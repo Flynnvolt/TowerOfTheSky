@@ -34,20 +34,22 @@ int entry(int argc, char **argv) {
 		}
 
 		//Wasd Movement
-		Vector2 input_axis = v2_normalize(0, 0);
+		Vector2 input_axis = v2(0,0);
 
 		if (is_key_down('A')) {
 			input_axis.x -= 1.0;
 		}
 		if (is_key_down('D')) {
 			input_axis.x += 1.0;
-		}s
+		}
 		if (is_key_down('S')) {
 			input_axis.y -= 1.0;
 		}
 		if (is_key_down('W')) {
 			input_axis.y += 1.0;
 		}
+		
+		input_axis = v2_normalize(input_axis);
 
 		player_pos = v2_add(player_pos, v2_mulf(input_axis, 1.0 * delta_t));
 		
