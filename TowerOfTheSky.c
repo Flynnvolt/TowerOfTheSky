@@ -22,6 +22,11 @@ int entry(int argc, char **argv) {
 	{
 		reset_temporary_storage();
 
+		draw_frame.projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
+
+		float zoom = 3;
+		draw_frame.view = m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0));
+
 		float64 now = os_get_current_time_in_seconds();
 		float64 delta_t = now - last_time;
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
@@ -48,15 +53,19 @@ int entry(int argc, char **argv) {
 		if (is_key_down('W')) {
 			input_axis.y += 1.0;
 		}
-		
+
 		input_axis = v2_normalize(input_axis);
 
-		player_pos = v2_add(player_pos, v2_mulf(input_axis, 1.0 * delta_t));
-		
+		player_pos = v2_add(player_pos, v2_mulf(input_axis, 100.0 * delta_t));
+
+		//Sprite size
+		Vector2 size = v2(28, 38);
+
 		//draw player
 		Matrix4 xform = m4_scalar(1.0);
 		xform         = m4_translate(xform, v3(player_pos.x, player_pos.y, 0));
-		draw_image_xform(player, xform, v2(.5f, .5f), COLOR_WHITE);
+		xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
+		draw_image_xform(player, xform, size, COLOR_WHITE);
 
 
 		os_update(); 
