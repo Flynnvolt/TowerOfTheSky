@@ -1,8 +1,30 @@
-bool almost_equals(float a, float b, float epsilon) {
+const int tile_width = 15;
+
+int world_pos_to_tile_pos(float world_pos) 
+{
+	return roundf(world_pos / (float)tile_width);
+}
+
+float tile_pos_to_world_pos(int tile_pos) 
+{
+	return ((float)tile_pos * (float)tile_width);
+}
+
+Vector2 round_v2_to_tile(Vector2 world_pos) 
+{
+	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
+	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
+	return world_pos;
+}
+
+
+bool almost_equals(float a, float b, float epsilon) 
+{
  return fabs(a - b) <= epsilon;
 }
 
-bool animate_f32_to_target(float* value, float target, float delta_t, float rate) {
+bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
+{
 	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
 	if (almost_equals(*value, target, 0.001f))
 	{
@@ -12,7 +34,8 @@ bool animate_f32_to_target(float* value, float target, float delta_t, float rate
 	return false;
 }
 
-void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) {
+void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
+{
 	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
@@ -21,7 +44,7 @@ typedef struct Sprite Sprite;
 
 struct Sprite
 {
-	Gfx_Image * image;
+	Gfx_Image* image;
 	Vector2 size;
 };
 
@@ -40,7 +63,7 @@ enum SpriteID
 
 Sprite sprites[SPRITE_MAX];
 
-Sprite * get_sprite(SpriteID id)
+Sprite* get_sprite(SpriteID id)
 {
 	if (id >= 0 && id < SPRITE_MAX)
 	{
@@ -80,15 +103,15 @@ struct World
 	Entity entities[MAX_ENTITY_COUNT];
 };
 
-World * world = 0;
+World* world = 0;
 
-Entity * entity_create() 
+Entity* entity_create() 
 {
-	Entity * entity_found = 0;
+	Entity* entity_found = 0;
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity * existing_entity = & world -> entities[i];
+		Entity* existing_entity = & world -> entities[i];
 
 		if (!existing_entity -> is_valid) 
 		{
@@ -101,30 +124,31 @@ Entity * entity_create()
 	return entity_found;
 }
 
-void entity_destroy(Entity * entity) 
+void entity_destroy(Entity* entity) 
 {
 	memset(entity, 0, sizeof(Entity));
 }
 
-void setup_player(Entity * en) 
+void setup_player(Entity* en) 
 {
-	en->arch = arch_player;
-	en->sprite_id = SPRITE_player;
+	en -> arch = arch_player;
+	en -> sprite_id = SPRITE_player;
 }
 
-void setup_rock(Entity * en) 
+void setup_rock(Entity* en) 
 {
-	en->arch = arch_rock;
-	en->sprite_id = SPRITE_rock0;
+	en -> arch = arch_rock;
+	en -> sprite_id = SPRITE_rock0;
 }
 
-void setup_tree(Entity * en) 
+void setup_tree(Entity* en) 
 {
-	en->arch = arch_tree;
-	en->sprite_id = SPRITE_tree0;
+	en -> arch = arch_tree;
+	en -> sprite_id = SPRITE_tree0;
 }
 
-Vector2 screen_to_world() {
+Vector2 screen_to_world() 
+{
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
 	Matrix4 proj = draw_frame.projection;
@@ -160,34 +184,40 @@ int entry(int argc, char **argv)
 	float64 last_time = os_get_current_time_in_seconds();
 
 	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("player.png"), get_heap_allocator()), .size = v2(28.0, 38.0) };
-	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("tree0.png"), get_heap_allocator()), .size = v2(13, 25) };
-	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("tree1.png"), get_heap_allocator()), .size = v2(15, 30) };
-	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("rock0.png"), get_heap_allocator()), .size = v2(20, 9) };
-	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("rock1.png"), get_heap_allocator()), .size = v2(12, 8) };
+	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("tree0.png"), get_heap_allocator()), .size = v2(13.0, 25.0) };
+	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("tree1.png"), get_heap_allocator()), .size = v2(15.0, 30.0) };
+	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("rock0.png"), get_heap_allocator()), .size = v2(20.0, 9.0) };
+	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("rock1.png"), get_heap_allocator()), .size = v2(12.0, 8.0) };
  
-	Gfx_Font *font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
+	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
 
-	Entity * player_en = entity_create();
-
-	setup_player(player_en);
-
+	//spawn rocks
 	for (int i = 0; i < 10; i++) 
 	{
-		Entity * en = entity_create();
+		Entity* en = entity_create();
 		setup_rock(en);
 		en -> pos = v2(i * 10.0, 0.0);
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+		en -> pos = round_v2_to_tile(en -> pos);
+		en -> pos.y -= tile_width * 0.5;
 	}
-	
+
+	//spawn trees
 	for (int i = 0; i < 10; i++) 
 	{
-		Entity * en = entity_create();
+		Entity* en = entity_create();
 		setup_tree(en);
 		en -> pos = v2(i * 10.0, 0.0);
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+		en -> pos = round_v2_to_tile(en->pos);
+		en -> pos.y -= tile_width * 0.5;
 	}
+
+	//spawn player
+	Entity* player_en = entity_create();
+	setup_player(player_en);
 
 	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
@@ -218,18 +248,38 @@ int entry(int argc, char **argv)
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
 		}
 
-		//mouse pos test
-		{
-			Vector2 pos = screen_to_world();
+		Vector2 mouse_pos = screen_to_world();
+		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos.x);
+		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos.y);
 
-			//world space current location debug for mouse pos
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), pos.x, pos.y), font_height, pos, v2(0.1, 0.1), COLOR_RED);
+		//tile rendering
+		{
+			int player_tile_x = world_pos_to_tile_pos(player_en -> pos.x);
+			int player_tile_y = world_pos_to_tile_pos(player_en -> pos.y);
+			int tile_radius_x = 40;
+			int tile_radius_y = 30;
+
+			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
+			{
+				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
+				{
+					if ((x + (y % 2 == 0) ) % 2 == 0) 
+					{
+						Vector4 col = v4(0.0, 0.0, 0.2, 0.35);
+						float x_pos = x * tile_width;
+						float y_pos = y * tile_width;
+						draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
+					}
+				}
+			}
+
+			draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
 
 		//render
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
-			Entity * en = & world -> entities[i];
+			Entity* en = & world -> entities[i];
 
 			if (en -> is_valid)
 			{
@@ -244,7 +294,7 @@ int entry(int argc, char **argv)
 
 					default:
 					{
-						Sprite * sprite = get_sprite(en -> sprite_id);
+						Sprite* sprite = get_sprite(en -> sprite_id);
 						Matrix4 xform = m4_scalar(1.0);
 						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 						xform         = m4_translate(xform, v3(sprite -> size.x * -0.5, 0.0, 0));
@@ -257,6 +307,30 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
+		}
+
+		//mouse pos test
+		{
+			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+			{
+				Entity* en = & world -> entities[i];
+				if (en -> is_valid) 
+				{
+					Sprite* sprite = get_sprite(en->sprite_id);
+					Range2f bounds = range2f_make_bottom_center(sprite->size);
+					bounds = range2f_shift(bounds, en->pos);
+					Vector4 col = COLOR_RED;
+					col.a = 0.4;
+
+					if (range2f_contains(bounds, mouse_pos)) 
+					{
+						draw_rect(bounds.min, range2f_size(bounds), col);
+					}
+				}
+			}
+
+			//world space current location debug for mouse pos
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), pos.x, pos.y), font_height, pos, v2(0.1, 0.1), COLOR_RED);
 		}
 
 		//Press Esc to Close Game
@@ -287,7 +361,7 @@ int entry(int argc, char **argv)
 
 		input_axis = v2_normalize(input_axis);
 
-		player_en->pos = v2_add(player_en->pos, v2_mulf(input_axis, 100.0 * delta_t));
+		player_en -> pos = v2_add(player_en -> pos, v2_mulf(input_axis, 100.0 * delta_t));
 
 		os_update(); 
 		gfx_update();
