@@ -124,6 +124,28 @@ void setup_tree(Entity * en)
 	en->sprite_id = SPRITE_tree0;
 }
 
+Vector2 screen_to_world() {
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.view;
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	// Transform to world coordinates
+	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
+	world_pos = m4_transform(m4_inverse(proj), world_pos);
+	world_pos = m4_transform(view, world_pos);
+	// log("%f, %f", world_pos.x, world_pos.y);
+
+	// Return as 2D vector
+	return (Vector2){ world_pos.x, world_pos.y };
+}
+
 int entry(int argc, char **argv) 
 {
 	window.title = STR("Tower of the Sky");
@@ -143,6 +165,10 @@ int entry(int argc, char **argv)
 	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("rock0.png"), get_heap_allocator()), .size = v2(20, 9) };
 	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("rock1.png"), get_heap_allocator()), .size = v2(12, 8) };
  
+	Gfx_Font *font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
+	assert(font, "Failed loading arial.ttf, %d", GetLastError());
+	const u32 font_height = 48;
+
 	Entity * player_en = entity_create();
 
 	setup_player(player_en);
@@ -185,11 +211,19 @@ int entry(int argc, char **argv)
 		//camera
 		{
 			Vector2 target_pos = player_en -> pos;
-			animate_v2_to_target(&camera_pos, target_pos, delta_t, 15.0f);
+			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
 
 			draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
+		}
+
+		//mouse pos test
+		{
+			Vector2 pos = screen_to_world();
+
+			//world space current location debug for mouse pos
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), pos.x, pos.y), font_height, pos, v2(0.1, 0.1), COLOR_RED);
 		}
 
 		//render
@@ -215,6 +249,10 @@ int entry(int argc, char **argv)
 						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 						xform         = m4_translate(xform, v3(sprite -> size.x * -0.5, 0.0, 0));
 						draw_image_xform(sprite -> image, xform, sprite -> size, COLOR_WHITE);
+
+						//world space current location debug for object pos
+						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
+
 						break;
 					}
 				}
