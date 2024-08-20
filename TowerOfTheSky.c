@@ -1,4 +1,6 @@
-const int tile_width = 15;
+const int tile_width = 16;
+
+const float entity_selection_radius = 8.0f;
 
 int world_pos_to_tile_pos(float world_pos) 
 {
@@ -16,7 +18,6 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
 	return world_pos;
 }
-
 
 bool almost_equals(float a, float b, float epsilon) 
 {
@@ -104,6 +105,15 @@ struct World
 };
 
 World* world = 0;
+
+typedef struct WorldFrame WorldFrame;
+
+struct WorldFrame 
+{
+	Entity* selected_entity;
+};
+
+WorldFrame world_frame;
 
 Entity* entity_create() 
 {
@@ -201,7 +211,7 @@ int entry(int argc, char **argv)
 		en -> pos = v2(i * 10.0, 0.0);
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
 		en -> pos = round_v2_to_tile(en -> pos);
-		en -> pos.y -= tile_width * 0.5;
+		//en -> pos.y -= tile_width * 0.5;
 	}
 
 	//spawn trees
@@ -212,7 +222,7 @@ int entry(int argc, char **argv)
 		en -> pos = v2(i * 10.0, 0.0);
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
 		en -> pos = round_v2_to_tile(en->pos);
-		en -> pos.y -= tile_width * 0.5;
+		//en -> pos.y -= tile_width * 0.5;
 	}
 
 	//spawn player
@@ -226,6 +236,7 @@ int entry(int argc, char **argv)
 	while (!window.should_close) 
 	{
 		reset_temporary_storage();
+		world_frame = (WorldFrame){0};
 
 		//time tracking
 		float64 now = os_get_current_time_in_seconds();
@@ -248,11 +259,11 @@ int entry(int argc, char **argv)
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
 		}
 
-		Vector2 mouse_pos = screen_to_world();
-		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos.x);
-		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos.y);
+		Vector2 mouse_pos_world = screen_to_world();
+		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
+		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
-		//tile rendering
+		//tile rendering 
 		{
 			int player_tile_x = world_pos_to_tile_pos(player_en -> pos.x);
 			int player_tile_y = world_pos_to_tile_pos(player_en -> pos.y);
@@ -272,8 +283,50 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
+			//show which tile is currently selected
+			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
+		}
 
-			draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
+		//mouse pos test
+		float smallest_dist = INFINITY;
+
+		{
+			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+			{
+				Entity* en = & world -> entities[i];
+				if (en -> is_valid) 
+				{
+					Sprite* sprite = get_sprite(en -> sprite_id);
+
+					int entity_tile_x = world_pos_to_tile_pos(en -> pos.x);
+					int entity_tile_y = world_pos_to_tile_pos(en -> pos.y);
+
+					float dist = fabsf(v2_dist(en -> pos, mouse_pos_world));
+
+					if (dist < entity_selection_radius)
+					{
+						if (!world_frame.selected_entity || (dist < smallest_dist))
+						{
+							world_frame.selected_entity = en;
+							smallest_dist = dist;
+						}
+					}; 
+
+					/*
+					Range2f bounds = range2f_make_bottom_center(sprite->size);
+					bounds = range2f_shift(bounds, en->pos);
+					Vector4 col = COLOR_RED;
+					col.a = 0.4;
+
+					if (range2f_contains(bounds, mouse_pos_world)) 
+					{
+						draw_rect(bounds.min, range2f_size(bounds), col);
+					}
+					*/
+				}
+			}
+			//world space current location debug for mouse pos
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		}
 
 		//render
@@ -290,15 +343,23 @@ int entry(int argc, char **argv)
 					{
 						break;
 					}
-					*/
+					*/ 
 
 					default:
 					{
 						Sprite* sprite = get_sprite(en -> sprite_id);
 						Matrix4 xform = m4_scalar(1.0);
+						xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 						xform         = m4_translate(xform, v3(sprite -> size.x * -0.5, 0.0, 0));
-						draw_image_xform(sprite -> image, xform, sprite -> size, COLOR_WHITE);
+						
+						Vector4 col = COLOR_WHITE;
+						if(world_frame.selected_entity == en)
+						{
+							col = COLOR_RED;
+						}
+
+						draw_image_xform(sprite -> image, xform, sprite -> size, col);
 
 						//world space current location debug for object pos
 						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
@@ -307,30 +368,6 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
-		}
-
-		//mouse pos test
-		{
-			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-			{
-				Entity* en = & world -> entities[i];
-				if (en -> is_valid) 
-				{
-					Sprite* sprite = get_sprite(en->sprite_id);
-					Range2f bounds = range2f_make_bottom_center(sprite->size);
-					bounds = range2f_shift(bounds, en->pos);
-					Vector4 col = COLOR_RED;
-					col.a = 0.4;
-
-					if (range2f_contains(bounds, mouse_pos)) 
-					{
-						draw_rect(bounds.min, range2f_size(bounds), col);
-					}
-				}
-			}
-
-			//world space current location debug for mouse pos
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), pos.x, pos.y), font_height, pos, v2(0.1, 0.1), COLOR_RED);
 		}
 
 		//Press Esc to Close Game
