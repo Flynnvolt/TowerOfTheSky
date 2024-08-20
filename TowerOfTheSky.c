@@ -162,7 +162,7 @@ Vector2 screen_to_world()
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
 	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.view;
+	Matrix4 view = draw_frame.camera_xform;
 	float window_w = window.width;
 	float window_h = window.height;
 
@@ -191,7 +191,7 @@ int entry(int argc, char **argv)
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 
-	float64 last_time = os_get_current_time_in_seconds();
+	float64 last_time = os_get_elapsed_seconds();
 
 	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("player.png"), get_heap_allocator()), .size = v2(28.0, 38.0) };
 	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("tree0.png"), get_heap_allocator()), .size = v2(13.0, 25.0) };
@@ -239,7 +239,7 @@ int entry(int argc, char **argv)
 		world_frame = (WorldFrame){0};
 
 		//time tracking
-		float64 now = os_get_current_time_in_seconds();
+		float64 now = os_get_elapsed_seconds();
 		float64 delta_t = now - last_time;
 
 		//log fps
@@ -254,9 +254,9 @@ int entry(int argc, char **argv)
 			Vector2 target_pos = player_en -> pos;
 			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
 
-			draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
-			draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
-			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
+			draw_frame.camera_xform = m4_make_scale(v3(1.0, 1.0, 1.0));
+			draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
+			draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
 		}
 
 		Vector2 mouse_pos_world = screen_to_world();
