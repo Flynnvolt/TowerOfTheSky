@@ -1,6 +1,18 @@
+//added from tutorial 5 from randy
+inline float v2_dist(Vector2 a, Vector2 b) {
+    return v2_length(v2_sub(a, b));
+}
+
+
 const int tile_width = 16;
 
 const float entity_selection_radius = 8.0f;
+
+const int player_health = 10;
+
+const int rock_health = 3;
+
+const int tree_health = 3;
 
 int world_pos_to_tile_pos(float world_pos) 
 {
@@ -46,7 +58,6 @@ typedef struct Sprite Sprite;
 struct Sprite
 {
 	Gfx_Image* image;
-	Vector2 size;
 };
 
 typedef enum SpriteID SpriteID;
@@ -58,6 +69,8 @@ enum SpriteID
 	SPRITE_tree0,
 	SPRITE_tree1,
 	SPRITE_rock0,
+	SPRITE_item_gold,
+	SPRITE_item_pine_wood,
 	SPRITE_rock1,
 	SPRITE_MAX,
 };
@@ -73,15 +86,50 @@ Sprite* get_sprite(SpriteID id)
 	return & sprites[0];
 }
 
+Vector2 get_sprite_size(Sprite* sprite)
+{
+	return (Vector2) {sprite -> image -> width, sprite -> image -> height};
+}
+
+typedef struct Item Item;
+
+struct Item
+{
+
+};
+
+typedef enum ItemID ItemID;
+
+enum ItemID
+{
+	ITEM_nil,
+	ITEM_rock,
+	ITEM_pine_wood,
+	ITEM_MAX,
+};
+
+Item items[ITEM_MAX];
+
+Item* get_item(ItemID id)
+{
+	if (id >= 0 && id < ITEM_MAX)
+	{
+		return & items[id];
+	}
+	return & items[0];
+}
+
 typedef enum EntityArchetype EntityArchetype;
 
 enum EntityArchetype
 {
 	arch_nil = 0,
 	arch_player = 1,
-	arch_rock = 2,
-	arch_tree = 3,
-	arch_tree2 = 4,
+	arch_item = 2,
+	arch_rock = 3,
+	arch_tree = 4,
+	arch_tree2 = 5,
+	ARCH_MAX,
 };
 
 typedef struct Entity Entity;
@@ -93,6 +141,9 @@ struct Entity
 	SpriteID sprite_id;
 	EntityArchetype arch;
 	Vector2 pos;
+	int health;
+	ItemID item;
+	bool destroyable_world_item;
 };
 
 #define MAX_ENTITY_COUNT 1024
@@ -143,18 +194,35 @@ void setup_player(Entity* en)
 {
 	en -> arch = arch_player;
 	en -> sprite_id = SPRITE_player;
+	en -> health = player_health;
 }
 
 void setup_rock(Entity* en) 
 {
 	en -> arch = arch_rock;
 	en -> sprite_id = SPRITE_rock0;
+	en -> health = rock_health;
+	en -> destroyable_world_item = true;
 }
 
 void setup_tree(Entity* en) 
 {
 	en -> arch = arch_tree;
 	en -> sprite_id = SPRITE_tree0;
+	en -> health = tree_health;
+	en -> destroyable_world_item = true;
+}
+
+void setup_item_pine_wood(Entity* en)
+{
+	en -> item = ITEM_pine_wood;
+	en -> sprite_id = SPRITE_item_pine_wood;
+}
+
+void setup_item_rock(Entity* en)
+{
+	en -> item = ITEM_rock;
+	en -> sprite_id = SPRITE_item_gold;
 }
 
 Vector2 screen_to_world() 
@@ -193,12 +261,14 @@ int entry(int argc, char **argv)
 
 	float64 last_time = os_get_elapsed_seconds();
 
-	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("player.png"), get_heap_allocator()), .size = v2(28.0, 38.0) };
-	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("tree0.png"), get_heap_allocator()), .size = v2(13.0, 25.0) };
-	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("tree1.png"), get_heap_allocator()), .size = v2(15.0, 30.0) };
-	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("rock0.png"), get_heap_allocator()), .size = v2(20.0, 9.0) };
-	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("rock1.png"), get_heap_allocator()), .size = v2(12.0, 8.0) };
- 
+	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
+	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
+	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
+	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
+	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
+ 	sprites[SPRITE_item_gold] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
+	sprites[SPRITE_item_pine_wood] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
+
 	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
@@ -294,7 +364,7 @@ int entry(int argc, char **argv)
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 			{
 				Entity* en = & world -> entities[i];
-				if (en -> is_valid) 
+				if (en -> is_valid && en -> destroyable_world_item == true) 
 				{
 					Sprite* sprite = get_sprite(en -> sprite_id);
 
@@ -329,6 +399,51 @@ int entry(int argc, char **argv)
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		}
 
+		//click thing
+		{
+			Entity* selected_en = world_frame.selected_entity;
+
+			if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
+			{
+				consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+				if (selected_en)
+				{
+					selected_en -> health -= 1;
+
+					if (selected_en -> health <= 0)
+					{
+						switch (selected_en -> arch)
+						{
+							case arch_tree:
+							{
+								Entity* en = entity_create();
+								setup_item_pine_wood(en);
+								en -> pos = selected_en -> pos;
+								break;
+							}
+
+							case arch_rock:
+							{
+								Entity* en = entity_create();
+								setup_item_rock(en);
+								en -> pos = selected_en -> pos;
+								break;
+							}
+
+							default:
+							{
+								break;
+							}
+							
+						}
+
+						entity_destroy(selected_en);
+					}
+				}
+			}
+		}
+
 		//render
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
@@ -351,7 +466,7 @@ int entry(int argc, char **argv)
 						Matrix4 xform = m4_scalar(1.0);
 						xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-						xform         = m4_translate(xform, v3(sprite -> size.x * -0.5, 0.0, 0));
+						xform         = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
 						
 						Vector4 col = COLOR_WHITE;
 						if(world_frame.selected_entity == en)
@@ -359,7 +474,7 @@ int entry(int argc, char **argv)
 							col = COLOR_RED;
 						}
 
-						draw_image_xform(sprite -> image, xform, sprite -> size, col);
+						draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
 
 						//world space current location debug for object pos
 						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
