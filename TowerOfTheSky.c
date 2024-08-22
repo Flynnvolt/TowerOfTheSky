@@ -1,8 +1,36 @@
-//added from tutorial 5 from randy
+//added from tutorial 5 from randy (engine changes?)
 inline float v2_dist(Vector2 a, Vector2 b) {
     return v2_length(v2_sub(a, b));
 }
 
+// utils
+float sin_breathe(float time, float rate)
+{
+	return (sin(time * rate) + 1.0 / 2.0);
+}
+
+bool almost_equals(float a, float b, float epsilon) 
+{
+ return fabs(a - b) <= epsilon;
+}
+
+bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
+{
+	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
+	if (almost_equals(*value, target, 0.001f))
+	{
+		*value = target;
+		return true; // reached
+	}
+	return false;
+}
+
+void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
+{
+	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
+	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
+}
+//
 
 const int tile_width = 16;
 
@@ -29,28 +57,6 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
 	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
 	return world_pos;
-}
-
-bool almost_equals(float a, float b, float epsilon) 
-{
- return fabs(a - b) <= epsilon;
-}
-
-bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
-{
-	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
-	if (almost_equals(*value, target, 0.001f))
-	{
-		*value = target;
-		return true; // reached
-	}
-	return false;
-}
-
-void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
-{
-	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
-	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
 
 typedef struct Sprite Sprite;
@@ -144,6 +150,7 @@ struct Entity
 	int health;
 	ItemID item;
 	bool destroyable_world_item;
+	bool is_item;
 };
 
 #define MAX_ENTITY_COUNT 1024
@@ -217,12 +224,14 @@ void setup_item_pine_wood(Entity* en)
 {
 	en -> item = ITEM_pine_wood;
 	en -> sprite_id = SPRITE_item_pine_wood;
+	en -> is_item = true;
 }
 
 void setup_item_rock(Entity* en)
 {
 	en -> item = ITEM_rock;
 	en -> sprite_id = SPRITE_item_gold;
+	en -> is_item = true;
 }
 
 Vector2 screen_to_world() 
@@ -464,6 +473,12 @@ int entry(int argc, char **argv)
 					{
 						Sprite* sprite = get_sprite(en -> sprite_id);
 						Matrix4 xform = m4_scalar(1.0);
+
+						if(en -> is_item == true)
+						{
+							xform     = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
+						}
+
 						xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 						xform         = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
