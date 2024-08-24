@@ -266,7 +266,7 @@ Vector2 screen_to_world()
 
 int entry(int argc, char **argv) 
 {
-	window.title = STR("Tower of the Sky");
+	window.title = STR("Tutorial Test");
 	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 720; 
 	window.x = 200;
@@ -402,6 +402,18 @@ int entry(int argc, char **argv)
 							smallest_dist = dist;
 						}
 					}; 
+
+					/*
+					Range2f bounds = range2f_make_bottom_center(sprite->size);
+					bounds = range2f_shift(bounds, en->pos);
+					Vector4 col = COLOR_RED;
+					col.a = 0.4;
+
+					if (range2f_contains(bounds, mouse_pos_world)) 
+					{
+						draw_rect(bounds.min, range2f_size(bounds), col);
+					}
+					*/
 				}
 			}
 			//world space current location debug for mouse pos
@@ -424,7 +436,7 @@ int entry(int argc, char **argv)
 						{
 							//pickup
 							
-							world -> inventory_items[en -> arch].amount = 1;
+							world -> inventory_items[en -> arch].amount += 1;
 
 							entity_destroy(en);
 						}

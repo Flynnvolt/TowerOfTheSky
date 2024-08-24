@@ -45,4 +45,7 @@ typedef struct Context_Extra {
 // #include "oogabooga/examples/input_example.c"
 
 // Your epic project
-#include "TowerOfTheSky.c"
+//#include "TowerOfTheSky.c"
+
+//following along with the tutorial for now.
+#include "RandyTutorial.c"
