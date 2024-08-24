@@ -3,13 +3,6 @@ inline float v2_dist(Vector2 a, Vector2 b) {
     return v2_length(v2_sub(a, b));
 }
 
-// array helpers
-
-void* array_add()
-{
-
-}
-
 // utils
 float sin_breathe(float time, float rate)
 {
