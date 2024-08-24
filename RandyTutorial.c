@@ -3,6 +3,13 @@ inline float v2_dist(Vector2 a, Vector2 b) {
     return v2_length(v2_sub(a, b));
 }
 
+// array helpers
+
+void* array_add()
+{
+
+}
+
 // utils
 float sin_breathe(float time, float rate)
 {
@@ -141,6 +148,27 @@ enum EntityArchetype
 	ARCH_MAX,
 };
 
+SpriteID get_sprite_id_from_ItemID(ItemID item_id)
+{
+	switch (item_id)
+	{
+		case ITEM_pine_wood: 
+		{
+			return SPRITE_item_pine_wood;
+			break;
+		}
+		case ITEM_rock: 
+		{
+			return SPRITE_item_gold;
+			break;
+		}
+		default:
+		{
+			return 0;
+		}
+	}
+}
+
 typedef struct Entity Entity;
 
 struct Entity
@@ -276,7 +304,7 @@ int entry(int argc, char **argv)
 	world = alloc(get_heap_allocator(), sizeof(World));
 
 	float64 last_time = os_get_elapsed_seconds();
-
+	sprites[0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
 	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
 	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
 	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
@@ -311,9 +339,10 @@ int entry(int argc, char **argv)
 		//en -> pos.y -= tile_width * 0.5;
 	}
 
-	//item adding
+	//start with X of X item
 	{
 		world -> inventory_items[ITEM_pine_wood].amount = 5;
+		world -> inventory_items[ITEM_rock].amount = 5;
 	}
 
 	//spawn player
@@ -436,7 +465,7 @@ int entry(int argc, char **argv)
 						{
 							//pickup
 							
-							world -> inventory_items[en -> arch].amount += 1;
+							world -> inventory_items[en -> item].amount += 1;
 
 							entity_destroy(en);
 						}
@@ -490,7 +519,7 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		//render
+		//render entities
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
 			Entity* en = & world -> entities[i];
@@ -533,6 +562,57 @@ int entry(int argc, char **argv)
 
 						break;
 					}
+				}
+			}
+		}
+
+		//do UI rendering
+		{
+			float width = 240.0;
+			float height = 135.0;
+			draw_frame.camera_xform = m4_scalar(1.0);
+			draw_frame.projection = m4_make_orthographic_projection(0.0, width, 0.0, height, -1, 10);
+
+			float y_pos = 30.0;
+
+			int item_count = 0;
+
+			for (int i = 0; i < ITEM_MAX; i++)
+			{
+				ItemData* item = & world -> inventory_items[i];
+
+				if (item -> amount > 0)
+				{
+					item_count += 1;
+				}
+			}
+
+			const float icon_thing = 16.0;
+			const float padding = 4.0;
+			float icon_width = icon_thing + padding;
+
+			float entire_thing_width = item_count * (icon_thing + padding);
+			float x_start_pos = (width / 2.0) - (entire_thing_width / 2.0) + (icon_width * 0.5);
+
+			int slot_index = 0;
+			for (int i = 0; i < ITEM_MAX; i++)
+			{
+				ItemData* item = & world -> inventory_items[i];
+
+				if (item -> amount > 0)
+				{
+					float slot_index_offset = slot_index * icon_width;
+
+					Matrix4 xform = m4_scalar(1.0);
+					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
+
+					draw_rect_xform(xform, v2(16, 16), COLOR_BLACK);
+
+					Sprite* sprite = get_sprite(get_sprite_id_from_ItemID(i));
+					
+					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+					slot_index += 1;
 				}
 			}
 		}
