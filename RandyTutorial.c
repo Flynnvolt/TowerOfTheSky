@@ -441,6 +441,8 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
 
+	render_atlas_if_not_yet_rendered(font, 32, 'A');
+
 	//spawn rocks
 	for (int i = 0; i < 10; i++) 
 	{
@@ -574,6 +576,8 @@ int entry(int argc, char **argv)
 					{
 						//todo epic physics pickup
 
+
+						//fabsf converts things to always be positive?
 						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
 						{
 							//pickup item
@@ -812,7 +816,7 @@ int entry(int argc, char **argv)
 							draw_rect_xform(xform, box_size, bg_box_color);
 
 							float current_y_pos = icon_center.y;
-
+							
 							//draw item name on screen
 							{
 								string title = get_ItemID_pretty_name(i);
