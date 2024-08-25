@@ -159,7 +159,6 @@ struct Entity
 //entity
 #define MAX_ENTITY_COUNT 1024
 
-
 typedef struct World World;
 
 struct World
@@ -211,36 +210,6 @@ void setup_player(Entity* en)
 	en -> health = player_health;
 }
 
-void setup_rock(Entity* en) 
-{
-	en -> arch = arch_rock;
-	en -> sprite_id = SPRITE_rock0;
-	en -> health = rock_health;
-	en -> destroyable_world_item = true;
-}
-
-void setup_tree(Entity* en) 
-{
-	en -> arch = arch_tree;
-	en -> sprite_id = SPRITE_tree0;
-	en -> health = tree_health;
-	en -> destroyable_world_item = true;
-}
-
-void setup_item_pine_wood(Entity* en)
-{
-	en -> item = ITEM_pine_wood;
-	en -> sprite_id = SPRITE_item_pine_wood;
-	en -> is_item = true;
-}
-
-void setup_item_rock(Entity* en)
-{
-	en -> item = ITEM_rock;
-	en -> sprite_id = SPRITE_item_gold;
-	en -> is_item = true;
-}
-
 Vector2 screen_to_world() 
 {
 	float mouse_x = input_frame.mouse_x;
@@ -288,33 +257,6 @@ int entry(int argc, char **argv)
 	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
-
-	//spawn rocks
-	for (int i = 0; i < 10; i++) 
-	{
-		Entity* en = entity_create();
-		setup_rock(en);
-		en -> pos = v2(i * 10.0, 0.0);
-		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en -> pos);
-		//en -> pos.y -= tile_width * 0.5;
-	}
-
-	//spawn trees
-	for (int i = 0; i < 10; i++) 
-	{
-		Entity* en = entity_create();
-		setup_tree(en);
-		en -> pos = v2(i * 10.0, 0.0);
-		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en->pos);
-		//en -> pos.y -= tile_width * 0.5;
-	}
-
-	//item adding
-	{
-		world -> inventory_items[ITEM_pine_wood].amount = 5;
-	}
 
 	//spawn player
 	Entity* player_en = entity_create();
@@ -376,106 +318,6 @@ int entry(int argc, char **argv)
 			}
 			//show which tile is currently selected
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
-		}
-
-		//mouse pos test
-		float smallest_dist = INFINITY;
-
-		{
-			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-			{
-				Entity* en = & world -> entities[i];
-				if (en -> is_valid && en -> destroyable_world_item == true) 
-				{
-					Sprite* sprite = get_sprite(en -> sprite_id);
-
-					int entity_tile_x = world_pos_to_tile_pos(en -> pos.x);
-					int entity_tile_y = world_pos_to_tile_pos(en -> pos.y);
-
-					float dist = fabsf(v2_dist(en -> pos, mouse_pos_world));
-
-					if (dist < entity_selection_radius)
-					{
-						if (!world_frame.selected_entity || (dist < smallest_dist))
-						{
-							world_frame.selected_entity = en;
-							smallest_dist = dist;
-						}
-					}; 
-				}
-			}
-			//world space current location debug for mouse pos
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
-		}
-
-		//update entites
-		{
-			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
-			{
-				Entity* en = & world -> entities[i];
-
-				if (en -> is_valid)
-				{
-					if (en -> is_item)
-					{
-						//todo epic physics pickup
-
-						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
-						{
-							//pickup
-							
-							world -> inventory_items[en -> arch].amount = 1;
-
-							entity_destroy(en);
-						}
-					}
-				}
-			}
-		}
-
-		//click thing
-		{
-			Entity* selected_en = world_frame.selected_entity;
-
-			if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
-			{
-				consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-
-				if (selected_en)
-				{
-					selected_en -> health -= 1;
-
-					if (selected_en -> health <= 0)
-					{
-						switch (selected_en -> arch)
-						{
-							case arch_tree:
-							{
-								Entity* en = entity_create();
-								setup_item_pine_wood(en);
-								en -> pos = selected_en -> pos;
-								break;
-							}
-
-							case arch_rock:
-							{
-								Entity* en = entity_create();
-								setup_item_rock(en);
-								en -> pos = selected_en -> pos;
-								break;
-							}
-
-							default:
-							{
-								break;
-							}
-							
-						}
-
-						entity_destroy(selected_en);
-					}
-				}
-			}
 		}
 
 		//render

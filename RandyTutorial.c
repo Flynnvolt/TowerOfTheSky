@@ -1,12 +1,56 @@
-//added from tutorial 5 from randy (engine changes?)
-inline float v2_dist(Vector2 a, Vector2 b) {
-    return v2_length(v2_sub(a, b));
+//rangef needed to continue tutorial
+
+typedef struct Range1f {
+  float min;
+  float max;
+} Range1f;
+// ...
+
+typedef struct Range2f {
+  Vector2 min;
+  Vector2 max;
+} Range2f;
+
+inline Range2f range2f_make(Vector2 min, Vector2 max) { return (Range2f) { min, max }; }
+
+Range2f range2f_shift(Range2f r, Vector2 shift) {
+  r.min = v2_add(r.min, shift);
+  r.max = v2_add(r.max, shift);
+  return r;
 }
 
-// utils
-float sin_breathe(float time, float rate)
-{
-	return (sin(time * rate) + 1.0 / 2.0);
+Range2f range2f_make_bottom_center(Vector2 size) {
+  Range2f range = {0};
+  range.max = size;
+  range = range2f_shift(range, v2(size.x * -0.5, 0.0));
+  return range;
+}
+
+Vector2 range2f_size(Range2f range) {
+  Vector2 size = {0};
+  size = v2_sub(range.min, range.max);
+  size.x = fabsf(size.x);
+  size.y = fabsf(size.y);
+  return size;
+}
+
+bool range2f_contains(Range2f range, Vector2 v) {
+  return v.x >= range.min.x && v.x <= range.max.x && v.y >= range.min.y && v.y <= range.max.y;
+}
+
+Range2f range2f_make(Vector2 min, Vector2 max);
+Range2f range2f_shift(Range2f r, Vector2 shift);
+Range2f range2f_make_bottom_center(Vector2 size);
+Vector2 range2f_size(Range2f range);
+bool range2f_contains(Range2f range, Vector2 v);
+
+Vector2 range2f_get_center(Range2f r) {
+	return (Vector2) { (r.max.x - r.min.x) * 0.5 + r.min.x, (r.max.y - r.min.y) * 0.5 + r.min.y };
+}
+
+//added from tutorial from randy (engine changes?)
+inline float v2_dist(Vector2 a, Vector2 b) {
+    return v2_length(v2_sub(a, b));
 }
 
 bool almost_equals(float a, float b, float epsilon) 
@@ -30,19 +74,38 @@ void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float r
 	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
-//
 
+Range2f quad_to_range(Draw_Quad quad) {
+	return (Range2f){quad.bottom_left, quad.top_right};
+}
+
+Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) {
+
+	// NOTE: we're assuming these are the screen space matricies.
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+
+	Matrix4 ndc_to_screen_space = m4_identity();
+	ndc_to_screen_space = m4_mul(ndc_to_screen_space, m4_inverse(proj));
+	ndc_to_screen_space = m4_mul(ndc_to_screen_space, view);
+
+	ndc_quad.bottom_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_left), 0, 1)).xy;
+	ndc_quad.bottom_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_right), 0, 1)).xy;
+	ndc_quad.top_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_left), 0, 1)).xy;
+	ndc_quad.top_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_right), 0, 1)).xy;
+
+	return ndc_quad;
+}
+
+//utils
+
+float sin_breathe(float time, float rate)
+{
+	return (sin(time * rate) + 1.0 / 2.0);
+}
+
+//tile stuff
 const int tile_width = 16;
-
-const float entity_selection_radius = 8.0f;
-
-const float player_pickup_radius = 20.0f;
-
-const int player_health = 10;
-
-const int rock_health = 3;
-
-const int tree_health = 3;
 
 int world_pos_to_tile_pos(float world_pos) 
 {
@@ -60,6 +123,20 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
 	return world_pos;
 }
+
+#define m4_identity m4_make_scale(v3(1, 1, 1))
+
+Vector4 bg_box_color = {0, 0, 0, 0.5};
+
+const float entity_selection_radius = 8.0f;
+
+const float player_pickup_radius = 20.0f;
+
+const int player_health = 10;
+
+const int rock_health = 3;
+
+const int tree_health = 3;
 
 typedef struct Sprite Sprite;
 
@@ -162,6 +239,28 @@ SpriteID get_sprite_id_from_ItemID(ItemID item_id)
 	}
 }
 
+string get_ItemID_pretty_name(ItemID item_id) 
+{
+	switch (item_id) 
+	{
+		case ITEM_pine_wood:
+		{
+			return STR("Pine Wood");
+			break;
+
+		} 
+		case ITEM_rock: 
+		{
+			return STR("Gold");
+			break;
+		}
+		default:
+		{
+			return STR("nil");
+		}
+	}
+}
+
 typedef struct Entity Entity;
 
 struct Entity
@@ -177,9 +276,7 @@ struct Entity
 	bool is_item;
 };
 
-//entity
 #define MAX_ENTITY_COUNT 1024
-
 
 typedef struct World World;
 
@@ -262,6 +359,22 @@ void setup_item_rock(Entity* en)
 	en -> is_item = true;
 }
 
+Vector2 get_mouse_pos_in_ndc()
+{
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	return (Vector2){ndc_x, ndc_y};
+}
+
 Vector2 screen_to_world() 
 {
 	float mouse_x = input_frame.mouse_x;
@@ -334,14 +447,15 @@ int entry(int argc, char **argv)
 
 	//start with X of X item
 	{
-		world -> inventory_items[ITEM_pine_wood].amount = 5;
-		world -> inventory_items[ITEM_rock].amount = 5;
+		//world -> inventory_items[ITEM_pine_wood].amount = 5;
+		//world -> inventory_items[ITEM_rock].amount = 5;
 	}
 
 	//spawn player
 	Entity* player_en = entity_create();
 	setup_player(player_en);
 
+	//camera
 	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
 
@@ -400,7 +514,7 @@ int entry(int argc, char **argv)
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
 
-		//mouse pos test
+		//mouse hover highlight
 		float smallest_dist = INFINITY;
 
 		{
@@ -424,25 +538,13 @@ int entry(int argc, char **argv)
 							smallest_dist = dist;
 						}
 					}; 
-
-					/*
-					Range2f bounds = range2f_make_bottom_center(sprite->size);
-					bounds = range2f_shift(bounds, en->pos);
-					Vector4 col = COLOR_RED;
-					col.a = 0.4;
-
-					if (range2f_contains(bounds, mouse_pos_world)) 
-					{
-						draw_rect(bounds.min, range2f_size(bounds), col);
-					}
-					*/
 				}
 			}
 			//world space current location debug for mouse pos
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		}
 
-		//update entites
+		//update entities
 		{
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
@@ -456,7 +558,7 @@ int entry(int argc, char **argv)
 
 						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
 						{
-							//pickup
+							//pickup item
 							
 							world -> inventory_items[en -> item].amount += 1;
 
@@ -467,7 +569,7 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		//click thing
+		//click to mine or cut trees
 		{
 			Entity* selected_en = world_frame.selected_entity;
 
@@ -566,7 +668,7 @@ int entry(int argc, char **argv)
 			draw_frame.camera_xform = m4_scalar(1.0);
 			draw_frame.projection = m4_make_orthographic_projection(0.0, width, 0.0, height, -1, 10);
 
-			float y_pos = 30.0;
+			float y_pos = 115.0;
 
 			int item_count = 0;
 
@@ -581,11 +683,19 @@ int entry(int argc, char **argv)
 			}
 
 			const float icon_thing = 16.0;
-			const float padding = 4.0;
-			float icon_width = icon_thing + padding;
+			float icon_width = icon_thing;
 
-			float entire_thing_width = item_count * (icon_thing + padding);
-			float x_start_pos = (width / 2.0) - (entire_thing_width / 2.0) + (icon_width * 0.5);
+			const int icon_row_count = 8;
+
+			float entire_thing_width = icon_row_count * icon_width;
+			float x_start_pos = (width / 2.0) - (entire_thing_width / 2.0);
+
+			//black background intventory box
+			{
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+				draw_rect_xform(xform, v2(entire_thing_width, icon_width), bg_box_color);
+			}
 
 			int slot_index = 0;
 			for (int i = 0; i < ITEM_MAX; i++)
@@ -594,16 +704,122 @@ int entry(int argc, char **argv)
 
 				if (item -> amount > 0)
 				{
+					//draw item icons
 					float slot_index_offset = slot_index * icon_width;
 
 					Matrix4 xform = m4_scalar(1.0);
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
-					draw_rect_xform(xform, v2(16, 16), COLOR_BLACK);
-
 					Sprite* sprite = get_sprite(get_sprite_id_from_ItemID(i));
-					
+
+					Draw_Quad* quad = draw_rect_xform(xform, v2(16, 16), v4(1, 1, 1, 0.2));
+
+					Range2f icon_box = quad_to_range(*quad);
+
+					float is_selected_alpha = 0.0;
+				
+					if (range2f_contains(icon_box, get_mouse_pos_in_ndc()))
+					{
+						is_selected_alpha = 1.0;
+					}
+				
+					Matrix4 box_bottom_right_xform = xform;
+
+					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
+
+					//make items bigger when selected
+					if (is_selected_alpha == 1.0)
+					{
+						//TODO selection polish
+						float scale_adjust = 0.3;
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
+					}
+
+					//breathe effect on items in inventory when selected
+					if (is_selected_alpha == 1.0)
+					{
+						float scale_adjust = 0.025 * sin_breathe(os_get_elapsed_seconds(), 5.0);
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
+					}
+
+					//rotate effect on items in inventory when selected
+					if (is_selected_alpha == 1.0)
+					{
+						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
+						xform = m4_rotate_z(xform, rotate_adjust);
+					}
+
+					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
+				
 					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+					//tooltip
+					if (is_selected_alpha == 1.0)
+					{
+						Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+
+						Range2f screen_range = quad_to_range(screen_quad);
+
+						Vector2 icon_center = range2f_get_center(screen_range);
+
+						Matrix4 xform = m4_scalar(1.0);
+
+						// TODO - we're guessing at the Y box size here.
+						// in order to automate this, we would need to move it down below after we do all the element advance things for the text.
+						// ... but then the box would be drawing in front of everyone. So we'd have to do Z sorting.
+						// Solution for now is to just guess at the size.
+						Vector2 box_size = v2(40.0, 15.0);
+
+						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
+
+						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_width * 0.5, 0));
+
+						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
+
+						draw_rect_xform(xform, box_size, bg_box_color);
+
+						float current_y_pos = icon_center.y;
+
+						//draw item name on screen
+						{
+							string title = get_ItemID_pretty_name(i);
+
+							Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+
+							Vector2 draw_pos = icon_center;
+
+							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+							
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // top center
+
+							draw_pos = v2_add(draw_pos, v2(0, icon_width * -0.5));
+
+							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+							draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+
+							current_y_pos = draw_pos.y;
+						}
+
+						//draw item amount on screen
+						{
+							string item_amount = STR("x%i"); //%i is where the number goes.
+
+							item_amount = sprint(get_temporary_allocator(), item_amount , item -> amount);
+
+							Gfx_Text_Metrics metrics = measure_text(font, item_amount, font_height, v2(0.1, 0.1));
+
+							Vector2 draw_pos = v2(icon_center.x, current_y_pos);
+
+							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+							
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // top center
+
+							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+							draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+						}
+					}
 
 					slot_index += 1;
 				}
