@@ -278,13 +278,31 @@ struct Entity
 
 #define MAX_ENTITY_COUNT 1024
 
+
+typedef enum UXState UXState;
+
+enum UXState
+{
+	UX_nil,
+	UX_inventory,
+	//UX_building,
+};
+
+
 typedef struct World World;
 
+// :World
 struct World
 {
 	Entity entities[MAX_ENTITY_COUNT];
 
 	ItemData inventory_items[ITEM_MAX];
+
+	UXState ux_state;
+
+	float inventory_alpha;
+
+	float inventory_alpha_target;
 };
 
 World* world = 0;
@@ -662,7 +680,6 @@ int entry(int argc, char **argv)
 		}
 
 		// :UI Rendering
-		if (false)
 		{
 			float width = 240.0;
 			float height = 135.0;
@@ -670,7 +687,20 @@ int entry(int argc, char **argv)
 			draw_frame.projection = m4_make_orthographic_projection(0.0, width, 0.0, height, -1, 10);
 
 			// :Inventory UI
+			if(is_key_just_pressed(KEY_TAB))
 			{
+				consume_key_just_pressed(KEY_TAB);
+				world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
+			}
+
+			world -> inventory_alpha_target = (world -> ux_state == UX_inventory ? 1.0 : 0.0);
+			animate_f32_to_target(& world -> inventory_alpha, world -> inventory_alpha_target, delta_t, 200.0); //speed inventory closes / fades
+			bool is_inventory_enabled = world -> inventory_alpha_target == 1;
+
+			if(world -> inventory_alpha != 0.0)
+			{
+				//TODO make inventory fade in out when key pressed.
+
 				float y_pos = 115.0;
 
 				int item_count = 0;
@@ -721,7 +751,7 @@ int entry(int argc, char **argv)
 
 						float is_selected_alpha = 0.0;
 					
-						if (range2f_contains(icon_box, get_mouse_pos_in_ndc()))
+						if (is_inventory_enabled && range2f_contains(icon_box, get_mouse_pos_in_ndc()))
 						{
 							is_selected_alpha = 1.0;
 						}
