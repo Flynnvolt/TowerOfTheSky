@@ -4,7 +4,6 @@ typedef struct Range1f {
   float min;
   float max;
 } Range1f;
-// ...
 
 typedef struct Range2f {
   Vector2 min;
@@ -48,7 +47,6 @@ Vector2 range2f_get_center(Range2f r) {
 	return (Vector2) { (r.max.x - r.min.x) * 0.5 + r.min.x, (r.max.y - r.min.y) * 0.5 + r.min.y };
 }
 
-//added from tutorial from randy (engine changes?)
 inline float v2_dist(Vector2 a, Vector2 b) {
     return v2_length(v2_sub(a, b));
 }
@@ -97,14 +95,14 @@ Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) {
 	return ndc_quad;
 }
 
-//utils
+// :Utilities
 
 float sin_breathe(float time, float rate)
 {
 	return (sin(time * rate) + 1.0 / 2.0);
 }
 
-//tile stuff
+// :Tile Functions
 const int tile_width = 16;
 
 int world_pos_to_tile_pos(float world_pos) 
@@ -124,6 +122,7 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	return world_pos;
 }
 
+// :Variables
 #define m4_identity m4_make_scale(v3(1, 1, 1))
 
 Vector4 bg_box_color = {0, 0, 0, 0.5};
@@ -138,9 +137,10 @@ const int rock_health = 3;
 
 const int tree_health = 3;
 
-typedef struct Sprite Sprite;
+// :Sprites
+typedef struct SpriteData SpriteData;
 
-struct Sprite
+struct SpriteData
 {
 	Gfx_Image* image;
 };
@@ -160,9 +160,9 @@ enum SpriteID
 	SPRITE_MAX,
 };
 
-Sprite sprites[SPRITE_MAX];
+SpriteData sprites[SPRITE_MAX];
 
-Sprite* get_sprite(SpriteID id)
+SpriteData* get_sprite(SpriteID id)
 {
 	if (id >= 0 && id < SPRITE_MAX)
 	{
@@ -171,11 +171,12 @@ Sprite* get_sprite(SpriteID id)
 	return & sprites[0];
 }
 
-Vector2 get_sprite_size(Sprite* sprite)
+Vector2 get_sprite_size(SpriteData* sprite)
 {
 	return (Vector2) {sprite -> image -> width, sprite -> image -> height};
 }
 
+// :Items
 typedef struct ItemData ItemData;
 
 struct ItemData
@@ -205,19 +206,6 @@ ItemData* get_item(ItemID id)
 	return & items[0];
 }
 
-typedef enum EntityArchetype EntityArchetype;
-
-enum EntityArchetype
-{
-	arch_nil = 0,
-	arch_player = 1,
-	arch_item = 2,
-	arch_rock = 3,
-	arch_tree = 4,
-	arch_tree2 = 5,
-	ARCH_MAX,
-};
-
 SpriteID get_sprite_id_from_ItemID(ItemID item_id)
 {
 	switch (item_id)
@@ -227,11 +215,13 @@ SpriteID get_sprite_id_from_ItemID(ItemID item_id)
 			return SPRITE_item_pine_wood;
 			break;
 		}
+
 		case ITEM_rock: 
 		{
 			return SPRITE_item_gold;
 			break;
 		}
+
 		default:
 		{
 			return 0;
@@ -249,17 +239,64 @@ string get_ItemID_pretty_name(ItemID item_id)
 			break;
 
 		} 
+
 		case ITEM_rock: 
 		{
 			return STR("Gold");
 			break;
 		}
+
 		default:
 		{
 			return STR("nil");
 		}
 	}
 }
+
+// :Buildings
+
+typedef struct BuildingData BuildingData;
+
+struct BuildingData
+{
+
+};
+
+typedef enum BuildingID BuildingID;
+
+enum BuildingID
+{
+	BUILDING_nil,
+	BUILDING_furnace,
+	BUILDING_workbench,
+	BUILDING_MAX,
+};
+
+BuildingData buildings[BUILDING_MAX];
+
+BuildingData* get_building(BuildingID id)
+{
+	if (id >= 0 && id < BUILDING_MAX)
+	{
+		return & buildings[id];
+	}
+	return & buildings[0];
+}
+
+// :Entities
+
+typedef enum EntityArchetype EntityArchetype;
+
+enum EntityArchetype
+{
+	arch_nil = 0,
+	arch_player = 1,
+	arch_item = 2,
+	arch_rock = 3,
+	arch_tree = 4,
+	arch_tree2 = 5,
+	ARCH_MAX,
+};
 
 typedef struct Entity Entity;
 
@@ -278,20 +315,20 @@ struct Entity
 
 #define MAX_ENTITY_COUNT 1024
 
-
+// :UX
 typedef enum UXState UXState;
 
 enum UXState
 {
 	UX_nil,
 	UX_inventory,
-	//UX_building,
+	UX_building,
 };
 
+// :World
 
 typedef struct World World;
 
-// :World
 struct World
 {
 	Entity entities[MAX_ENTITY_COUNT];
@@ -316,6 +353,7 @@ struct WorldFrame
 
 WorldFrame world_frame;
 
+// :Setup
 Entity* entity_create() 
 {
 	Entity* entity_found = 0;
@@ -428,14 +466,14 @@ int entry(int argc, char **argv)
 	world = alloc(get_heap_allocator(), sizeof(World));
 
 	float64 last_time = os_get_elapsed_seconds();
-	sprites[0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
-	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
-	sprites[SPRITE_tree0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
-	sprites[SPRITE_tree1] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
-	sprites[SPRITE_rock0] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
-	sprites[SPRITE_rock1] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
- 	sprites[SPRITE_item_gold] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
-	sprites[SPRITE_item_pine_wood] = (Sprite){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
+	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
+	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
+	sprites[SPRITE_tree0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
+	sprites[SPRITE_tree1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
+	sprites[SPRITE_rock0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
+	sprites[SPRITE_rock1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
+ 	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
+	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
 
 	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
@@ -543,7 +581,7 @@ int entry(int argc, char **argv)
 				Entity* en = & world -> entities[i];
 				if (en -> is_valid && en -> destroyable_world_item == true) 
 				{
-					Sprite* sprite = get_sprite(en -> sprite_id);
+					SpriteData* sprite = get_sprite(en -> sprite_id);
 
 					int entity_tile_x = world_pos_to_tile_pos(en -> pos.x);
 					int entity_tile_y = world_pos_to_tile_pos(en -> pos.y);
@@ -557,7 +595,7 @@ int entry(int argc, char **argv)
 							world_frame.selected_entity = en;
 							smallest_dist = dist;
 						}
-					}; 
+					} 
 				}
 			}
 			//world space current location debug for mouse pos
@@ -575,8 +613,6 @@ int entry(int argc, char **argv)
 					if (en -> is_item)
 					{
 						//todo epic physics pickup
-
-
 						//fabsf converts things to always be positive?
 						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
 						{
@@ -627,7 +663,6 @@ int entry(int argc, char **argv)
 							{
 								break;
 							}
-							
 						}
 
 						entity_destroy(selected_en);
@@ -654,7 +689,7 @@ int entry(int argc, char **argv)
 
 					default:
 					{
-						Sprite* sprite = get_sprite(en -> sprite_id);
+						SpriteData* sprite = get_sprite(en -> sprite_id);
 						Matrix4 xform = m4_scalar(1.0);
 
 						if(en -> is_item == true)
@@ -747,7 +782,7 @@ int entry(int argc, char **argv)
 						Matrix4 xform = m4_scalar(1.0);
 						xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
-						Sprite* sprite = get_sprite(get_sprite_id_from_ItemID(i));
+						SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(i));
 
 						Draw_Quad* quad = draw_rect_xform(xform, v2(16, 16), v4(1, 1, 1, 0.2));
 
@@ -861,6 +896,11 @@ int entry(int argc, char **argv)
 						slot_index += 1;
 					}
 				}
+			}
+
+			// :Building UI
+			{
+
 			}
 		}
 
