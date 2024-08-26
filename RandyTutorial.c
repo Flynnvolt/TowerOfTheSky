@@ -1,31 +1,37 @@
 // Rangef needed to continue tutorial
 
-typedef struct Range1f {
+typedef struct Range1f 
+{
   float min;
   float max;
 } Range1f;
 
-typedef struct Range2f {
+typedef struct Range2f 
+{
   Vector2 min;
   Vector2 max;
 } Range2f;
 
-inline Range2f range2f_make(Vector2 min, Vector2 max) { return (Range2f) { min, max }; }
+inline Range2f range2f_make(Vector2 min, Vector2 max) 
+{ return (Range2f) { min, max }; }
 
-Range2f range2f_shift(Range2f r, Vector2 shift) {
+Range2f range2f_shift(Range2f r, Vector2 shift) 
+{
   r.min = v2_add(r.min, shift);
   r.max = v2_add(r.max, shift);
   return r;
 }
 
-Range2f range2f_make_bottom_center(Vector2 size) {
+Range2f range2f_make_bottom_center(Vector2 size) 
+{
   Range2f range = {0};
   range.max = size;
   range = range2f_shift(range, v2(size.x * -0.5, 0.0));
   return range;
 }
 
-Vector2 range2f_size(Range2f range) {
+Vector2 range2f_size(Range2f range) 
+{
   Vector2 size = {0};
   size = v2_sub(range.min, range.max);
   size.x = fabsf(size.x);
@@ -33,7 +39,8 @@ Vector2 range2f_size(Range2f range) {
   return size;
 }
 
-bool range2f_contains(Range2f range, Vector2 v) {
+bool range2f_contains(Range2f range, Vector2 v) 
+{
   return v.x >= range.min.x && v.x <= range.max.x && v.y >= range.min.y && v.y <= range.max.y;
 }
 
@@ -43,11 +50,13 @@ Range2f range2f_make_bottom_center(Vector2 size);
 Vector2 range2f_size(Range2f range);
 bool range2f_contains(Range2f range, Vector2 v);
 
-Vector2 range2f_get_center(Range2f r) {
+Vector2 range2f_get_center(Range2f r) 
+{
 	return (Vector2) { (r.max.x - r.min.x) * 0.5 + r.min.x, (r.max.y - r.min.y) * 0.5 + r.min.y };
 }
 
-inline float v2_dist(Vector2 a, Vector2 b) {
+inline float v2_dist(Vector2 a, Vector2 b) 
+{
     return v2_length(v2_sub(a, b));
 }
 
@@ -69,16 +78,17 @@ bool animate_f32_to_target(float* value, float target, float delta_t, float rate
 
 void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
 {
-	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
-	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
+	animate_f32_to_target(&(value -> x), target.x, delta_t, rate);
+	animate_f32_to_target(&(value -> y), target.y, delta_t, rate);
 }
 
-Range2f quad_to_range(Draw_Quad quad) {
+Range2f quad_to_range(Draw_Quad quad) 
+{
 	return (Range2f){quad.bottom_left, quad.top_right};
 }
 
-Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) {
-
+Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) 
+{
 	// NOTE: we're assuming these are the screen space matricies.
 	Matrix4 proj = draw_frame.projection;
 	Matrix4 view = draw_frame.camera_xform;
@@ -134,6 +144,10 @@ u32 font_height = 48;
 float screen_width = 240.0;
 
 float screen_height = 135.0;
+
+const s32 Layer_UI = 20;
+
+const s32 Layer_WORLD = 10;
 
 // :Variables
 
@@ -342,13 +356,13 @@ enum BuildingID
 
 BuildingData buildings[BUILDING_MAX];
 
-BuildingData* get_building(BuildingID id)
+BuildingData get_building(BuildingID id)
 {
-	if (id >= 0 && id < BUILDING_MAX)
-	{
-		return & buildings[id];
-	}
-	return & buildings[0];
+    if (id >= 0 && id < BUILDING_MAX)
+    {
+        return buildings[id];
+    }
+    return buildings[0];
 }
 
 // :UX
@@ -395,6 +409,7 @@ struct WorldFrame
 	Entity* selected_entity;
 	Matrix4 world_proj;
 	Matrix4 world_view;
+	bool hover_consumed;
 };
 
 WorldFrame world_frame;
@@ -476,6 +491,30 @@ void setup_item_rock(Entity* en)
 	en -> is_item = true;
 }
 
+void entity_setup(Entity* en, EntityArchetype id) 
+{
+	switch (id) 
+	{
+		case ARCH_furnace:
+		{
+			setup_furnace(en); 
+			break;
+		}
+
+		case ARCH_workbench:
+		{
+			setup_workbench(en); 
+			break;
+		}
+
+		default: 
+		{
+			log_error("missing entity_setup case entry"); 
+			break;
+		}
+	}
+}
+
 Vector2 get_mouse_pos_in_ndc()
 {
 	float mouse_x = input_frame.mouse_x;
@@ -536,6 +575,8 @@ void set_world_space()
 void do_ui_stuff()
 {
 	set_screen_space();
+
+	push_z_layer(Layer_UI);
 
 	// :Inventory UI
 	{
@@ -721,7 +762,7 @@ void do_ui_stuff()
 			world -> ux_state = (world -> ux_state == UX_building ? UX_nil : UX_building);
 		}
 
-		world -> building_alpha_target = (world -> ux_state == UX_building  ? 1.0 : 0.0);
+		world -> building_alpha_target = (world -> ux_state == UX_building ? 1.0 : 0.0);
 		animate_f32_to_target(& world -> building_alpha, world -> building_alpha_target, delta_t, 200.0); // Speed building closes / fades
 		bool is_building_enabled = world -> building_alpha_target == 1;
 
@@ -733,7 +774,7 @@ void do_ui_stuff()
 
 			float padding = 4.0;
 
-			float building_count = (BUILDING_MAX -1); // One less because nil is not a building.
+			float building_count = (BUILDING_MAX - 1); // One less because nil is not a building.
 
 			float total_box_width = (building_count * icon_size) + (padding * (building_count + 1));
 
@@ -767,6 +808,8 @@ void do_ui_stuff()
 
 				if (range2f_contains(box, get_mouse_pos_in_ndc()))
 				{
+					world_frame.hover_consumed = true;
+
 					if(is_key_just_pressed(MOUSE_BUTTON_LEFT))
 					{
 						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
@@ -786,25 +829,46 @@ void do_ui_stuff()
 
 	if(world -> ux_state == UX_build_mode)
 	{
-		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
-
 		set_world_space();
 
 		{
-			BuildingData* building = get_building(world -> placing_building);
-			SpriteData* sprite = get_sprite(building -> icon);
+			Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
+
+			BuildingData building = get_building(world -> placing_building);
+			SpriteData* sprite = get_sprite(building.icon);
+
+			Vector2 pos = mouse_pos_world;
+			pos = round_v2_to_tile(pos);
 
 			Matrix4 xform = m4_identity;
-			xform = m4_translate(xform, v3(mouse_pos_world.x, mouse_pos_world.y, 0));
+			xform = m4_translate(xform, v3(pos.x, pos.y, 0));
+
+			// @Volatile with entity rendering
+
+			xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 			xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, 0.0, 0));
 
 			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+			if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
+			{
+				consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+				Entity* en = entity_create();
+
+				entity_setup(en, building.to_build);
+
+				en -> pos = pos;
+
+				world -> ux_state = 0;
+			}
 		}
 
 		set_screen_space();
 	}
 
 	set_world_space();
+	pop_z_layer();
 }
 
 int entry(int argc, char **argv) 
@@ -824,16 +888,20 @@ int entry(int argc, char **argv)
 
 	// Missing Texture Sprite
 	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
+	
 	// Player
 	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
+
 	// Trees / Rocks
 	sprites[SPRITE_tree0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
 	sprites[SPRITE_tree1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
 	sprites[SPRITE_rock0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
 	sprites[SPRITE_rock1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
+
 	// Items
  	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
 	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
+
 	// Buildings
 	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
 	sprites[SPRITE_building_workbench] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/workbench.png"), get_heap_allocator())};
@@ -883,9 +951,11 @@ int entry(int argc, char **argv)
 		setup_tree(en);
 		en -> pos = v2(i * 10.0, 0.0);
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en->pos);
+		en -> pos = round_v2_to_tile(en -> pos);
 		//en -> pos.y -= tile_width * 0.5;
 	}
+
+	// :Ease of Testing
 
 	// Start with X of X item for ease of testing
 	{
@@ -895,9 +965,11 @@ int entry(int argc, char **argv)
 
 	// X building starts placed in world for ease of testing
 	{
+		/*
 		Entity* en = entity_create();
 
 		setup_furnace(en);
+		*/
 	}
 
 	// Spawn player
@@ -915,13 +987,18 @@ int entry(int argc, char **argv)
 		reset_temporary_storage();
 		world_frame = (WorldFrame){0};
 
-		// Time tracking
+		// :Time tracking
+		
 		float64 now = os_get_elapsed_seconds();
 		delta_t = now - last_time;
 
 		// Log fps
-		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
+		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (now - last_time), (now - last_time) * 1000);
 		last_time = now;
+
+		// :Frame Update
+
+		draw_frame.enable_z_sorting = true;
 
 		world_frame.world_proj = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 		
@@ -932,17 +1009,20 @@ int entry(int argc, char **argv)
 
 			world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0));
 			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
-			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
+			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
 		}
 
 		set_world_space();
 
-		draw_frame.projection = world_frame.world_proj;
-		draw_frame.camera_xform = world_frame.world_view;
+		push_z_layer(Layer_WORLD);
 
 		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
+
+		// :Do UI Rendering
+
+		do_ui_stuff();
 
 		// :Tile Rendering
 		{
@@ -971,6 +1051,7 @@ int entry(int argc, char **argv)
 		// Mouse hover highlight
 		float smallest_dist = INFINITY;
 
+		if(!world_frame.hover_consumed)
 		{
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 			{
@@ -1023,10 +1104,6 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-
-		// :Do UI Rendering
-
-		do_ui_stuff();
 
 		// Click to mine or cut trees
 		{
@@ -1099,11 +1176,14 @@ int entry(int argc, char **argv)
 							xform     = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
 						}
 
-						xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
-						xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-						xform         = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
+						// @Volatile with entity placement
+
+						xform  = m4_translate(xform, v3(0, tile_width * -0.5, 0));
+						xform  = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
+						xform  = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
 						
 						Vector4 col = COLOR_WHITE;
+
 						if(world_frame.selected_entity == en)
 						{
 							col = COLOR_RED;
@@ -1134,14 +1214,17 @@ int entry(int argc, char **argv)
 		{
 			input_axis.x -= 1.0;
 		}
+
 		if (is_key_down('D')) 
 		{
 			input_axis.x += 1.0;
 		}
+
 		if (is_key_down('S')) 
 		{
 			input_axis.y -= 1.0;
 		}
+
 		if (is_key_down('W')) 
 		{
 			input_axis.y += 1.0;
