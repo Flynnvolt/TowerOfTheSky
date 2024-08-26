@@ -132,12 +132,12 @@ typedef enum EntityArchetype EntityArchetype;
 
 enum EntityArchetype
 {
-	arch_nil = 0,
-	arch_player = 1,
-	arch_item = 2,
-	arch_rock = 3,
-	arch_tree = 4,
-	arch_tree2 = 5,
+	ARCH_nil = 0,
+	ARCH_player = 1,
+	ARCH_item = 2,
+	ARCH_rock = 3,
+	ARCH_tree = 4,
+	ARCH_tree2 = 5,
 	ARCH_MAX,
 };
 
@@ -205,7 +205,7 @@ void entity_destroy(Entity* entity)
 
 void setup_player(Entity* en) 
 {
-	en -> arch = arch_player;
+	en -> arch = ARCH_player;
 	en -> sprite_id = SPRITE_player;
 	en -> health = player_health;
 }

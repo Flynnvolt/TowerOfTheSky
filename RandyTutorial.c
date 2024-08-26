@@ -289,12 +289,12 @@ typedef enum EntityArchetype EntityArchetype;
 
 enum EntityArchetype
 {
-	arch_nil = 0,
-	arch_player = 1,
-	arch_item = 2,
-	arch_rock = 3,
-	arch_tree = 4,
-	arch_tree2 = 5,
+	ARCH_nil = 0,
+	ARCH_player = 1,
+	ARCH_item = 2,
+	ARCH_rock = 3,
+	ARCH_tree = 4,
+	ARCH_tree2 = 5,
 	ARCH_MAX,
 };
 
@@ -380,14 +380,14 @@ void entity_destroy(Entity* entity)
 
 void setup_player(Entity* en) 
 {
-	en -> arch = arch_player;
+	en -> arch = ARCH_player;
 	en -> sprite_id = SPRITE_player;
 	en -> health = player_health;
 }
 
 void setup_rock(Entity* en) 
 {
-	en -> arch = arch_rock;
+	en -> arch = ARCH_rock;
 	en -> sprite_id = SPRITE_rock0;
 	en -> health = rock_health;
 	en -> destroyable_world_item = true;
@@ -395,7 +395,7 @@ void setup_rock(Entity* en)
 
 void setup_tree(Entity* en) 
 {
-	en -> arch = arch_tree;
+	en -> arch = ARCH_tree;
 	en -> sprite_id = SPRITE_tree0;
 	en -> health = tree_health;
 	en -> destroyable_world_item = true;
@@ -643,7 +643,7 @@ int entry(int argc, char **argv)
 					{
 						switch (selected_en -> arch)
 						{
-							case arch_tree:
+							case ARCH_tree:
 							{
 								Entity* en = entity_create();
 								setup_item_pine_wood(en);
@@ -651,7 +651,7 @@ int entry(int argc, char **argv)
 								break;
 							}
 
-							case arch_rock:
+							case ARCH_rock:
 							{
 								Entity* en = entity_create();
 								setup_item_rock(en);
@@ -681,7 +681,7 @@ int entry(int argc, char **argv)
 				switch (en -> arch)
 				{	
 					/*
-					case arch_player:
+					case ARCH_player:
 					{
 						break;
 					}
@@ -900,7 +900,7 @@ int entry(int argc, char **argv)
 
 			// :Building UI
 			{
-
+				
 			}
 		}
 
