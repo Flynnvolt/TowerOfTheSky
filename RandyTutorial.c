@@ -1,4 +1,4 @@
-//rangef needed to continue tutorial
+// Rangef needed to continue tutorial
 
 typedef struct Range1f {
   float min;
@@ -62,7 +62,7 @@ bool animate_f32_to_target(float* value, float target, float delta_t, float rate
 	if (almost_equals(*value, target, 0.001f))
 	{
 		*value = target;
-		return true; // reached
+		return true; // Reached
 	}
 	return false;
 }
@@ -122,6 +122,18 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
 	return world_pos;
 }
+
+// :Global APP
+
+float64 delta_t;
+
+Gfx_Font* font;
+
+u32 font_height = 48;
+
+float screen_width = 240.0;
+
+float screen_height = 135.0;
 
 // :Variables
 
@@ -272,37 +284,9 @@ string get_ItemID_pretty_name(ItemID item_id)
 	}
 }
 
-// :Buildings
-
-typedef struct BuildingData BuildingData;
-
-struct BuildingData
-{
-
-};
-
-typedef enum BuildingID BuildingID;
-
-enum BuildingID
-{
-	BUILDING_nil,
-	BUILDING_furnace,
-	BUILDING_workbench,
-	BUILDING_MAX,
-};
-
-BuildingData buildings[BUILDING_MAX];
-
-BuildingData* get_building(BuildingID id)
-{
-	if (id >= 0 && id < BUILDING_MAX)
-	{
-		return & buildings[id];
-	}
-	return & buildings[0];
-}
-
 // :Entities
+
+#define MAX_ENTITY_COUNT 1024
 
 typedef enum EntityArchetype EntityArchetype;
 
@@ -334,7 +318,38 @@ struct Entity
 	bool is_item;
 };
 
-#define MAX_ENTITY_COUNT 1024
+// :Buildings
+
+typedef struct BuildingData BuildingData;
+
+struct BuildingData
+{
+	EntityArchetype to_build;
+	SpriteID icon;
+	// Display Name
+	// Cost
+};
+
+typedef enum BuildingID BuildingID;
+
+enum BuildingID
+{
+	BUILDING_nil,
+	BUILDING_furnace,
+	BUILDING_workbench,
+	BUILDING_MAX,
+};
+
+BuildingData buildings[BUILDING_MAX];
+
+BuildingData* get_building(BuildingID id)
+{
+	if (id >= 0 && id < BUILDING_MAX)
+	{
+		return & buildings[id];
+	}
+	return & buildings[0];
+}
 
 // :UX
 
@@ -345,6 +360,7 @@ enum UXState
 	UX_nil,
 	UX_inventory,
 	UX_building,
+	UX_build_mode,
 };
 
 // :World
@@ -362,6 +378,12 @@ struct World
 	float inventory_alpha;
 
 	float inventory_alpha_target;
+
+	float building_alpha;
+
+	float building_alpha_target;
+
+	BuildingID placing_building;
 };
 
 World* world = 0;
@@ -371,6 +393,8 @@ typedef struct WorldFrame WorldFrame;
 struct WorldFrame 
 {
 	Entity* selected_entity;
+	Matrix4 world_proj;
+	Matrix4 world_view;
 };
 
 WorldFrame world_frame;
@@ -468,7 +492,7 @@ Vector2 get_mouse_pos_in_ndc()
 	return (Vector2){ndc_x, ndc_y};
 }
 
-Vector2 screen_to_world() 
+Vector2 get_mouse_pos_in_world_space() 
 {
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
@@ -491,6 +515,298 @@ Vector2 screen_to_world()
 	return (Vector2){ world_pos.x, world_pos.y };
 }
 
+// :Functions
+
+// :UI Rendering
+
+void set_screen_space()
+{
+	draw_frame.camera_xform = m4_scalar(1.0);
+	draw_frame.projection = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
+}
+
+void set_world_space()
+{
+	Matrix4 prev_view = draw_frame.camera_xform;
+	Matrix4 prev_proj = draw_frame.projection;
+	draw_frame.camera_xform = world_frame.world_view;
+	draw_frame.projection = world_frame.world_proj;
+}
+
+void do_ui_stuff()
+{
+	set_screen_space();
+
+	// :Inventory UI
+	{
+		if(is_key_just_pressed(KEY_TAB))
+		{
+			consume_key_just_pressed(KEY_TAB);
+			world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
+		}
+
+		world -> inventory_alpha_target = (world -> ux_state == UX_inventory ? 1.0 : 0.0);
+		animate_f32_to_target(& world -> inventory_alpha, world -> inventory_alpha_target, delta_t, 200.0); //speed inventory closes / fades
+		bool is_inventory_enabled = world -> inventory_alpha_target == 1;
+
+		if(world -> inventory_alpha != 0.0)
+		{
+			// TODO make inventory fade in out when key pressed.
+
+			float y_pos = 115.0;
+
+			int item_count = 0;
+
+			for (int i = 0; i < ITEM_MAX; i++)
+			{
+				ItemData* item = & world -> inventory_items[i];
+
+				if (item -> amount > 0)
+				{
+					item_count += 1;
+				}
+			}
+
+			const float icon_thing = 16.0;
+			float icon_width = icon_thing;
+
+			const int icon_row_count = 8;
+
+			float entire_thing_width = icon_row_count * icon_width;
+			float x_start_pos = (screen_width * 0.5) - (entire_thing_width * 0.5);
+
+			// Black background box
+			{
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+				draw_rect_xform(xform, v2(entire_thing_width, icon_width), bg_box_color);
+			}
+
+			int slot_index = 0;
+			for (int id = 1; id < ITEM_MAX; id++)
+			{
+				ItemData* item = & world -> inventory_items[id];
+
+				if (item -> amount > 0)
+				{
+					// Draw item icons
+					float slot_index_offset = slot_index * icon_width;
+
+					Matrix4 xform = m4_scalar(1.0);
+					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
+
+					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
+
+					Draw_Quad* quad = draw_rect_xform(xform, v2(16, 16), v4(1, 1, 1, 0.2));
+
+					Range2f icon_box = quad_to_range(*quad);
+
+					float is_selected_alpha = 0.0;
+				
+					if (is_inventory_enabled && range2f_contains(icon_box, get_mouse_pos_in_ndc()))
+					{
+						is_selected_alpha = 1.0;
+					}
+				
+					Matrix4 box_bottom_right_xform = xform;
+
+					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
+
+					// Make items bigger when selected
+					if (is_selected_alpha == 1.0)
+					{
+						// TODO selection polish
+						float scale_adjust = 0.3;
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
+					}
+
+					// Breathe effect on items in inventory when selected
+					if (is_selected_alpha == 1.0)
+					{
+						float scale_adjust = 0.025 * sin_breathe(os_get_elapsed_seconds(), 5.0);
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
+					}
+
+					// Rotate effect on items in inventory when selected
+					if (is_selected_alpha == 1.0)
+					{
+						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
+						xform = m4_rotate_z(xform, rotate_adjust);
+					}
+
+					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
+				
+					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+					// Tooltip
+					if (is_selected_alpha == 1.0)
+					{
+						Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+
+						Range2f screen_range = quad_to_range(screen_quad);
+
+						Vector2 icon_center = range2f_get_center(screen_range);
+
+						Matrix4 xform = m4_scalar(1.0);
+
+						// TODO - we're guessing at the Y box size here.
+						// in order to automate this, we would need to move it down below after we do all the element advance things for the text.
+						// ... but then the box would be drawing in front of everyone. So we'd have to do Z sorting.
+						// Solution for now is to just guess at the size.
+						Vector2 box_size = v2(40.0, 15.0);
+
+						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
+
+						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_width * 0.5, 0));
+
+						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
+
+						draw_rect_xform(xform, box_size, bg_box_color);
+
+						float current_y_pos = icon_center.y;
+						
+						// Draw item name on screen
+						{
+							string title = get_ItemID_pretty_name(id);
+
+							Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+
+							Vector2 draw_pos = icon_center;
+
+							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+							
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // Top center
+
+							draw_pos = v2_add(draw_pos, v2(0, icon_width * -0.5));
+
+							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
+
+							draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+
+							current_y_pos = draw_pos.y;
+						}
+
+						// Draw item amount on screen
+						{
+							string item_amount = STR("x%i"); // %i is where the number goes.
+
+							item_amount = sprint(get_temporary_allocator(), item_amount , item -> amount);
+
+							Gfx_Text_Metrics metrics = measure_text(font, item_amount, font_height, v2(0.1, 0.1));
+
+							Vector2 draw_pos = v2(icon_center.x, current_y_pos);
+
+							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+							
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // Top center
+
+							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+							draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+						}
+					}
+
+					slot_index += 1;
+				}
+			}
+		}
+	}
+
+	// :Building UI
+
+	{
+		if(is_key_just_pressed('C'))
+		{
+			consume_key_just_pressed('C');
+			world -> ux_state = (world -> ux_state == UX_building ? UX_nil : UX_building);
+		}
+
+		world -> building_alpha_target = (world -> ux_state == UX_building  ? 1.0 : 0.0);
+		animate_f32_to_target(& world -> building_alpha, world -> building_alpha_target, delta_t, 200.0); // Speed building closes / fades
+		bool is_building_enabled = world -> building_alpha_target == 1;
+
+		if(world -> building_alpha != 0.0)
+		{
+			float y_pos = 10.0;
+
+			float icon_size = 16.0;
+
+			float padding = 4.0;
+
+			float building_count = (BUILDING_MAX -1); // One less because nil is not a building.
+
+			float total_box_width = (building_count * icon_size) + (padding * (building_count + 1));
+
+			float x_start_pos = (screen_width * 0.5) - (total_box_width * 0.5);
+
+			// Black background box
+			{
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+				draw_rect_xform(xform, v2(total_box_width, icon_size), bg_box_color);
+			}
+
+			float x_start = x_start_pos + padding;
+			
+			// Draw building Icon
+			for (BuildingID id = 1; id < BUILDING_MAX; id++)
+			{
+				BuildingData* building = & buildings[id];
+
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(x_start, y_pos, 0.0));
+				
+				//draw_rect_xform(xform, v2(icon_size, icon_size), v4(1, 1, 1, 0.2)); // White Background box 
+
+				SpriteData* sprite = get_sprite(building -> icon);
+
+				// TODO: Fix sprites so they are not stretched
+				Draw_Quad* quad = draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
+
+				Range2f box = quad_to_range(*quad);
+
+				if (range2f_contains(box, get_mouse_pos_in_ndc()))
+				{
+					if(is_key_just_pressed(MOUSE_BUTTON_LEFT))
+					{
+						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+						
+						world -> placing_building = id;
+						world -> ux_state = UX_build_mode;
+					}
+				}
+
+				// Move to the position for the next icon
+				x_start += icon_size + padding;
+			}
+		}
+	}
+
+	// :Building Mode
+
+	if(world -> ux_state == UX_build_mode)
+	{
+		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
+
+		set_world_space();
+
+		{
+			BuildingData* building = get_building(world -> placing_building);
+			SpriteData* sprite = get_sprite(building -> icon);
+
+			Matrix4 xform = m4_identity;
+			xform = m4_translate(xform, v3(mouse_pos_world.x, mouse_pos_world.y, 0));
+			xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, 0.0, 0));
+
+			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+		}
+
+		set_screen_space();
+	}
+
+	set_world_space();
+}
+
 int entry(int argc, char **argv) 
 {
 	window.title = STR("Tutorial Test");
@@ -505,19 +821,20 @@ int entry(int argc, char **argv)
 	float64 last_time = os_get_elapsed_seconds();
 
 	// :Load Sprites
-	//Missing Texture Sprite
+
+	// Missing Texture Sprite
 	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
-	//Player
+	// Player
 	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
-	//Trees / Rocks
+	// Trees / Rocks
 	sprites[SPRITE_tree0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
 	sprites[SPRITE_tree1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
 	sprites[SPRITE_rock0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
 	sprites[SPRITE_rock1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
-	//Items
+	// Items
  	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
 	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
-	//Buildings
+	// Buildings
 	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
 	sprites[SPRITE_building_workbench] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/workbench.png"), get_heap_allocator())};
 
@@ -533,15 +850,22 @@ int entry(int argc, char **argv)
 
 	// :Font Setup
 
-	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
+	font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
-	const u32 font_height = 48;
 
 	render_atlas_if_not_yet_rendered(font, 32, 'A');
 
+	// :Building Resource Setup
+
+	{
+		//buildings[0] =
+		buildings[BUILDING_furnace] = (BuildingData) {.to_build = ARCH_furnace, .icon = SPRITE_building_furnace};
+		buildings[BUILDING_workbench] = (BuildingData) {.to_build = ARCH_workbench, .icon = SPRITE_building_workbench};
+	}
+
 	// :Spawn Entities
 
-	//spawn rocks
+	// Spawn rocks
 	for (int i = 0; i < 10; i++) 
 	{
 		Entity* en = entity_create();
@@ -552,7 +876,7 @@ int entry(int argc, char **argv)
 		//en -> pos.y -= tile_width * 0.5;
 	}
 
-	//spawn trees
+	// Spawn trees
 	for (int i = 0; i < 10; i++) 
 	{
 		Entity* en = entity_create();
@@ -563,7 +887,7 @@ int entry(int argc, char **argv)
 		//en -> pos.y -= tile_width * 0.5;
 	}
 
-	//start with X of X item for ease of testing
+	// Start with X of X item for ease of testing
 	{
 		//world -> inventory_items[ITEM_pine_wood].amount = 5;
 		//world -> inventory_items[ITEM_rock].amount = 5;
@@ -576,11 +900,11 @@ int entry(int argc, char **argv)
 		setup_furnace(en);
 	}
 
-	//spawn player
+	// Spawn player
 	Entity* player_en = entity_create();
 	setup_player(player_en);
 
-	//camera
+	// Camera Settings
 	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
 
@@ -591,28 +915,32 @@ int entry(int argc, char **argv)
 		reset_temporary_storage();
 		world_frame = (WorldFrame){0};
 
-		//time tracking
+		// Time tracking
 		float64 now = os_get_elapsed_seconds();
-		float64 delta_t = now - last_time;
+		delta_t = now - last_time;
 
-		//log fps
+		// Log fps
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = now;
 
-		//scaling / zoom
-		draw_frame.projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
+		world_frame.world_proj = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 		
-		//camera
+		// Camera
 		{
 			Vector2 target_pos = player_en -> pos;
 			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
 
-			draw_frame.camera_xform = m4_make_scale(v3(1.0, 1.0, 1.0));
-			draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
-			draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
+			world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0));
+			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
+			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0/zoom, 1.0/zoom, 1.0)));
 		}
 
-		Vector2 mouse_pos_world = screen_to_world();
+		set_world_space();
+
+		draw_frame.projection = world_frame.world_proj;
+		draw_frame.camera_xform = world_frame.world_view;
+
+		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
@@ -636,11 +964,11 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
-			//show which tile is currently selected
+			// Show which tile is currently selected
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
 
-		//mouse hover highlight
+		// Mouse hover highlight
 		float smallest_dist = INFINITY;
 
 		{
@@ -681,11 +1009,11 @@ int entry(int argc, char **argv)
 				{
 					if (en -> is_item)
 					{
-						//todo epic physics pickup
-						//fabsf converts things to always be positive?
+						// TODO epic physics pickup
+						// Fabsf converts things to always be positive?
 						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
 						{
-							//pickup item
+							// Pickup item
 							
 							world -> inventory_items[en -> item].amount += 1;
 
@@ -696,7 +1024,11 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		//click to mine or cut trees
+		// :Do UI Rendering
+
+		do_ui_stuff();
+
+		// Click to mine or cut trees
 		{
 			Entity* selected_en = world_frame.selected_entity;
 
@@ -788,195 +1120,7 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		// :UI Rendering
-
-		{
-			float width = 240.0;
-			float height = 135.0;
-			draw_frame.camera_xform = m4_scalar(1.0);
-			draw_frame.projection = m4_make_orthographic_projection(0.0, width, 0.0, height, -1, 10);
-
-			// :Inventory UI
-			if(is_key_just_pressed(KEY_TAB))
-			{
-				consume_key_just_pressed(KEY_TAB);
-				world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
-			}
-
-			world -> inventory_alpha_target = (world -> ux_state == UX_inventory ? 1.0 : 0.0);
-			animate_f32_to_target(& world -> inventory_alpha, world -> inventory_alpha_target, delta_t, 200.0); //speed inventory closes / fades
-			bool is_inventory_enabled = world -> inventory_alpha_target == 1;
-
-			if(world -> inventory_alpha != 0.0)
-			{
-				//TODO make inventory fade in out when key pressed.
-
-				float y_pos = 115.0;
-
-				int item_count = 0;
-
-				for (int i = 0; i < ITEM_MAX; i++)
-				{
-					ItemData* item = & world -> inventory_items[i];
-
-					if (item -> amount > 0)
-					{
-						item_count += 1;
-					}
-				}
-
-				const float icon_thing = 16.0;
-				float icon_width = icon_thing;
-
-				const int icon_row_count = 8;
-
-				float entire_thing_width = icon_row_count * icon_width;
-				float x_start_pos = (width / 2.0) - (entire_thing_width / 2.0);
-
-				//black background intventory box
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(entire_thing_width, icon_width), bg_box_color);
-				}
-
-				int slot_index = 0;
-				for (int i = 0; i < ITEM_MAX; i++)
-				{
-					ItemData* item = & world -> inventory_items[i];
-
-					if (item -> amount > 0)
-					{
-						//draw item icons
-						float slot_index_offset = slot_index * icon_width;
-
-						Matrix4 xform = m4_scalar(1.0);
-						xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-
-						SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(i));
-
-						Draw_Quad* quad = draw_rect_xform(xform, v2(16, 16), v4(1, 1, 1, 0.2));
-
-						Range2f icon_box = quad_to_range(*quad);
-
-						float is_selected_alpha = 0.0;
-					
-						if (is_inventory_enabled && range2f_contains(icon_box, get_mouse_pos_in_ndc()))
-						{
-							is_selected_alpha = 1.0;
-						}
-					
-						Matrix4 box_bottom_right_xform = xform;
-
-						xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
-
-						//make items bigger when selected
-						if (is_selected_alpha == 1.0)
-						{
-							//TODO selection polish
-							float scale_adjust = 0.3;
-							xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
-						}
-
-						//breathe effect on items in inventory when selected
-						if (is_selected_alpha == 1.0)
-						{
-							float scale_adjust = 0.025 * sin_breathe(os_get_elapsed_seconds(), 5.0);
-							xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
-						}
-
-						//rotate effect on items in inventory when selected
-						if (is_selected_alpha == 1.0)
-						{
-							float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
-							xform = m4_rotate_z(xform, rotate_adjust);
-						}
-
-						xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
-					
-						draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
-
-						//tooltip
-						if (is_selected_alpha == 1.0)
-						{
-							Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
-
-							Range2f screen_range = quad_to_range(screen_quad);
-
-							Vector2 icon_center = range2f_get_center(screen_range);
-
-							Matrix4 xform = m4_scalar(1.0);
-
-							// TODO - we're guessing at the Y box size here.
-							// in order to automate this, we would need to move it down below after we do all the element advance things for the text.
-							// ... but then the box would be drawing in front of everyone. So we'd have to do Z sorting.
-							// Solution for now is to just guess at the size.
-							Vector2 box_size = v2(40.0, 15.0);
-
-							//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
-
-							xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_width * 0.5, 0));
-
-							xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
-
-							draw_rect_xform(xform, box_size, bg_box_color);
-
-							float current_y_pos = icon_center.y;
-							
-							//draw item name on screen
-							{
-								string title = get_ItemID_pretty_name(i);
-
-								Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
-
-								Vector2 draw_pos = icon_center;
-
-								draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-								
-								draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // top center
-
-								draw_pos = v2_add(draw_pos, v2(0, icon_width * -0.5));
-
-								draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-								draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
-
-								current_y_pos = draw_pos.y;
-							}
-
-							//draw item amount on screen
-							{
-								string item_amount = STR("x%i"); //%i is where the number goes.
-
-								item_amount = sprint(get_temporary_allocator(), item_amount , item -> amount);
-
-								Gfx_Text_Metrics metrics = measure_text(font, item_amount, font_height, v2(0.1, 0.1));
-
-								Vector2 draw_pos = v2(icon_center.x, current_y_pos);
-
-								draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-								
-								draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // top center
-
-								draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-								draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
-							}
-						}
-
-						slot_index += 1;
-					}
-				}
-			}
-
-			// :Building UI
-
-			{
-				
-			}
-		}
-
-		//Press Esc to Close Game
+		// Press Esc to Close Game
 		if(is_key_just_pressed(KEY_ESCAPE))
 		{
 			window.should_close = true;
