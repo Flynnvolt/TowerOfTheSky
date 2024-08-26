@@ -103,6 +103,7 @@ float sin_breathe(float time, float rate)
 }
 
 // :Tile Functions
+
 const int tile_width = 16;
 
 int world_pos_to_tile_pos(float world_pos) 
@@ -123,6 +124,7 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 }
 
 // :Variables
+
 #define m4_identity m4_make_scale(v3(1, 1, 1))
 
 Vector4 bg_box_color = {0, 0, 0, 0.5};
@@ -137,7 +139,12 @@ const int rock_health = 3;
 
 const int tree_health = 3;
 
+const int furnace_health = 3;
+
+const int workbench_health = 3;
+
 // :Sprites
+
 typedef struct SpriteData SpriteData;
 
 struct SpriteData
@@ -157,6 +164,8 @@ enum SpriteID
 	SPRITE_item_gold,
 	SPRITE_item_pine_wood,
 	SPRITE_rock1,
+	SPRITE_building_furnace,
+	SPRITE_building_workbench,
 	SPRITE_MAX,
 };
 
@@ -166,7 +175,16 @@ SpriteData* get_sprite(SpriteID id)
 {
 	if (id >= 0 && id < SPRITE_MAX)
 	{
-		return & sprites[id];
+		SpriteData* sprite = & sprites[id];
+
+		if (sprite -> image)
+		{
+			return sprite;
+		}
+		else
+		{
+			return & sprites[0];
+		}
 	}
 	return & sprites[0];
 }
@@ -177,6 +195,7 @@ Vector2 get_sprite_size(SpriteData* sprite)
 }
 
 // :Items
+
 typedef struct ItemData ItemData;
 
 struct ItemData
@@ -295,6 +314,8 @@ enum EntityArchetype
 	ARCH_rock = 3,
 	ARCH_tree = 4,
 	ARCH_tree2 = 5,
+	ARCH_furnace = 6,
+	ARCH_workbench = 7,
 	ARCH_MAX,
 };
 
@@ -316,6 +337,7 @@ struct Entity
 #define MAX_ENTITY_COUNT 1024
 
 // :UX
+
 typedef enum UXState UXState;
 
 enum UXState
@@ -354,6 +376,7 @@ struct WorldFrame
 WorldFrame world_frame;
 
 // :Setup
+
 Entity* entity_create() 
 {
 	Entity* entity_found = 0;
@@ -383,6 +406,20 @@ void setup_player(Entity* en)
 	en -> arch = ARCH_player;
 	en -> sprite_id = SPRITE_player;
 	en -> health = player_health;
+}
+
+void setup_furnace(Entity* en) 
+{
+	en -> arch = ARCH_furnace;
+	en -> sprite_id = SPRITE_building_furnace;
+	en -> health = furnace_health;
+}
+
+void setup_workbench(Entity* en) 
+{
+	en -> arch = ARCH_workbench;
+	en -> sprite_id = SPRITE_building_workbench;
+	en -> health = workbench_health;
 }
 
 void setup_rock(Entity* en) 
@@ -466,20 +503,43 @@ int entry(int argc, char **argv)
 	world = alloc(get_heap_allocator(), sizeof(World));
 
 	float64 last_time = os_get_elapsed_seconds();
+
+	// :Load Sprites
+	//Missing Texture Sprite
 	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
+	//Player
 	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
+	//Trees / Rocks
 	sprites[SPRITE_tree0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree0.png"), get_heap_allocator())};
 	sprites[SPRITE_tree1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/tree1.png"), get_heap_allocator())};
 	sprites[SPRITE_rock0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock0.png"), get_heap_allocator())};
 	sprites[SPRITE_rock1] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/rock1.png"), get_heap_allocator())};
+	//Items
  	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
 	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
+	//Buildings
+	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
+	sprites[SPRITE_building_workbench] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/workbench.png"), get_heap_allocator())};
+
+	// @ship debug this off
+	{
+		for (SpriteID i = 0; i < SPRITE_MAX; i++)
+		{
+			SpriteData* sprite = & sprites[i];
+
+			assert(sprite -> image, "Sprite was not setup properly");
+		}
+	}
+
+	// :Font Setup
 
 	Gfx_Font* font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
 
 	render_atlas_if_not_yet_rendered(font, 32, 'A');
+
+	// :Spawn Entities
 
 	//spawn rocks
 	for (int i = 0; i < 10; i++) 
@@ -503,10 +563,17 @@ int entry(int argc, char **argv)
 		//en -> pos.y -= tile_width * 0.5;
 	}
 
-	//start with X of X item
+	//start with X of X item for ease of testing
 	{
 		//world -> inventory_items[ITEM_pine_wood].amount = 5;
 		//world -> inventory_items[ITEM_rock].amount = 5;
+	}
+
+	// X building starts placed in world for ease of testing
+	{
+		Entity* en = entity_create();
+
+		setup_furnace(en);
 	}
 
 	//spawn player
@@ -517,7 +584,8 @@ int entry(int argc, char **argv)
 	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
 
-	//Game Loop
+	// :Game Loop
+
 	while (!window.should_close) 
 	{
 		reset_temporary_storage();
@@ -548,7 +616,7 @@ int entry(int argc, char **argv)
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
-		//tile rendering 
+		// :Tile Rendering
 		{
 			int player_tile_x = world_pos_to_tile_pos(player_en -> pos.x);
 			int player_tile_y = world_pos_to_tile_pos(player_en -> pos.y);
@@ -602,7 +670,8 @@ int entry(int argc, char **argv)
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		}
 
-		//update entities
+		// :Update Entities
+
 		{
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
@@ -671,7 +740,8 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		//render entities
+		// :Render Entities
+
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
 			Entity* en = & world -> entities[i];
@@ -719,6 +789,7 @@ int entry(int argc, char **argv)
 		}
 
 		// :UI Rendering
+
 		{
 			float width = 240.0;
 			float height = 135.0;
@@ -899,6 +970,7 @@ int entry(int argc, char **argv)
 			}
 
 			// :Building UI
+
 			{
 				
 			}
@@ -910,7 +982,8 @@ int entry(int argc, char **argv)
 			window.should_close = true;
 		}
 
-		//Wasd Movement
+		// :Wasd Movement
+
 		Vector2 input_axis = v2(0,0);
 
 		if (is_key_down('A')) 
