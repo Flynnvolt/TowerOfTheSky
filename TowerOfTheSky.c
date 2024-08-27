@@ -762,7 +762,6 @@ void do_ui_stuff()
 					//Draw Sprite
 					draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
 
-					/*
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
@@ -774,13 +773,7 @@ void do_ui_stuff()
 
 						Matrix4 xform = m4_scalar(1.0);
 
-						// TODO - we're guessing at the Y box size here.
-						// in order to automate this, we would need to move it down below after we do all the element advance things for the text.
-						// ... but then the box would be drawing in front of everyone. So we'd have to do Z sorting.
-						// Solution for now is to just guess at the size.
 						Vector2 box_size = v2(40.0, 15.0);
-
-						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 
 						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_size * 0.5, 0));
 
@@ -830,8 +823,6 @@ void do_ui_stuff()
 							draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 						}
 					}
-					*/
-
 					slot_index += 1;
 				}
 			}
@@ -852,6 +843,14 @@ void do_ui_stuff()
 int entry(int argc, char **argv) 
 {
 	window.title = STR("Tower of the Sky");
+
+	//Sprites work with this:
+	/*
+	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.scaled_height = 720; 
+	*/
+
+	//Sprites break with this:
 	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 1080; 
 
@@ -885,7 +884,7 @@ int entry(int argc, char **argv)
 			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
 			{
 				SpriteData* sprite = & sprites[i];
-				assert(sprite->image, "Sprite was not setup properly");
+				assert(sprite -> image, "Sprite was not setup properly");
 			}
 		}
 	#endif
