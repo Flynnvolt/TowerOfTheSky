@@ -247,6 +247,21 @@ Vector2 get_sprite_size(SpriteData* sprite)
 	return (Vector2) {sprite -> image -> width, sprite -> image -> height};
 }
 
+typedef enum EntityArchetype EntityArchetype;
+
+enum EntityArchetype
+{
+	ARCH_nil = 0,
+	ARCH_player = 1,
+	ARCH_item = 2,
+	ARCH_rock = 3,
+	ARCH_tree = 4,
+	ARCH_tree2 = 5,
+	ARCH_furnace = 6,
+	ARCH_workbench = 7,
+	ARCH_MAX,
+};
+
 // :Items
 
 #define MAX_RECIPE_INGREDIENTS 8
@@ -284,7 +299,7 @@ struct ItemData
 	//ItemID type;
 	int amount;
 	// :recipe crafting
-	//EntityArchetype for_structure;
+	EntityArchetype for_structure;
 	ItemAmount crafting_recipe[MAX_RECIPE_INGREDIENTS];
 	float craft_length;
 };
@@ -364,21 +379,6 @@ string get_ItemID_pretty_name(ItemID item_id)
 // :Entities
 
 #define MAX_ENTITY_COUNT 1024
-
-typedef enum EntityArchetype EntityArchetype;
-
-enum EntityArchetype
-{
-	ARCH_nil = 0,
-	ARCH_player = 1,
-	ARCH_item = 2,
-	ARCH_rock = 3,
-	ARCH_tree = 4,
-	ARCH_tree2 = 5,
-	ARCH_furnace = 6,
-	ARCH_workbench = 7,
-	ARCH_MAX,
-};
 
 typedef struct Entity Entity;
 
@@ -1006,18 +1006,18 @@ void do_ui_stuff()
 			for (int i = 1; i < ITEM_MAX; i++) 
 			{
 				ItemData data = get_item_data(i);
-				if (get_crafting_recipe_count(data)) 
+				if (data.for_structure == workbench_en -> arch && get_crafting_recipe_count(data)) 
 				{
 					Matrix4 xform = m4_identity;
 					xform = m4_translate(xform, v3(x1, y1, 0));
 
 					Vector4 col = COLOR_WHITE;
-					if (world->selected_crafting_item == i) 
+					if (world -> selected_crafting_item == i) 
 					{
 						col = COLOR_RED;
 					}
 
-					Draw_Quad* quad = draw_image_xform(get_sprite(get_sprite_id_from_ItemID(i))->image, xform, item_icon_size, col);
+					Draw_Quad* quad = draw_image_xform(get_sprite(get_sprite_id_from_ItemID(i)) -> image, xform, item_icon_size, col);
 					Range2f icon_box = quad_to_range(*quad);
 					if (range2f_contains(icon_box, get_mouse_pos_in_ndc())) 
 					{
@@ -1025,15 +1025,12 @@ void do_ui_stuff()
 						if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
 						{
 							consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-							world->selected_crafting_item = i;
+							world -> selected_crafting_item = i;
 						}
 					}
+					x1 += item_icon_size.x;
 				}
-
-				x1 += item_icon_size.x;
 			}
-			// output item (result)
-			// bunch of input items with counts
 		}
 
 		x0 += section_size.x;
@@ -1047,9 +1044,9 @@ void do_ui_stuff()
 			xform = m4_translate(xform, v3(x0, y0, 0));
 			draw_rect_xform(xform, section_size, bg_col);
 
-			if (world->selected_crafting_item) 
+			if (world -> selected_crafting_item) 
 			{
-				ItemData selected_item_data = get_item_data(world->selected_crafting_item);
+				ItemData selected_item_data = get_item_data(world -> selected_crafting_item);
 
 				// title of item
 				y0 += section_size.y;
@@ -1141,7 +1138,7 @@ void do_ui_stuff()
 					for (int i = 0; i < get_crafting_recipe_count(selected_item_data); i++) 
 					{
 						ItemAmount ingredient_amount = selected_item_data.crafting_recipe[i];
-						if (ingredient_amount.amount > world->inventory_items[ingredient_amount.id].amount) 
+						if (ingredient_amount.amount > world -> inventory_items[ingredient_amount.id].amount) 
 						{
 							has_enough_for_crafting = false;
 							break;
@@ -1162,15 +1159,15 @@ void do_ui_stuff()
 							
 							// :Craft!
 
-							workbench_en->current_crafting_item = world->selected_crafting_item;
-							workbench_en->current_crafting_amount += 1;
+							workbench_en -> current_crafting_item = world -> selected_crafting_item;
+							workbench_en -> current_crafting_amount += 1;
 
 							// remove ingredients from inventory
 							for (int i = 0; i < get_crafting_recipe_count(selected_item_data); i++) 
 							{
 								ItemAmount ingredient_amount = selected_item_data.crafting_recipe[i];
-								world->inventory_items[ingredient_amount.id].amount -= ingredient_amount.amount;
-								assert(world->inventory_items[ingredient_amount.id].amount >= 0, "removed too many items. the check above must have failed!");
+								world -> inventory_items[ingredient_amount.id].amount -= ingredient_amount.amount;
+								assert(world -> inventory_items[ingredient_amount.id].amount >= 0, "removed too many items. the check above must have failed!");
 							}
 						}
 					}
@@ -1289,8 +1286,8 @@ int entry(int argc, char **argv)
 			data -> craft_length = 2.0;
 		}
 
-		items[ITEM_rock] = (ItemData){ .pretty_name=STR("Rock"), .crafting_recipe={ {ITEM_pine_wood, 2} } };
-		items[ITEM_pine_wood] = (ItemData){ .pretty_name=STR("Pine Wood"), .crafting_recipe={ {ITEM_pine_wood, 5}, {ITEM_rock, 1} } };
+		items[ITEM_rock] = (ItemData){ .pretty_name = STR("Rock"), .for_structure = ARCH_furnace, .crafting_recipe = { {ITEM_pine_wood, 2} } };
+		items[ITEM_pine_wood] = (ItemData){ .pretty_name = STR("Pine Wood"), .for_structure = ARCH_workbench, .crafting_recipe={ {ITEM_pine_wood, 5}, {ITEM_rock, 1} } };
 	}
 
 	// :Spawn Entities
@@ -1454,7 +1451,7 @@ int entry(int argc, char **argv)
 
 				if (en -> is_valid)
 				{
-					// switch (en->arch) {
+					// switch (en -> arch) {
 					// ...
 					// }
 
@@ -1462,22 +1459,22 @@ int entry(int argc, char **argv)
 					{
 						if (en -> current_crafting_item) 
 						{
-							float length = en->current_crafting_item;
-							if (en->crafting_end_time == 0) 
+							float length = en -> current_crafting_item;
+							if (en -> crafting_end_time == 0) 
 							{
-								en->crafting_end_time = now() + length;
+								en -> crafting_end_time = now() + length;
 							}
 
 							float alpha = alpha_from_end_time(en -> crafting_end_time, length);
 							// log("%f", alpha);
 
-							if (has_reached_end_time(en->crafting_end_time)) 
+							if (has_reached_end_time(en -> crafting_end_time)) 
 							{
 								// craft thing
 								{
 									Entity* item = entity_create();
-									setup_item(item, en->current_crafting_item);
-									item->pos = en->pos;
+									setup_item(item, en -> current_crafting_item);
+									item -> pos = en -> pos;
 								}
 								en -> current_crafting_amount -= 1;
 								en -> crafting_end_time = 0;
@@ -1513,7 +1510,7 @@ int entry(int argc, char **argv)
 		{
 			Entity* selected_en = world_frame.selected_entity;
 
-			if (selected_en && selected_en->destroyable_world_item)
+			if (selected_en && selected_en -> destroyable_world_item)
 			{
 				if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
 				{
