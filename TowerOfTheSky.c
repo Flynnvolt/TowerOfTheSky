@@ -164,7 +164,7 @@ float64 delta_t;
 
 Gfx_Font* font;
 
-u32 font_height = 48;
+u32 font_height = 96;
 
 float screen_width = 480.0;
 
@@ -693,7 +693,7 @@ void do_ui_stuff()
 				}
 			}
 
-			const float icon_size = 16.0;
+			const float icon_size = 32.0;
 
 			const int icon_row_count = 8;
 
@@ -718,7 +718,7 @@ void do_ui_stuff()
 					float slot_index_offset = slot_index * icon_size;
 
 					Matrix4 xform = m4_scalar(1.0);
-					
+
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
 					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
@@ -736,6 +736,12 @@ void do_ui_stuff()
 					}
 
 					xform = m4_translate(xform, v3(icon_size * 0.5, icon_size * 0.5, 0.0));
+
+					// Make items start slightly smaller so when sized up they dont get to big
+					{
+						float scale_adjust = -0.3;
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
+					}
 
 					// Make items bigger when selected
 					if (is_selected_alpha == 1.0)
@@ -759,11 +765,11 @@ void do_ui_stuff()
 						xform = m4_rotate_z(xform, rotate_adjust);
 					}
 
-					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
+					xform = m4_translate(xform, v3(icon_size * -0.5,  icon_size * -0.5, 0));
 				
 					// Draw Sprite
-					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
-
+					draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
+				
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
@@ -775,7 +781,7 @@ void do_ui_stuff()
 
 						Matrix4 xform = m4_scalar(1.0);
 
-						Vector2 box_size = v2(40.0, 15.0);
+						Vector2 box_size = v2(32.0, 32.0);
 
 						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 
@@ -797,7 +803,7 @@ void do_ui_stuff()
 
 							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 							
-							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // Top center
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
 
 							draw_pos = v2_add(draw_pos, v2(0, icon_size * -0.5));
 
@@ -820,7 +826,7 @@ void do_ui_stuff()
 
 							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 							
-							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // Top center
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -2.0))); // Top center
 
 							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
