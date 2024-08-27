@@ -92,6 +92,28 @@ Range2f quad_to_range(Draw_Quad quad)
 	return (Range2f){quad.bottom_left, quad.top_right};
 }
 
+float float_alpha(float x, float min, float max) 
+{
+	float res = (x-min) / (max-min);
+	res = clamp(res, 0.0, 1.0);
+	return res;
+}
+
+inline float64 now() 
+{
+	return os_get_elapsed_seconds();
+}
+
+float alpha_from_end_time(float64 end_time, float length) 
+{
+	return float_alpha(now(), end_time-length, end_time);
+}
+
+bool has_reached_end_time(float64 end_time) 
+{
+	return now() > end_time;
+}
+
 Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) 
 {
 	// NOTE: we're assuming these are the screen space matricies.
@@ -264,6 +286,7 @@ struct ItemData
 	// :recipe crafting
 	//EntityArchetype for_structure;
 	ItemAmount crafting_recipe[MAX_RECIPE_INGREDIENTS];
+	float craft_length;
 };
 
 ItemData items[ITEM_MAX];
@@ -374,6 +397,7 @@ struct Entity
 	bool workbench_thing;
 	ItemID current_crafting_item;
 	int current_crafting_amount;
+	float64 crafting_end_time;
 };
 
 string get_archetype_pretty_name(EntityArchetype arch) 
@@ -942,6 +966,8 @@ void do_ui_stuff()
 		Vector2 section_size = v2(50.0, 70.0);
 		float gap_between_panels = 10.0;
 		float text_height_pad = 4.0;
+		Vector4 bg_col = v4(0, 0, 0, 0.7);
+		Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
 
 		float ui_width_thing = section_size.x * 2.0 + gap_between_panels;
 
@@ -950,7 +976,7 @@ void do_ui_stuff()
 		{
 			Matrix4 xform = m4_identity;
 			xform = m4_translate(xform, v3(x0, y0, 0));
-			draw_rect_xform(xform, section_size, COLOR_BLACK);
+			draw_rect_xform(xform, section_size, bg_col);
 
 			// title
 			float x1 = x0;
@@ -1019,7 +1045,7 @@ void do_ui_stuff()
 		{
 			Matrix4 xform = m4_identity;
 			xform = m4_translate(xform, v3(x0, y0, 0));
-			draw_rect_xform(xform, section_size, COLOR_BLACK);
+			draw_rect_xform(xform, section_size, bg_col);
 
 			if (world->selected_crafting_item) 
 			{
@@ -1056,6 +1082,9 @@ void do_ui_stuff()
 
 					x0 = bottom_left_right_pane.x + (section_size.x - element_size.x) * 0.5;
 
+					// bg box thing
+					draw_rect(v2(x0, y0), element_size, fill_col);
+
 					// icon
 					{
 						float item_icon_length = element_size.y * 0.8;
@@ -1087,7 +1116,6 @@ void do_ui_stuff()
 
 					// y0 += metrics.visual_size.y;
 
-					draw_rect(v2(x0, y0), element_size, v4(0.5, 0.5, 0.5, 0.5));
 					y0 -= element_size.y;
 
 					y0 -= 2.0f; // padding @cleanup
@@ -1114,7 +1142,7 @@ void do_ui_stuff()
 					}
 
 					Range2f btn_range = range2f_make_bottom_right(v2(x0, y0), size);
-					Vector4 col = v4(0.5, 0.5, 0.5, 0.5);
+					Vector4 col = fill_col;
 					if (has_enough_for_crafting && range2f_contains(btn_range, get_mouse_pos_in_world_space()))
 					{
 						col = COLOR_RED;
@@ -1247,6 +1275,13 @@ int entry(int argc, char **argv)
 	// :item data resource setup
 
 	{
+		// do defaults
+		for (ItemID i = 1; i < ITEM_MAX; i++) 
+		{
+			ItemData* data = & items[i];
+			data -> craft_length = 2.0;
+		}
+
 		items[ITEM_rock] = (ItemData){ .pretty_name=STR("Rock"), .crafting_recipe={ {ITEM_pine_wood, 2} } };
 		items[ITEM_pine_wood] = (ItemData){ .pretty_name=STR("Pine Wood"), .crafting_recipe={ {ITEM_pine_wood, 5}, {ITEM_rock, 1} } };
 	}
@@ -1279,8 +1314,8 @@ int entry(int argc, char **argv)
 
 	// Start with X of X item for ease of testing
 	{
-		//world -> inventory_items[ITEM_pine_wood].amount = 5;
-		//world -> inventory_items[ITEM_rock].amount = 5;
+		world -> inventory_items[ITEM_pine_wood].amount = 50;
+		world -> inventory_items[ITEM_rock].amount = 50;
 	}
 
 	// X building starts placed in world for ease of testing
@@ -1309,12 +1344,13 @@ int entry(int argc, char **argv)
 
 		// :Time tracking
 		
-		float64 now = os_get_elapsed_seconds();
-		delta_t = now - last_time;
+		float64 current_time = os_get_elapsed_seconds();
+		delta_t = current_time - last_time;
+		last_time = current_time;
 
 		// Log fps
-		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (now - last_time), (now - last_time) * 1000);
-		last_time = now;
+		if ((int)current_time != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (current_time - last_time), (current_time - last_time) * 1000);
+		last_time = current_time;
 
 		// :Frame Update
 
@@ -1411,6 +1447,44 @@ int entry(int argc, char **argv)
 
 				if (en -> is_valid)
 				{
+					// switch (en->arch) {
+					// ...
+					// }
+
+					if (en -> workbench_thing) 
+					{
+						if (en -> current_crafting_item) 
+						{
+							float length = en->current_crafting_item;
+							if (en->crafting_end_time == 0) 
+							{
+								en->crafting_end_time = now() + length;
+							}
+
+							float alpha = alpha_from_end_time(en -> crafting_end_time, length);
+							// log("%f", alpha);
+
+							if (has_reached_end_time(en->crafting_end_time)) 
+							{
+								// craft thing
+								{
+									Entity* item = entity_create();
+									setup_item(item, en->current_crafting_item);
+									item->pos = en->pos;
+								}
+								en -> current_crafting_amount -= 1;
+								en -> crafting_end_time = 0;
+
+								assert(en -> current_crafting_amount >= 0, "fuckie wuckie");
+								
+								if (en -> current_crafting_amount == 0) 
+								{
+									en -> current_crafting_item = 0;
+								}
+							}
+						}
+					}
+
 					if (en -> is_item)
 					{
 						// TODO epic physics pickup
@@ -1529,6 +1603,31 @@ int entry(int argc, char **argv)
 						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
 
 						break;
+					}
+				}
+
+				// craft progress bar thing
+				if (en -> current_crafting_item && en -> workbench_thing) 
+				{
+					float radius = 4.0; 
+
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y + 14.0, 0));
+						xform = m4_translate(xform, v3(-radius, -radius, 0));
+						draw_circle_xform(xform, v2(radius * 2, radius * 2), COLOR_WHITE);
+					}
+
+					ItemData craft_item_data = get_item_data(en -> current_crafting_item);
+
+					float alpha = alpha_from_end_time(en -> crafting_end_time, en -> current_crafting_item);
+
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y + 14.0, 0));
+						xform = m4_scale(xform, v3(alpha, alpha, 1.0));
+						xform = m4_translate(xform, v3(-radius, -radius, 0));
+						draw_circle_xform(xform, v2(radius*2, radius*2), COLOR_BLACK);
 					}
 				}
 			}
