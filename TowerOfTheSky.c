@@ -694,6 +694,7 @@ void do_ui_stuff()
 			}
 
 			const float icon_size = 16.0;
+
 			const int icon_row_count = 8;
 
 			float entire_thing_width = icon_row_count * icon_size;
@@ -717,13 +718,13 @@ void do_ui_stuff()
 					float slot_index_offset = slot_index * icon_size;
 
 					Matrix4 xform = m4_scalar(1.0);
-
+					
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
 					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
-
+					
 					// White transparent box to show item slot is filled.
-					Draw_Quad* quad = draw_rect_xform(xform, v2(icon_size , icon_size), v4(1, 1, 1, 0.2));
+					Draw_Quad* quad = draw_rect_xform(xform, v2(icon_size, icon_size), v4(1, 1, 1, 0.2));
 
 					Range2f icon_box = quad_to_range(*quad);
 
@@ -733,6 +734,8 @@ void do_ui_stuff()
 					{
 						is_selected_alpha = 1.0;
 					}
+
+					xform = m4_translate(xform, v3(icon_size * 0.5, icon_size * 0.5, 0.0));
 
 					// Make items bigger when selected
 					if (is_selected_alpha == 1.0)
@@ -755,9 +758,11 @@ void do_ui_stuff()
 						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
 						xform = m4_rotate_z(xform, rotate_adjust);
 					}
+
+					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
 				
-					//Draw Sprite
-					draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
+					// Draw Sprite
+					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
 					// Tooltip
 					if (is_selected_alpha == 1.0)
@@ -771,6 +776,8 @@ void do_ui_stuff()
 						Matrix4 xform = m4_scalar(1.0);
 
 						Vector2 box_size = v2(40.0, 15.0);
+
+						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 
 						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_size * 0.5, 0));
 
