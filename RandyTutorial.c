@@ -459,6 +459,7 @@ struct BuildingData
 {
 	ArchetypeID to_build;
 	SpriteID icon;
+	int pct_per_research_exp; // this jank will get replaced with a recipe one day
 	// Display Name
 	// Cost
 };
@@ -503,9 +504,13 @@ typedef struct UnlockState UnlockState;
 struct UnlockState 
 {
 	bool is_known; // this'll be true when we discover the recipes
-	bool is_researched; // we then research it in the table
 	u8 research_progress; // 0% -> 100%
 };
+
+bool is_fully_unlocked(UnlockState unlock_state) 
+{
+	return unlock_state.research_progress >= 100;
+}
 
 // :World
 
@@ -548,11 +553,17 @@ struct WorldFrame
 	Matrix4 world_proj;
 	Matrix4 world_view;
 	bool hover_consumed;
+	Entity* player;
 };
 
 WorldFrame world_frame;
 
 // :Setup
+
+Entity* get_player() 
+{
+	return world_frame.player;
+}
 
 Entity* entity_create() 
 {
@@ -970,6 +981,8 @@ void do_ui_stuff()
 			for (BuildingID id = 1; id < BUILDING_MAX; id++)
 			{
 				BuildingData* building = & buildings[id];
+				UnlockState unlock_state = world -> building_unlocks[id];
+				bool is_unlocked = is_fully_unlocked(unlock_state);
 
 				Matrix4 xform = m4_identity;
 				xform = m4_translate(xform, v3(x_start, y_pos, 0.0));
@@ -978,12 +991,18 @@ void do_ui_stuff()
 
 				SpriteData* sprite = get_sprite(building -> icon);
 
-				// TODO: Fix sprites so they are not stretched
-				Draw_Quad* quad = draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
+				Vector4 col = COLOR_WHITE;
 
+				if (!is_unlocked) 
+				{
+					col = v4(0.0, 0.0, 0.0, 1.0);
+				}
+
+				Draw_Quad* quad = draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), col);
+ 
 				Range2f box = quad_to_range(*quad);
 
-				if (range2f_contains(box, get_mouse_pos_in_ndc()))
+				if (is_unlocked && range2f_contains(box, get_mouse_pos_in_ndc()))
 				{
 					world_frame.hover_consumed = true;
 
@@ -1344,7 +1363,8 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 			{
 				UnlockState unlock_state = world -> building_unlocks[i];
 				BuildingData building_data = get_building_data(i);
-				if (unlock_state.is_researched) 
+
+				if (is_fully_unlocked(unlock_state)) 
 				{
 					continue;
 				}
@@ -1423,6 +1443,7 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 
 			if (world -> selected_research_thing) 
 			{
+				BuildingData building_data = get_building_data(world -> selected_research_thing);
 				UnlockState* unlock_data = &world -> building_unlocks[world -> selected_research_thing];
 
 				// title
@@ -1494,7 +1515,7 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 						{
 							consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-							unlock_data -> research_progress += 10;
+							unlock_data -> research_progress += building_data.pct_per_research_exp;
 
 							world -> inventory_items[ITEM_exp].amount -= 1;
 							assert(world -> inventory_items[ITEM_exp].amount >= 0, "pre-check failed.");
@@ -1503,7 +1524,6 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 							{
 								unlock_data -> research_progress = 100;
 								// todo - epic feeback
-								unlock_data -> is_researched = true;
 								world -> selected_research_thing = 0;
 								world -> ux_state = 0;
 							}
@@ -1638,9 +1658,9 @@ int entry(int argc, char **argv)
 
 	{
 		//buildings[0] =
-		buildings[BUILDING_furnace] = (BuildingData) {.to_build = ARCH_furnace, .icon = SPRITE_building_furnace};
-		buildings[BUILDING_workbench] = (BuildingData) {.to_build = ARCH_workbench, .icon = SPRITE_building_workbench};
-		buildings[BUILDING_research_station] = (BuildingData){ .to_build = ARCH_research_station, .icon = SPRITE_research_station };
+		buildings[BUILDING_furnace] = (BuildingData) {.to_build = ARCH_furnace, .icon = SPRITE_building_furnace, .pct_per_research_exp = 25};
+		buildings[BUILDING_workbench] = (BuildingData) {.to_build = ARCH_workbench, .icon = SPRITE_building_workbench, .pct_per_research_exp = 25 };
+		buildings[BUILDING_research_station] = (BuildingData){ .to_build = ARCH_research_station, .icon = SPRITE_research_station, .pct_per_research_exp = 50 };
 	}
 
 	// :item data resource setup
@@ -1657,65 +1677,59 @@ int entry(int argc, char **argv)
 		items[ITEM_pine_wood] = (ItemData){ .pretty_name = STR("Pine Wood"), .for_structure = ARCH_workbench, .crafting_recipe={ {ITEM_pine_wood, 5}, {ITEM_rock, 1} } };
 	}
 
-	// :Spawn Entities
-
-	// Spawn rocks
-	for (int i = 0; i < 10; i++) 
+	// note, this'll eventually be moved into a world_setup func after we do serialisation
 	{
-		Entity* en = entity_create();
-		setup_rock(en);
-		en -> pos = v2(i * 10.0, 0.0);
-		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en -> pos);
-		//en -> pos.y -= tile_width * 0.5;
+		// Setup
+		Entity* player_en = entity_create();
+		setup_player(player_en);
+
+		// :Test stuff
+		#if defined(DEV_TESTING)
+		{
+			world -> inventory_items[ITEM_pine_wood].amount = 50;
+			world -> inventory_items[ITEM_rock].amount = 50;
+			world -> inventory_items[ITEM_exp].amount = 50;
+
+			Entity* en = entity_create();
+			setup_research_station(en);
+			en -> pos.x = -20.0;
+		}
+		#endif
+
+		// :Spawn Entities
+
+		// Spawn Rocks
+		for (int i = 0; i < 10; i++) 
+		{
+			Entity* en = entity_create();
+			setup_rock(en);
+			en -> pos = v2(i * 10.0, 0.0);
+			en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+			en -> pos = round_v2_to_tile(en -> pos);
+			//en -> pos.y -= tile_width * 0.5;
+		}
+
+		// Spawn Trees
+		for (int i = 0; i < 10; i++) 
+		{
+			Entity* en = entity_create();
+			setup_tree(en);
+			en -> pos = v2(i * 10.0, 0.0);
+			en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+			en -> pos = round_v2_to_tile(en -> pos);
+			//en -> pos.y -= tile_width * 0.5;
+		}
+
+		// Spawn Exp Veins
+		for (int i = 0; i < 10; i++) 
+		{
+			Entity* en = entity_create();
+			setup_exp_vein(en);
+			en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+			en -> pos = round_v2_to_tile(en -> pos);
+			// en->pos.y -= tile_width * 0.5;
+		}
 	}
-
-	// Spawn trees
-	for (int i = 0; i < 10; i++) 
-	{
-		Entity* en = entity_create();
-		setup_tree(en);
-		en -> pos = v2(i * 10.0, 0.0);
-		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en -> pos);
-		//en -> pos.y -= tile_width * 0.5;
-	}
-
-	for (int i = 0; i < 10; i++) 
-	{
-		Entity* en = entity_create();
-		setup_exp_vein(en);
-		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
-		en -> pos = round_v2_to_tile(en -> pos);
-		// en->pos.y -= tile_width * 0.5;
-	}
-
-	// :Ease of Testing
-
-	#if defined(DEV_TESTING)
-	{
-		world -> inventory_items[ITEM_pine_wood].amount = 50;
-		world -> inventory_items[ITEM_rock].amount = 50;
-		world -> inventory_items[ITEM_exp].amount = 50;
-	}
-
-	// X building starts placed in world for ease of testing
-	{
-		/*
-		Entity* en = entity_create();
-		setup_furnace(en);
-		en -> pos.y = 20.0;
-
-		en = entity_create();
-		setup_research_station(en);
-		en -> pos.x = -20.0;
-		*/
-	}
-	#endif
-
-	// Spawn player
-	Entity* player_en = entity_create();
-	setup_player(player_en);
 
 	// Camera Settings
 	float zoom = 3;
@@ -1732,11 +1746,20 @@ int entry(int argc, char **argv)
 		
 		float64 current_time = os_get_elapsed_seconds();
 		delta_t = current_time - last_time;
-		last_time = current_time;
 
 		// Log fps
 		if ((int)current_time != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (current_time - last_time), (current_time - last_time) * 1000);
 		last_time = current_time;
+
+		// find player lol
+		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+		{
+			Entity* en = & world -> entities[i];
+			if (en -> is_valid && en->arch == ARCH_player) 
+			{
+				world_frame.player = en;
+			}
+		}
 
 		// :Frame Update
 
@@ -1746,7 +1769,7 @@ int entry(int argc, char **argv)
 		
 		// Camera
 		{
-			Vector2 target_pos = player_en -> pos;
+			Vector2 target_pos = get_player() -> pos;
 			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
 
 			world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0));
@@ -1776,9 +1799,9 @@ int entry(int argc, char **argv)
 			float smallest_dist = INFINITY;
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 			{
-				Entity* en = &world->entities[i];
+				Entity* en = & world -> entities[i];
 				
-				bool has_interaction = en->destroyable_world_item || en -> workbench_thing || en -> arch == ARCH_research_station;
+				bool has_interaction = en -> destroyable_world_item || en -> workbench_thing || en -> arch == ARCH_research_station;
 				// add extra :interact cases here ^^
 
 				if (en -> is_valid && has_interaction) 
@@ -1804,9 +1827,9 @@ int entry(int argc, char **argv)
 
 		// :Tile Rendering
 		{
-			int player_tile_x = world_pos_to_tile_pos(player_en -> pos.x);
-			int player_tile_y = world_pos_to_tile_pos(player_en -> pos.y);
-			int tile_radius_x = 40;
+			int player_tile_x = world_pos_to_tile_pos(get_player() -> pos.x);
+			int player_tile_y = world_pos_to_tile_pos(get_player() -> pos.y);
+			int tile_radius_x = 40; 
 			int tile_radius_y = 30;
 
 			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
@@ -1877,7 +1900,7 @@ int entry(int argc, char **argv)
 					{
 						// TODO epic physics pickup
 						// Fabsf converts things to always be positive?
-						if(fabsf(v2_dist(en -> pos, player_en -> pos)) < player_pickup_radius)
+						if (fabsf(v2_dist(en -> pos, get_player() -> pos)) < player_pickup_radius)
 						{
 							// Pickup item
 							
@@ -2075,7 +2098,7 @@ int entry(int argc, char **argv)
 
 		input_axis = v2_normalize(input_axis);
 
-		player_en -> pos = v2_add(player_en -> pos, v2_mulf(input_axis, 100.0 * delta_t));
+		get_player() -> pos = v2_add(get_player() -> pos, v2_mulf(input_axis, 100.0 * delta_t));
 
 		os_update(); 
 		gfx_update();
