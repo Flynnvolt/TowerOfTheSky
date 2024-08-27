@@ -219,6 +219,7 @@ enum SpriteID
 	SPRITE_rock1,
 	SPRITE_building_furnace,
 	SPRITE_building_workbench,
+	SPRITE_research_station,
 	SPRITE_MAX,
 };
 
@@ -259,6 +260,7 @@ enum EntityArchetype
 	ARCH_tree2 = 5,
 	ARCH_furnace = 6,
 	ARCH_workbench = 7,
+	ARCH_research_station = 8,
 	ARCH_MAX,
 };
 
@@ -442,6 +444,7 @@ enum BuildingID
 	BUILDING_nil,
 	BUILDING_furnace,
 	BUILDING_workbench,
+	BUILDING_research_station,
 	BUILDING_MAX,
 };
 
@@ -559,6 +562,12 @@ void setup_workbench(Entity* en)
 	en -> workbench_thing = true;
 }
 
+void setup_research_station(Entity* en) 
+{
+	en -> arch = ARCH_research_station;
+	en -> sprite_id = SPRITE_research_station;
+}
+
 void setup_rock(Entity* en) 
 {
 	en -> arch = ARCH_rock;
@@ -596,6 +605,12 @@ void entity_setup(Entity* en, EntityArchetype id)
 		case ARCH_workbench:
 		{
 			setup_workbench(en); 
+			break;
+		}
+
+		case ARCH_research_station:
+		{
+			setup_research_station(en);
 			break;
 		}
 
@@ -1250,16 +1265,17 @@ int entry(int argc, char **argv)
 	// Buildings
 	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
 	sprites[SPRITE_building_workbench] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/workbench.png"), get_heap_allocator())};
+	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator())};
 
-	// @ship debug this off
-	{
-		for (SpriteID i = 0; i < SPRITE_MAX; i++)
+	#if CONFIGURATION == DEBUG
 		{
-			SpriteData* sprite = & sprites[i];
-
-			assert(sprite -> image, "Sprite was not setup properly");
+			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
+			{
+				SpriteData* sprite = & sprites[i];
+				assert(sprite->image, "Sprite was not setup properly");
+			}
 		}
-	}
+		#endif
 
 	// :Font Setup
 
@@ -1274,6 +1290,7 @@ int entry(int argc, char **argv)
 		//buildings[0] =
 		buildings[BUILDING_furnace] = (BuildingData) {.to_build = ARCH_furnace, .icon = SPRITE_building_furnace};
 		buildings[BUILDING_workbench] = (BuildingData) {.to_build = ARCH_workbench, .icon = SPRITE_building_workbench};
+		buildings[BUILDING_research_station] = (BuildingData){ .to_build = ARCH_research_station, .icon = SPRITE_research_station };
 	}
 
 	// :item data resource setup
