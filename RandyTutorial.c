@@ -236,8 +236,6 @@ enum ItemID
 	ITEM_nil,
 	ITEM_rock,
 	ITEM_pine_wood,
-	ITEM_furnace,
-	ITEM_workbench,
 	ITEM_MAX,
 };
 
@@ -333,18 +331,6 @@ string get_ItemID_pretty_name(ItemID item_id)
 			break;
 		}
 
-		case ITEM_workbench: 
-		{
-			return STR("Workbench");
-			break;
-		}
-
-		case ITEM_furnace: 
-		{
-			return STR("Furnace");
-			break;
-		}
-
 		default:
 		{
 			return STR("nil");
@@ -386,7 +372,32 @@ struct Entity
 	bool destroyable_world_item;
 	bool is_item;
 	bool workbench_thing;
+	ItemID current_crafting_item;
+	int current_crafting_amount;
 };
+
+string get_archetype_pretty_name(EntityArchetype arch) 
+{
+	switch (arch) 
+	{
+		case ARCH_furnace:
+		{
+		return STR("Furnace");
+		break;
+		} 
+
+		case ARCH_workbench:
+		{
+		return STR("WorkBench");
+		break;
+		} 
+		
+		default:
+		{
+			return STR("nil");
+		}
+	}
+}
 
 // :Buildings
 
@@ -442,7 +453,7 @@ struct World
 {
 	Entity entities[MAX_ENTITY_COUNT];
 
-	ItemData inventory_items[ITEM_MAX];
+	InventoryItemData inventory_items[ITEM_MAX];
 
 	UXState ux_state;
 
@@ -513,7 +524,6 @@ void setup_furnace(Entity* en)
 	en -> arch = ARCH_furnace;
 	en -> sprite_id = SPRITE_building_furnace;
 	en -> health = furnace_health;
-	en -> item = ITEM_furnace;
 	en -> workbench_thing = true;
 }
 
@@ -522,7 +532,6 @@ void setup_workbench(Entity* en)
 	en -> arch = ARCH_workbench;
 	en -> sprite_id = SPRITE_building_workbench;
 	en -> health = workbench_health;
-	en -> item = ITEM_workbench;
 	en -> workbench_thing = true;
 }
 
@@ -657,7 +666,7 @@ void do_ui_stuff()
 
 			for (int i = 0; i < ITEM_MAX; i++)
 			{
-				ItemData* item = & world -> inventory_items[i];
+				InventoryItemData* item = & world -> inventory_items[i];
 
 				if (item -> amount > 0)
 				{
@@ -683,7 +692,7 @@ void do_ui_stuff()
 			int slot_index = 0;
 			for (int id = 1; id < ITEM_MAX; id++)
 			{
-				ItemData* item = & world -> inventory_items[id];
+				InventoryItemData* item = & world -> inventory_items[id];
 
 				if (item -> amount > 0)
 				{
@@ -928,6 +937,8 @@ void do_ui_stuff()
 
 	if (world -> ux_state == UX_workbench && world -> open_workbench) 
 	{
+		Entity* workbench_en = world -> open_workbench;
+
 		Vector2 section_size = v2(50.0, 70.0);
 		float gap_between_panels = 10.0;
 		float text_height_pad = 4.0;
@@ -945,7 +956,7 @@ void do_ui_stuff()
 			float x1 = x0;
 			float y1 = y0 + section_size.y;
 			{
-				string title = get_ItemID_pretty_name(world -> open_workbench -> item);
+				string title = get_archetype_pretty_name(workbench_en -> arch);
 				Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
 
 				float center_pos = x0 + section_size.x * 0.5;
@@ -1038,8 +1049,8 @@ void do_ui_stuff()
 				// list out the ingredients
 				for (int i = 0; i < get_crafting_recipe_count(selected_item_data); i++) 
 				{
-					ItemAmount item_amount = selected_item_data.crafting_recipe[i];
-					ItemData item_data = get_item_data(item_amount.id);
+					ItemAmount ingredient_amount = selected_item_data.crafting_recipe[i];
+					ItemData ingredient_item_data = get_item_data(ingredient_amount.id);
 
 					Vector2 element_size = v2(section_size.x * 0.8, 6.0);
 
@@ -1054,7 +1065,7 @@ void do_ui_stuff()
 
 						Matrix4 xform = m4_identity;
 						xform = m4_translate(xform, v3(x1, y1, 0));
-						Draw_Quad* quad = draw_image_xform(get_sprite(get_sprite_id_from_ItemID(item_amount.id))->image, xform, v2(item_icon_length, item_icon_length), COLOR_WHITE);
+						Draw_Quad* quad = draw_image_xform(get_sprite(get_sprite_id_from_ItemID(ingredient_amount.id))->image, xform, v2(item_icon_length, item_icon_length), COLOR_WHITE);
 						Range2f icon_box = quad_to_range(*quad);
 
 						if (range2f_contains(icon_box, get_mouse_pos_in_ndc())) 
@@ -1063,7 +1074,9 @@ void do_ui_stuff()
 						}
 					}
 
-					string txt = STR("3/5");
+					InventoryItemData inv_item = world -> inventory_items[ingredient_amount.id];
+					string txt = tprint("%i/%i", inv_item.amount, ingredient_amount.amount);
+
 					Gfx_Text_Metrics metrics = measure_text(font, txt, font_height, v2(0.1, 0.1));
 					float center_pos = bottom_left_right_pane.x + section_size.x * 0.5;
 					Vector2 draw_pos = v2(center_pos, y0 + element_size.y * 0.5);
@@ -1088,9 +1101,21 @@ void do_ui_stuff()
 					y0 = bottom_left_right_pane.y;
 					y0 += 5.0f; // padding from bottom @cleanup
 
+					// check for all ingredients met
+					bool has_enough_for_crafting = true;
+					for (int i = 0; i < get_crafting_recipe_count(selected_item_data); i++) 
+					{
+						ItemAmount ingredient_amount = selected_item_data.crafting_recipe[i];
+						if (ingredient_amount.amount > world->inventory_items[ingredient_amount.id].amount) 
+						{
+							has_enough_for_crafting = false;
+							break;
+						}
+					}
+
 					Range2f btn_range = range2f_make_bottom_right(v2(x0, y0), size);
 					Vector4 col = v4(0.5, 0.5, 0.5, 0.5);
-					if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+					if (has_enough_for_crafting && range2f_contains(btn_range, get_mouse_pos_in_world_space()))
 					{
 						col = COLOR_RED;
 						world_frame.hover_consumed = true;
@@ -1099,8 +1124,22 @@ void do_ui_stuff()
 						if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
 						{
 							consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+							
+							// :Craft!
+
+							workbench_en->current_crafting_item = world->selected_crafting_item;
+							workbench_en->current_crafting_amount += 1;
+
+							// remove ingredients from inventory
+							for (int i = 0; i < get_crafting_recipe_count(selected_item_data); i++) 
+							{
+								ItemAmount ingredient_amount = selected_item_data.crafting_recipe[i];
+								world->inventory_items[ingredient_amount.id].amount -= ingredient_amount.amount;
+								assert(world->inventory_items[ingredient_amount.id].amount >= 0, "removed too many items. the check above must have failed!");
+							}
 						}
 					}
+					// todo - disable button with has_enough_for_crafting
 					draw_rect(v2(x0, y0), size, col);
 
 					string txt = STR("CRAFT");
@@ -1132,6 +1171,13 @@ void do_ui_stuff()
 		}
 
 		world_frame.hover_consumed = true;
+	}
+
+	// Esc Closes ALL UI
+	if (world -> ux_state != UX_nil && is_key_just_pressed(KEY_ESCAPE)) 
+	{
+		consume_key_just_pressed(KEY_ESCAPE);
+		world -> ux_state = 0;
 	}
 
 	set_world_space();
@@ -1488,8 +1534,8 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		// Press Esc to Close Game
-		if(is_key_just_pressed(KEY_ESCAPE))
+		// Press F1 to Close Game
+		if(is_key_just_pressed(KEY_F1))
 		{
 			window.should_close = true;
 		}
