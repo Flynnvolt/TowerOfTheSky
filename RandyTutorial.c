@@ -28,6 +28,12 @@ void draw_text_with_pivot(Gfx_Font *font, string text, u32 raster_height, Vector
 
 	switch (pivot) 
 	{
+		case PIVOT_bottom_left:
+		{
+			pivot_mul = v2(0.0, 0.0);
+			break;
+		} 
+
 		case PIVOT_center_center:
 		{
 			pivot_mul = v2(0.5, 0.5); 
@@ -176,7 +182,9 @@ Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 const float entity_selection_radius = 8.0f;
 
-const float player_pickup_radius = 20.0f;
+const float player_pickup_radius = 10.0f;
+
+const int exp_vein_health = 3;
 
 const int player_health = 10;
 
@@ -217,6 +225,7 @@ enum SpriteID
 	SPRITE_building_workbench,
 	SPRITE_research_station,
 	SPRITE_exp,
+	SPRITE_exp_vein,
 	SPRITE_MAX,
 };
 
@@ -258,6 +267,7 @@ enum ArchetypeID
 	ARCH_furnace = 6,
 	ARCH_workbench = 7,
 	ARCH_research_station = 8,
+	ARCH_exp_vein = 9,
 	ARCH_MAX,
 };
 
@@ -372,6 +382,12 @@ string get_ItemID_pretty_name(ItemID item_id)
 		case ITEM_rock: 
 		{
 			return STR("Gold");
+			break;
+		}
+
+		case ITEM_exp: 
+		{
+			return STR("Exp");
 			break;
 		}
 
@@ -569,6 +585,14 @@ void setup_player(Entity* en)
 	en -> health = player_health;
 }
 
+void setup_exp_vein(Entity* en) 
+{
+	en -> arch = ARCH_exp_vein;
+	en -> sprite_id = SPRITE_exp_vein;
+	en -> health = exp_vein_health;
+	en -> destroyable_world_item = true;
+}
+
 void setup_furnace(Entity* en) 
 {
 	en -> arch = ARCH_furnace;
@@ -727,6 +751,9 @@ void do_ui_stuff()
 	push_z_layer(Layer_UI);
 
 	Vector2 txt_scale = v2(0.1, 0.1);
+	Vector4 bg_col = v4(0, 0, 0, 0.90);
+	Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
+	Vector4 accent_col = hex_to_rgba(0x44c3daff);
 
 	// :Inventory UI
 	{
@@ -1026,8 +1053,6 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 		Vector2 section_size = v2(50.0, 70.0);
 		float gap_between_panels = 10.0;
 		float text_height_pad = 4.0;
-		Vector4 bg_col = v4(0, 0, 0, 0.7);
-		Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
 
 		float ui_width_thing = section_size.x * 2.0 + gap_between_panels;
 
@@ -1274,9 +1299,6 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 		Vector2 section_size = v2(50.0, 70.0);
 		float gap_between_panels = 10.0;
 		float text_height_pad = 4.0;
-		Vector4 bg_col = v4(0, 0, 0, 0.7);
-		Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
-		Vector4 accent_col = hex_to_rgba(0x44c3daff);
 
 		float ui_width_thing = section_size.x * 2.0 + gap_between_panels;
 
@@ -1438,7 +1460,7 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 					// fill
 					draw_rect(v2(x0, y0), v2(size.x * research_alpha, size.y), accent_col);
 					
-					string txt = tprint("%i%%", unlock_data->research_progress);
+					string txt = tprint("%i%%", unlock_data -> research_progress);
 
 					x0 = x_right_pane_start;
 					x0 += section_size.x * 0.5;
@@ -1447,12 +1469,10 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 					draw_text_with_pivot(font, txt, font_height, v2(x0, y0), txt_scale, COLOR_WHITE, PIVOT_center_center);
 				}
 
-				y0 = y_bottom + 30.0; // @cleanup
-				// todo - material cost
-				{
-				}
+				// todo - put this into a research_recipe array so we can do multiple items for research.
+				bool has_enough_for_research = world -> inventory_items[ITEM_exp].amount > 0;
 
-				// craft button
+				// research button
 				{
 					Vector2 size = v2(section_size.x * 0.8, 6.0);
 
@@ -1460,11 +1480,10 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 					y0 = y_bottom;
 					y0 += 5.0f; // padding from bottom @cleanup
 
-					// todo - check for cost
-
 					Range2f btn_range = range2f_make_bottom_left(v2(x0, y0), size);
 					Vector4 col = fill_col;
-					if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+
+					if (has_enough_for_research && range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
 					{
 						col = COLOR_RED;
 						world_frame.hover_consumed = true;
@@ -1477,6 +1496,9 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 
 							unlock_data -> research_progress += 10;
 
+							world -> inventory_items[ITEM_exp].amount -= 1;
+							assert(world -> inventory_items[ITEM_exp].amount >= 0, "pre-check failed.");
+
 							if (unlock_data -> research_progress >= 100) 
 							{
 								unlock_data -> research_progress = 100;
@@ -1487,7 +1509,7 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 							}
 						}
 					}
-					// todo - disable button with has_enough_for_crafting
+
 					draw_rect(v2(x0, y0), size, col);
 
 					string txt = STR("RESEARCH");
@@ -1497,6 +1519,33 @@ if (world -> ux_state == UX_workbench && world -> interacting_with_entity)
 					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
 					draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+					
+					y0 += size.y;
+				}
+
+				y0 += 6.0f; // arbitrary spacing
+
+				// material icon list
+				{
+					// EXP, x1 (red if out)
+					x0 = x_right_pane_start + section_size.x * 0.5;
+
+					// icon
+					{
+						float item_icon_length = 6.0;
+						Range2f box = range2f_make_center_right(v2(x0, y0), v2(item_icon_length, item_icon_length));
+						draw_sprite_in_rect(SPRITE_exp, box, COLOR_WHITE, 0.4);
+					}
+
+					Vector4 col = COLOR_WHITE;
+
+					if (!has_enough_for_research) 
+					{
+						col = COLOR_RED;
+					}
+
+					string txt = tprint("x1");
+					draw_text_with_pivot(font, txt, font_height, v2(x0, y0), txt_scale, col, PIVOT_center_left);
 				}
 			} 
 			else 
@@ -1561,6 +1610,7 @@ int entry(int argc, char **argv)
  	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
 	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
 	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator()) };
+	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator()) };
 
 	// Buildings
 	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
@@ -1629,6 +1679,15 @@ int entry(int argc, char **argv)
 		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
 		en -> pos = round_v2_to_tile(en -> pos);
 		//en -> pos.y -= tile_width * 0.5;
+	}
+
+	for (int i = 0; i < 10; i++) 
+	{
+		Entity* en = entity_create();
+		setup_exp_vein(en);
+		en -> pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
+		en -> pos = round_v2_to_tile(en -> pos);
+		// en->pos.y -= tile_width * 0.5;
 	}
 
 	// :Ease of Testing
@@ -1860,6 +1919,14 @@ int entry(int argc, char **argv)
 								Entity* en = entity_create();
 								setup_item(en, ITEM_rock);
 								en -> pos = selected_en -> pos;
+								break;
+							}
+
+							case ARCH_exp_vein: 
+							{
+								Entity* en = entity_create();
+								setup_item(en, ITEM_exp);
+								en -> pos = selected_en->pos;
 								break;
 							}
 
