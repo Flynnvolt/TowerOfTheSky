@@ -119,7 +119,7 @@ enum ItemID
 
 ItemData items[ITEM_MAX];
 
-ItemData* get_item(ItemID id)
+ItemData* get_item_data(ItemID id)
 {
 	if (id >= 0 && id < ITEM_MAX)
 	{
