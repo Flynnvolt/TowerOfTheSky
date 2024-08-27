@@ -55,6 +55,11 @@ Vector2 range2f_get_center(Range2f r)
 	return (Vector2) { (r.max.x - r.min.x) * 0.5 + r.min.x, (r.max.y - r.min.y) * 0.5 + r.min.y };
 }
 
+Range2f range2f_make_bottom_right(Vector2 pos, Vector2 size) 
+{
+  return (Range2f) {pos, v2_add(pos, size)};
+}
+
 inline float v2_dist(Vector2 a, Vector2 b) 
 {
     return v2_length(v2_sub(a, b));
@@ -231,6 +236,8 @@ enum ItemID
 	ITEM_nil,
 	ITEM_rock,
 	ITEM_pine_wood,
+	ITEM_furnace,
+	ITEM_workbench,
 	ITEM_MAX,
 };
 
@@ -256,6 +263,8 @@ struct ItemData
 	string pretty_name;
 	//ItemID type;
 	int amount;
+	// :recipe crafting
+	//EntityArchetype for_structure;
 	ItemAmount crafting_recipe[MAX_RECIPE_INGREDIENTS];
 };
 
@@ -324,6 +333,18 @@ string get_ItemID_pretty_name(ItemID item_id)
 			break;
 		}
 
+		case ITEM_workbench: 
+		{
+			return STR("Workbench");
+			break;
+		}
+
+		case ITEM_furnace: 
+		{
+			return STR("Furnace");
+			break;
+		}
+
 		default:
 		{
 			return STR("nil");
@@ -364,6 +385,7 @@ struct Entity
 	ItemID selected_crafting_item;
 	bool destroyable_world_item;
 	bool is_item;
+	bool workbench_thing;
 };
 
 // :Buildings
@@ -390,7 +412,7 @@ enum BuildingID
 
 BuildingData buildings[BUILDING_MAX];
 
-BuildingData get_building(BuildingID id)
+BuildingData get_building_data(BuildingID id)
 {
     if (id >= 0 && id < BUILDING_MAX)
     {
@@ -491,6 +513,8 @@ void setup_furnace(Entity* en)
 	en -> arch = ARCH_furnace;
 	en -> sprite_id = SPRITE_building_furnace;
 	en -> health = furnace_health;
+	en -> item = ITEM_furnace;
+	en -> workbench_thing = true;
 }
 
 void setup_workbench(Entity* en) 
@@ -498,6 +522,8 @@ void setup_workbench(Entity* en)
 	en -> arch = ARCH_workbench;
 	en -> sprite_id = SPRITE_building_workbench;
 	en -> health = workbench_health;
+	en -> item = ITEM_workbench;
+	en -> workbench_thing = true;
 }
 
 void setup_rock(Entity* en) 
@@ -516,18 +542,12 @@ void setup_tree(Entity* en)
 	en -> destroyable_world_item = true;
 }
 
-void setup_item_pine_wood(Entity* en)
+void setup_item(Entity* en, ItemID item_id) 
 {
-	en -> item = ITEM_pine_wood;
-	en -> sprite_id = SPRITE_item_pine_wood;
+	en -> arch = ARCH_item;
+	en -> sprite_id = get_sprite_id_from_ItemID(item_id);
 	en -> is_item = true;
-}
-
-void setup_item_rock(Entity* en)
-{
-	en -> item = ITEM_rock;
-	en -> sprite_id = SPRITE_item_gold;
-	en -> is_item = true;
+	en -> item = item_id;
 }
 
 void entity_setup(Entity* en, EntityArchetype id) 
@@ -603,12 +623,10 @@ void set_screen_space()
 	draw_frame.projection = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
 }
 
-void set_world_space()
+void set_world_space() 
 {
-	Matrix4 prev_view = draw_frame.camera_xform;
-	Matrix4 prev_proj = draw_frame.projection;
-	draw_frame.camera_xform = world_frame.world_view;
 	draw_frame.projection = world_frame.world_proj;
+	draw_frame.camera_xform = world_frame.world_view;
 }
 
 void do_ui_stuff()
@@ -873,7 +891,7 @@ void do_ui_stuff()
 		{
 			Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
 
-			BuildingData building = get_building(world -> placing_building);
+			BuildingData building = get_building_data(world -> placing_building);
 			SpriteData* sprite = get_sprite(building.icon);
 
 			Vector2 pos = mouse_pos_world;
@@ -906,9 +924,9 @@ void do_ui_stuff()
 		set_screen_space();
 	}
 
-	// :Workbench ui
+	// :Workbench UI
 
-	if (world->ux_state == UX_workbench && world -> open_workbench) 
+	if (world -> ux_state == UX_workbench && world -> open_workbench) 
 	{
 		Vector2 section_size = v2(50.0, 70.0);
 		float gap_between_panels = 10.0;
@@ -1061,13 +1079,59 @@ void do_ui_stuff()
 
 					y0 -= 2.0f; // padding @cleanup
 				}
+				
+				// craft button
+				{
+					Vector2 size = v2(section_size.x * 0.8, 6.0);
+
+					x0 = bottom_left_right_pane.x + (section_size.x - size.x) * 0.5;
+					y0 = bottom_left_right_pane.y;
+					y0 += 5.0f; // padding from bottom @cleanup
+
+					Range2f btn_range = range2f_make_bottom_right(v2(x0, y0), size);
+					Vector4 col = v4(0.5, 0.5, 0.5, 0.5);
+					if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+					{
+						col = COLOR_RED;
+						world_frame.hover_consumed = true;
+						// TODO - where do we put the state for the animation of the button?
+						// Either just manually rip it via the App state, or some kind of hash string thing that's probably overcomplicated as shit.
+						if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+						{
+							consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+						}
+					}
+					draw_rect(v2(x0, y0), size, col);
+
+					string txt = STR("CRAFT");
+					Gfx_Text_Metrics metrics = measure_text(font, txt, font_height, v2(0.1, 0.1));
+					float center_pos = bottom_left_right_pane.x + section_size.x * 0.5;
+					Vector2 draw_pos = v2(center_pos, y0 + size.y * 0.5);
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+					draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+				}
 			} 
 			
 			else 
 			{
 				// select item first text
+				y0 += section_size.y * 0.5;
+				{
+					string title = STR("Select Item to Craft");
+					Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+
+					Vector2 draw_pos = v2(x0 + section_size.x * 0.5, y0);
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+					draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+				}
 			}
 		}
+
+		world_frame.hover_consumed = true;
 	}
 
 	set_world_space();
@@ -1234,6 +1298,40 @@ int entry(int argc, char **argv)
 
 		do_ui_stuff();
 
+		// :Select entity
+
+		if (!world_frame.hover_consumed)
+		{
+			// log("%f, %f", mouse_pos_world.x, mouse_pos_world.y);
+			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
+
+			float smallest_dist = INFINITY;
+
+			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+			{
+				Entity* en = & world -> entities[i];
+
+				if (en -> is_valid && (en -> destroyable_world_item || en -> workbench_thing)) 
+				{
+					SpriteData* sprite = get_sprite(en -> sprite_id);
+					int entity_tile_x = world_pos_to_tile_pos(en -> pos.x);
+					int entity_tile_y = world_pos_to_tile_pos(en -> pos.y);
+					float dist = fabsf(v2_dist(en -> pos, mouse_pos_world));
+
+					if (dist < entity_selection_radius) 
+					{
+						if (!world_frame.selected_entity || (dist < smallest_dist)) 
+						{
+							world_frame.selected_entity = en;
+							smallest_dist = dist;
+						}
+					}
+				}
+			}
+			//world space current location debug for mouse pos
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
+		}
+
 		// :Tile Rendering
 		{
 			int player_tile_x = world_pos_to_tile_pos(player_en -> pos.x);
@@ -1256,37 +1354,6 @@ int entry(int argc, char **argv)
 			}
 			// Show which tile is currently selected
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
-		}
-
-		// Mouse hover highlight
-		float smallest_dist = INFINITY;
-
-		if(!world_frame.hover_consumed)
-		{
-			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-			{
-				Entity* en = & world -> entities[i];
-				if (en -> is_valid && en -> destroyable_world_item == true) 
-				{
-					SpriteData* sprite = get_sprite(en -> sprite_id);
-
-					int entity_tile_x = world_pos_to_tile_pos(en -> pos.x);
-					int entity_tile_y = world_pos_to_tile_pos(en -> pos.y);
-
-					float dist = fabsf(v2_dist(en -> pos, mouse_pos_world));
-
-					if (dist < entity_selection_radius)
-					{
-						if (!world_frame.selected_entity || (dist < smallest_dist))
-						{
-							world_frame.selected_entity = en;
-							smallest_dist = dist;
-						}
-					} 
-				}
-			}
-			//world space current location debug for mouse pos
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		}
 
 		// :Update Entities
@@ -1315,16 +1382,16 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		// Click to mine or cut trees
+		// :Selection
 		{
 			Entity* selected_en = world_frame.selected_entity;
 
-			if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
+			if (selected_en && selected_en->destroyable_world_item)
 			{
-				consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-
-				if (selected_en)
+				if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
 				{
+					consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+					
 					selected_en -> health -= 1;
 
 					if (selected_en -> health <= 0)
@@ -1334,7 +1401,7 @@ int entry(int argc, char **argv)
 							case ARCH_tree:
 							{
 								Entity* en = entity_create();
-								setup_item_pine_wood(en);
+								setup_item(en, ITEM_pine_wood);
 								en -> pos = selected_en -> pos;
 								break;
 							}
@@ -1342,7 +1409,7 @@ int entry(int argc, char **argv)
 							case ARCH_rock:
 							{
 								Entity* en = entity_create();
-								setup_item_rock(en);
+								setup_item(en, ITEM_rock);
 								en -> pos = selected_en -> pos;
 								break;
 							}
@@ -1355,6 +1422,17 @@ int entry(int argc, char **argv)
 
 						entity_destroy(selected_en);
 					}
+				}
+			}
+
+			// :Interact
+			if (selected_en && selected_en -> workbench_thing) 
+			{
+				if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+				{
+					consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+					world -> ux_state = UX_workbench;
+					world -> open_workbench = selected_en;
 				}
 			}
 		}
@@ -1383,14 +1461,14 @@ int entry(int argc, char **argv)
 
 						if(en -> is_item == true)
 						{
-							xform     = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
+							xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
 						}
 
 						// @Volatile with entity placement
 
-						xform  = m4_translate(xform, v3(0, tile_width * -0.5, 0));
-						xform  = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-						xform  = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
+						xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
+						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
+						xform = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
 						
 						Vector4 col = COLOR_WHITE;
 
