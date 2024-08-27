@@ -854,15 +854,9 @@ int entry(int argc, char **argv)
 {
 	window.title = STR("Tower of the Sky");
 
-	//Sprites work with this:
-	/*
-	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_height = 720; 
-	*/
-
-	//Sprites break with this:
 	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 1080; 
+	window.fullscreen = true;
 
 	// Where on the monitor the window starts up at
 	window.x = 0;
@@ -942,6 +936,8 @@ int entry(int argc, char **argv)
 		// Log fps
 		if ((int)current_time != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (current_time - last_time), (current_time - last_time) * 1000);
 		last_time = current_time;
+
+		//log("Window Width:%i, Window Height:%i", window.scaled_width, window.scaled_height);
 
 		// find player
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
