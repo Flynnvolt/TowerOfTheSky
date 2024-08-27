@@ -1104,6 +1104,13 @@ void do_ui_stuff()
 					}
 
 					InventoryItemData inv_item = world -> inventory_items[ingredient_amount.id];
+
+					Vector4 txt_col = COLOR_WHITE;
+					if (inv_item.amount < ingredient_amount.amount) 
+					{
+						txt_col = COLOR_RED;
+					}
+
 					string txt = tprint("%i/%i", inv_item.amount, ingredient_amount.amount);
 
 					Gfx_Text_Metrics metrics = measure_text(font, txt, font_height, v2(0.1, 0.1));
@@ -1112,7 +1119,7 @@ void do_ui_stuff()
 					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0, 0.5)));
 
-					draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+					draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), txt_col);
 
 					// y0 += metrics.visual_size.y;
 
