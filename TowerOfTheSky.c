@@ -128,9 +128,9 @@ ItemData* get_item_data(ItemID id)
 	return & items[0];
 }
 
-typedef enum EntityArchetype EntityArchetype;
+typedef enum ArchetypeID ArchetypeID;
 
-enum EntityArchetype
+enum ArchetypeID
 {
 	ARCH_nil = 0,
 	ARCH_player = 1,
@@ -148,7 +148,7 @@ struct Entity
 	bool is_valid;
 	bool render_sprite;
 	SpriteID sprite_id;
-	EntityArchetype arch;
+	ArchetypeID arch;
 	Vector2 pos;
 	int health;
 	ItemID item;
