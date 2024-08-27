@@ -196,7 +196,9 @@ const int furnace_health = 3;
 
 const int workbench_health = 3;
 
-// #define DEV_TESTING
+// :Testing Toggle
+
+#define DEV_TESTING
 
 // :Sprites
 
@@ -222,6 +224,7 @@ enum SpriteID
 	SPRITE_building_furnace,
 	SPRITE_building_workbench,
 	SPRITE_research_station,
+	SPRITE_exp,
 	SPRITE_MAX,
 };
 
@@ -277,6 +280,7 @@ enum ItemID
 	ITEM_nil,
 	ITEM_rock,
 	ITEM_pine_wood,
+	ITEM_exp,
 	ITEM_MAX,
 };
 
@@ -346,6 +350,12 @@ SpriteID get_sprite_id_from_ItemID(ItemID item_id)
 		case ITEM_rock: 
 		{
 			return SPRITE_item_gold;
+			break;
+		}
+
+		case ITEM_exp: 
+		{
+			return SPRITE_exp;
 			break;
 		}
 
@@ -1514,6 +1524,7 @@ int entry(int argc, char **argv)
 	// Items
  	sprites[SPRITE_item_gold] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/gold.png"), get_heap_allocator())};
 	sprites[SPRITE_item_pine_wood] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/pine_wood.png"), get_heap_allocator())};
+	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator()) };
 
 	// Buildings
 	sprites[SPRITE_building_furnace] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/furnace.png"), get_heap_allocator())};
@@ -1590,14 +1601,19 @@ int entry(int argc, char **argv)
 	{
 		world -> inventory_items[ITEM_pine_wood].amount = 50;
 		world -> inventory_items[ITEM_rock].amount = 50;
+		world -> inventory_items[ITEM_exp].amount = 50;
 	}
 
 	// X building starts placed in world for ease of testing
 	{
 		/*
 		Entity* en = entity_create();
-
 		setup_furnace(en);
+		en -> pos.y = 20.0;
+
+		en = entity_create();
+		setup_research_station(en);
+		en -> pos.x = -20.0;
 		*/
 	}
 	#endif
