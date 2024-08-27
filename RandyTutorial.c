@@ -196,6 +196,8 @@ const int furnace_health = 3;
 
 const int workbench_health = 3;
 
+// #define DEV_TESTING
+
 // :Sprites
 
 typedef struct SpriteData SpriteData;
@@ -1333,7 +1335,7 @@ int entry(int argc, char **argv)
 
 	// :Ease of Testing
 
-	// Start with X of X item for ease of testing
+	#if defined(DEV_TESTING)
 	{
 		world -> inventory_items[ITEM_pine_wood].amount = 50;
 		world -> inventory_items[ITEM_rock].amount = 50;
@@ -1347,6 +1349,7 @@ int entry(int argc, char **argv)
 		setup_furnace(en);
 		*/
 	}
+	#endif
 
 	// Spawn player
 	Entity* player_en = entity_create();
