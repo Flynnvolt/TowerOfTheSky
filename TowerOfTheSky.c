@@ -578,7 +578,6 @@ void entity_setup(Entity* en, ArchetypeID id)
 	}
 }
 
-
 Vector2 get_mouse_pos_in_ndc()
 {
 	float mouse_x = input_frame.mouse_x;
@@ -639,7 +638,6 @@ Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, fl
 {
 	SpriteData* sprite = get_sprite(sprite_id);
 
-	// make it smoller
 	Vector2 size = range2f_size(rect);
 	Vector2 offset = rect.min;
 	rect = range2f_shift(rect, v2_mulf(rect.min, -1));
@@ -648,8 +646,6 @@ Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, fl
 	rect.max.x -= size.x * pad_pct * 0.5;
 	rect.max.y -= size.y * pad_pct * 0.5;
 	rect = range2f_shift(rect, offset);
-
-	// todo - ratio render lock
 
 	return draw_image(sprite -> image, rect.min, range2f_size(rect), col);
 }
@@ -670,6 +666,8 @@ void do_ui_stuff()
 		if(is_key_just_pressed(KEY_TAB))
 		{
 			consume_key_just_pressed(KEY_TAB);
+
+			// Swap to Inventory UI Open State.
 			world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 		}
 
@@ -696,7 +694,6 @@ void do_ui_stuff()
 			}
 
 			const float icon_size = 16.0;
-
 			const int icon_row_count = 8;
 
 			float entire_thing_width = icon_row_count * icon_size;
@@ -854,7 +851,7 @@ int entry(int argc, char **argv)
 	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 1080; 
 
-	// where on the monitor the window starts up at
+	// Where on the monitor the window starts up at
 	window.x = 0;
 	window.y = 0;
 
@@ -873,8 +870,8 @@ int entry(int argc, char **argv)
 	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
 
 	// Items
-	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator()) };
-	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator()) };
+	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator())};
+	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator())};
 
 	// Buildings
 	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator())};
@@ -892,6 +889,7 @@ int entry(int argc, char **argv)
 	// :Font Setup
 
 	font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
+
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 		{
@@ -932,7 +930,7 @@ int entry(int argc, char **argv)
 		if ((int)current_time != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (current_time - last_time), (current_time - last_time) * 1000);
 		last_time = current_time;
 
-		// find player lol
+		// find player
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
 			Entity* en = & world -> entities[i];
