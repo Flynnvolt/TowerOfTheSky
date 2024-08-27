@@ -695,19 +695,18 @@ void do_ui_stuff()
 				}
 			}
 
-			const float icon_thing = 16.0;
-			float icon_width = icon_thing;
+			const float icon_size = 16.0;
 
 			const int icon_row_count = 8;
 
-			float entire_thing_width = icon_row_count * icon_width;
+			float entire_thing_width = icon_row_count * icon_size;
 			float x_start_pos = (screen_width * 0.5) - (entire_thing_width * 0.5);
 
 			// Black background box
 			{
 				Matrix4 xform = m4_identity;
 				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-				draw_rect_xform(xform, v2(entire_thing_width, icon_width), bg_box_color);
+				draw_rect_xform(xform, v2(entire_thing_width, icon_size), bg_box_color);
 			}
 
 			int slot_index = 0;
@@ -718,14 +717,16 @@ void do_ui_stuff()
 				if (item -> amount > 0)
 				{
 					// Draw item icons
-					float slot_index_offset = slot_index * icon_width;
+					float slot_index_offset = slot_index * icon_size;
 
 					Matrix4 xform = m4_scalar(1.0);
+
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
 					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
 
-					Draw_Quad* quad = draw_rect_xform(xform, v2(16, 16), v4(1, 1, 1, 0.2));
+					// White transparent box to show item slot is filled.
+					Draw_Quad* quad = draw_rect_xform(xform, v2(icon_size , icon_size), v4(1, 1, 1, 0.2));
 
 					Range2f icon_box = quad_to_range(*quad);
 
@@ -735,10 +736,6 @@ void do_ui_stuff()
 					{
 						is_selected_alpha = 1.0;
 					}
-				
-					Matrix4 box_bottom_right_xform = xform;
-
-					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
 
 					// Make items bigger when selected
 					if (is_selected_alpha == 1.0)
@@ -761,11 +758,11 @@ void do_ui_stuff()
 						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
 						xform = m4_rotate_z(xform, rotate_adjust);
 					}
-
-					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5,  get_sprite_size(sprite).y * -0.5, 0));
 				
-					draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), COLOR_WHITE);
+					//Draw Sprite
+					draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
 
+					/*
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
@@ -785,7 +782,7 @@ void do_ui_stuff()
 
 						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 
-						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_width * 0.5, 0));
+						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_size * 0.5, 0));
 
 						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
@@ -805,7 +802,7 @@ void do_ui_stuff()
 							
 							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.0))); // Top center
 
-							draw_pos = v2_add(draw_pos, v2(0, icon_width * -0.5));
+							draw_pos = v2_add(draw_pos, v2(0, icon_size * -0.5));
 
 							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
 
@@ -833,6 +830,7 @@ void do_ui_stuff()
 							draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 						}
 					}
+					*/
 
 					slot_index += 1;
 				}
@@ -896,8 +894,6 @@ int entry(int argc, char **argv)
 
 	font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
-
-	render_atlas_if_not_yet_rendered(font, 32, 'A');
 
 		{
 			// Setup
