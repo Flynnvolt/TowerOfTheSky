@@ -164,7 +164,7 @@ float64 delta_t;
 
 Gfx_Font* font;
 
-u32 font_height = 60;
+u32 font_height = 48;
 
 float screen_width = 480.0;
 
@@ -856,6 +856,10 @@ void do_ui_stuff()
 
 				float x_start_pos = (screen_width * 0.025);
 
+				int current_mana_int = (int)current_mana;
+
+				int max_mana_int = (int)max_mana;
+
 				float percentage_of_manabar = (mana_bar_width / 100.0);
 
 				float current_mana_percentage = (current_mana / max_mana) * 100.0f;
@@ -879,8 +883,26 @@ void do_ui_stuff()
 					Matrix4 xform = m4_identity;
 					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
 					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
+				}	
+
+				// Mana bar text display
+				{
+					string current_mana_string = STR("Mana: %i/%i"); // %i is where the number goes.
+
+					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int);
+
+					Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
+
+					Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
+
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					
+					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+					draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
-				
 			}
 
 			// Wisdom bar test
@@ -890,6 +912,10 @@ void do_ui_stuff()
 				float wisdom_bar_width = icon_size * icon_row_count;
 
 				float x_start_pos = (screen_width * 0.025);
+
+				int current_wisdom_int = (int)current_wisdom;
+
+				int max_wisdom_int = (int)max_wisdom;
 
 				float percentage_of_wisdom = (wisdom_bar_width / 100.0);
 
@@ -914,6 +940,25 @@ void do_ui_stuff()
 					Matrix4 xform = m4_identity;
 					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
 					draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
+				}
+
+				// wisdom bar text display
+				{
+					string current_wisdom_string = STR("Wisdom: %i/%i"); // %i is where the number goes.
+
+					current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int);
+
+					Gfx_Text_Metrics metrics = measure_text(font, current_wisdom_string, font_height, v2(0.20, 0.20));
+
+					Vector2 draw_pos = v2(x_start_pos + (wisdom_bar_width * 0.5), y_pos + 14);
+
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					
+					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+					draw_text(font, current_wisdom_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
 			}
 		}
