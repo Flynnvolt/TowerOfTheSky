@@ -176,6 +176,14 @@ const s32 Layer_WORLD = 10;
 
 // :Wizard Testing stuffs
 
+const float base_multiplier = 1.04;
+
+float cost_multiplier = 1.2;
+
+float cost_power_multiplier = 1.002;
+
+float power_multiplier = 1.001;
+
 // Mana
 
 bool mana_unlocked = true;
@@ -198,17 +206,25 @@ float wisdom_per_second = 0.0;
 
 // Channel Mana
 
-bool channel_mana_known = false;
+bool channel_mana_known = true;
 
 int channel_mana_level = 0;
 
-float channel_mana_base_cost = 25.0;
+const float channel_mana_base_cost = 25.0;
 
-float channel_mana_current_cost = 25.0;
+float channel_mana_current_cost = channel_mana_base_cost;
 
-float channel_mana_base_mana_per_second_buff = 2.0;
+const float channel_mana_base_mana_per_second_buff = 2.0;
 
-float channel_mana_current_mana_per_second_buff = 2.0;
+float channel_mana_current_mana_per_second_buff = channel_mana_base_mana_per_second_buff;
+
+const float channel_mana_base_cost_multiplier = base_multiplier;
+
+float channel_mana_current_cost_multiplier = channel_mana_base_cost_multiplier;
+
+const float channel_mana_base_power_multiplier = base_multiplier;
+
+float channel_mana_current_power_multiplier = channel_mana_base_power_multiplier;
 
 // Intellect
 
@@ -216,13 +232,21 @@ bool intellect_known = false;
 
 int intellect_level = 0;
 
-float intellect_base_cost = 1;
+const float intellect_base_cost = 1;
 
-float intellect_current_cost = 1;
+float intellect_current_cost = intellect_base_cost;
 
-float intellect_base_max_mana_buff = 100;
+const float intellect_base_max_mana_buff = 100;
 
-float intellect_current_max_mana_buff = 100;
+float intellect_current_max_mana_buff = intellect_base_max_mana_buff ;
+
+const float intellect_base_cost_multiplier = base_multiplier;
+
+float intellect_current_cost_multiplier = intellect_base_cost_multiplier;
+
+const float intellect_base_power_multiplier = base_multiplier;
+
+float intellect_current_power_multiplier = intellect_base_power_multiplier;
 
 // :Variables
 
@@ -897,6 +921,12 @@ void do_ui_stuff()
 					{
 						current_mana += mana_per_second * delta_t;
 					}
+					
+					// Mana Overflow Check
+					if(current_mana >= max_mana)
+					{
+						current_mana = max_mana;
+					}
 
 					// Black background box
 					{
@@ -958,6 +988,12 @@ void do_ui_stuff()
 						current_wisdom += wisdom_per_second * delta_t;
 					}
 
+					// Wisdom Overflow Check
+					if(current_wisdom >= max_wisdom)
+					{
+						current_wisdom = max_wisdom;
+					}
+
 					// Black background box
 					{
 						Matrix4 xform = m4_identity;
@@ -992,39 +1028,69 @@ void do_ui_stuff()
 					}
 				}
 			}
-		
+
 			// Level Up Channel Mana Button
+			if(channel_mana_known == true)
 			{
-				Vector2 size = v2(16.0 , 16.0);
-
-				Vector2 button_pos = v2(150, y_pos);
-
-				Range2f btn_range = range2f_make_bottom_left(button_pos, size);
-
-				Vector4 col = fill_col;
-
-				if (/*check for have enough here */ range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
 				{
-					col = COLOR_RED;
-					world_frame.hover_consumed = true;
+					Vector2 size = v2(16.0 , 16.0);
 
-					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+					Vector2 button_pos = v2(150, y_pos);
+
+					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+
+					Vector4 col = fill_col;
+
+					// Check if enough mana for upgrade
+					if(current_mana > channel_mana_current_cost)
 					{
-						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+						// Check if mouse is on button
+						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						{
+							col = COLOR_RED;
+							world_frame.hover_consumed = true;
+
+							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+							{
+								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+								// Spend Mana on Upgrade
+								current_mana -= channel_mana_current_cost;
+								
+								// Apply upgrade
+								mana_per_second += channel_mana_current_mana_per_second_buff;
+
+								// Power Up Upgrade
+								channel_mana_current_mana_per_second_buff *= channel_mana_current_power_multiplier;
+
+								// Increase power multiplier
+								channel_mana_current_power_multiplier *= power_multiplier;
+
+								// Increase cost of upgrade
+								channel_mana_current_cost *= cost_multiplier;
+
+								// Increase cost multiplier
+								channel_mana_current_cost_multiplier *= cost_power_multiplier;
+
+								// Level up Upgrade
+								channel_mana_level += 1;
+							}
+						}
 					}
+
+					// Draw Button
+					draw_rect(button_pos, size, col);
+
+					// Draw Button Text
+					string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
+
+					Gfx_Text_Metrics metrics = measure_text(font, channel_mana_tooltip, font_height, v2(0.1, 0.1));
+					Vector2 draw_pos = v2(button_pos.x + 7, button_pos.y + 7);
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+					draw_text(font, channel_mana_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 				}
-
-				draw_rect(button_pos, size, col);
-
-				//log("%f", y_pos);
-
-				string txt = STR("Level Up\nChannel Mana");
-				Gfx_Text_Metrics metrics = measure_text(font, txt, font_height, v2(0.1, 0.1));
-				Vector2 draw_pos = v2(button_pos.x + 7, button_pos.y + 7);
-				draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-				draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
-
-				draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 			}
 		}
 		world_frame.hover_consumed = true;
