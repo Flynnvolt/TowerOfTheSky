@@ -174,9 +174,15 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
+// Wizard Testing stuffs
+
 float current_mana = 0;
 
 float max_mana = 100;
+
+float current_wisdom = 0;
+
+float max_wisdom = 100;
 
 // :Variables
 
@@ -663,7 +669,8 @@ void do_ui_stuff()
 	Vector2 txt_scale = v2(0.1, 0.1);
 	Vector4 bg_col = v4(0, 0, 0, 0.90);
 	Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
-	Vector4 accent_col = hex_to_rgba(0x44c3daff);
+	Vector4 accent_col_blue = hex_to_rgba(0x44c3daff);
+	Vector4 accent_col_purple = hex_to_rgba(0x9d00ffff);
 
 	// :Inventory UI
 	{
@@ -871,7 +878,42 @@ void do_ui_stuff()
 				{
 					Matrix4 xform = m4_identity;
 					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col);
+					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
+				}
+				
+			}
+
+			// Wisdom bar test
+			{
+				float y_pos = 125.0;
+
+				float wisdom_bar_width = 256.0;
+
+				float x_start_pos = (screen_width * 0.5) - (wisdom_bar_width * 0.5);
+
+				float percentage_of_wisdom = (wisdom_bar_width / 100.0);
+
+				float current_wisdom_percentage = (current_wisdom / max_wisdom) * 100.0f;
+
+				float wisdom_bar_visual_size = (percentage_of_wisdom * current_wisdom_percentage);
+
+				if(current_wisdom < max_wisdom)
+				{
+					current_wisdom += 0.0050;
+				}
+
+				// Black background box
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(wisdom_bar_width, icon_size), bg_box_color);
+				}
+
+				//  Wisdom fill
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
 				}
 			}
 		}
