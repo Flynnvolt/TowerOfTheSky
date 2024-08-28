@@ -174,9 +174,11 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
-// Wizard Testing stuffs
+// :Wizard Testing stuffs
 
 // Mana
+
+bool mana_unlocked = true;
 
 float current_mana = 0.0;
 
@@ -186,11 +188,41 @@ float mana_per_second = 10.0;
 
 // Wisdom
 
+bool wisdom_unlocked = false;
+
 float current_wisdom = 0.0;
 
-float max_wisdom = 100;
+float max_wisdom = 50.0;
 
 float wisdom_per_second = 0.0;
+
+// Channel Mana
+
+bool channel_mana_known = false;
+
+int channel_mana_level = 0;
+
+float channel_mana_base_cost = 25.0;
+
+float channel_mana_current_cost = 25.0;
+
+float channel_mana_base_mana_per_second_buff = 2.0;
+
+float channel_mana_current_mana_per_second_buff = 2.0;
+
+// Intellect
+
+bool intellect_known = false;
+
+int intellect_level = 0;
+
+float intellect_base_cost = 1;
+
+float intellect_current_cost = 1;
+
+float intellect_base_max_mana_buff = 100;
+
+float intellect_current_max_mana_buff = 100;
 
 // :Variables
 
@@ -461,17 +493,6 @@ enum UXState
 };
 typedef struct UnlockState UnlockState;
 
-struct UnlockState 
-{
-	bool is_known; // this'll be true when we discover the recipes
-	u8 research_progress; // 0% -> 100%
-};
-
-bool is_fully_unlocked(UnlockState unlock_state) 
-{
-	return unlock_state.research_progress >= 100;
-}
-
 // :World
 
 typedef struct World World;
@@ -497,10 +518,6 @@ struct World
 	Entity* interacting_with_entity;
 
 	ItemID selected_crafting_item;
-
-	BuildingID selected_research_thing;
-
-	UnlockState building_unlocks[BUILDING_MAX];
 };
 
 World* world = 0;
@@ -856,120 +873,161 @@ void do_ui_stuff()
 				}
 			}
 
-			// Mana bar test
+			// Mana bar
+			if(mana_unlocked == true)
 			{
-				float y_pos = 240;
-
-				float mana_bar_width = icon_size * icon_row_count;
-
-				float x_start_pos = (screen_width * 0.025);
-
-				int current_mana_int = (int)current_mana;
-
-				int max_mana_int = (int)max_mana;
-
-				float percentage_of_manabar = (mana_bar_width / 100.0);
-
-				float current_mana_percentage = (current_mana / max_mana) * 100.0f;
-
-				float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
-
-				if(current_mana < max_mana)
 				{
-					current_mana += mana_per_second * delta_t;
-				}
+					float y_pos = 240;
 
-				// Black background box
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
-				}
+					float mana_bar_width = icon_size * icon_row_count;
 
-				// Mana fill
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
-				}	
+					float x_start_pos = (screen_width * 0.025);
 
-				// Mana bar current mana display
-				{
-					string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
+					int current_mana_int = (int)current_mana;
 
-					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
+					int max_mana_int = (int)max_mana;
 
-					Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
+					float percentage_of_manabar = (mana_bar_width / 100.0);
 
-					Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
+					float current_mana_percentage = (current_mana / max_mana) * 100.0f;
 
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					
-					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+					float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
 
-					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+					if(current_mana < max_mana)
+					{
+						current_mana += mana_per_second * delta_t;
+					}
 
-					draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+					// Black background box
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+						draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
+					}
+
+					// Mana fill
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+						draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
+					}	
+
+					// Mana bar current mana display
+					{
+						string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
+
+						current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
+
+						Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
+
+						Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
+
+						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+						
+						draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+						draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+						draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+					}
 				}
 			}
 
-			// Wisdom bar test
+			// Wisdom bar
+			if(wisdom_unlocked == true)
 			{
-				float y_pos = 220;
-
-				float wisdom_bar_width = icon_size * icon_row_count;
-
-				float x_start_pos = (screen_width * 0.025);
-
-				int current_wisdom_int = (int)current_wisdom;
-
-				int max_wisdom_int = (int)max_wisdom;
-
-				float percentage_of_wisdom = (wisdom_bar_width / 100.0);
-
-				float current_wisdom_percentage = (current_wisdom / max_wisdom) * 100.0f;
-
-				float wisdom_bar_visual_size = (percentage_of_wisdom * current_wisdom_percentage);
-
-				if(current_wisdom < max_wisdom)
 				{
-					current_wisdom += wisdom_per_second * delta_t;
+					float y_pos = 220;
+
+					float wisdom_bar_width = icon_size * icon_row_count;
+
+					float x_start_pos = (screen_width * 0.025);
+
+					int current_wisdom_int = (int)current_wisdom;
+
+					int max_wisdom_int = (int)max_wisdom;
+
+					float percentage_of_wisdom = (wisdom_bar_width / 100.0);
+
+					float current_wisdom_percentage = (current_wisdom / max_wisdom) * 100.0f;
+
+					float wisdom_bar_visual_size = (percentage_of_wisdom * current_wisdom_percentage);
+
+					if(current_wisdom < max_wisdom)
+					{
+						current_wisdom += wisdom_per_second * delta_t;
+					}
+
+					// Black background box
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+						draw_rect_xform(xform, v2(wisdom_bar_width, icon_size), bg_box_color);
+					}
+
+					//  Wisdom fill
+					{
+						Matrix4 xform = m4_identity;
+						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+						draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
+					}
+
+					// wisdom bar current wisdom display
+					{
+						string current_wisdom_string = STR("Wisdom: %i/%i    +%.1f/s"); // %i is where the number goes.
+
+						current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int, wisdom_per_second);
+
+						Gfx_Text_Metrics metrics = measure_text(font, current_wisdom_string, font_height, v2(0.20, 0.20));
+
+						Vector2 draw_pos = v2(x_start_pos + (wisdom_bar_width * 0.5), y_pos + 14);
+
+						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+						
+						draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+						draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+						draw_text(font, current_wisdom_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+					}
+				}
+			}
+		
+			// Level Up Channel Mana Button
+			{
+				Vector2 size = v2(16.0 , 16.0);
+
+				Vector2 button_pos = v2(150, y_pos);
+
+				Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+
+				Vector4 col = fill_col;
+
+				if (/*check for have enough here */ range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+				{
+					col = COLOR_RED;
+					world_frame.hover_consumed = true;
+
+					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+					{
+						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+					}
 				}
 
-				// Black background box
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(wisdom_bar_width, icon_size), bg_box_color);
-				}
+				draw_rect(button_pos, size, col);
 
-				//  Wisdom fill
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
-				}
+				//log("%f", y_pos);
 
-				// wisdom bar current wisdom display
-				{
-					string current_wisdom_string = STR("Wisdom: %i/%i    +%.1f/s"); // %i is where the number goes.
+				string txt = STR("Level Up\nChannel Mana");
+				Gfx_Text_Metrics metrics = measure_text(font, txt, font_height, v2(0.1, 0.1));
+				Vector2 draw_pos = v2(button_pos.x + 7, button_pos.y + 7);
+				draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+				draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
-					current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int, wisdom_per_second);
-
-					Gfx_Text_Metrics metrics = measure_text(font, current_wisdom_string, font_height, v2(0.20, 0.20));
-
-					Vector2 draw_pos = v2(x_start_pos + (wisdom_bar_width * 0.5), y_pos + 14);
-
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					
-					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-					draw_text(font, current_wisdom_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
-				}
+				draw_text(font, txt, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 			}
 		}
+		world_frame.hover_consumed = true;
 	}
 
 	// Esc Closes ALL UI
@@ -1044,11 +1102,6 @@ int entry(int argc, char **argv)
 			#if defined(DEV_TESTING)
 			{
 				world -> inventory_items[ITEM_exp].amount = 50;
-				/*
-				Entity* en = entity_create();
-				setup_research_station(en);
-				en -> pos.x = -20.0;
-				*/
 			}
 			#endif
 		}
@@ -1113,31 +1166,28 @@ int entry(int argc, char **argv)
 
 		do_ui_stuff();
 
-		if (!world_frame.hover_consumed)
+		// :Tile Rendering
 		{
-			// :Tile Rendering
-			{
-				int player_tile_x = world_pos_to_tile_pos(get_player() -> pos.x);
-				int player_tile_y = world_pos_to_tile_pos(get_player() -> pos.y);
-				int tile_radius_x = 40; 
-				int tile_radius_y = 30;
+			int player_tile_x = world_pos_to_tile_pos(get_player() -> pos.x);
+			int player_tile_y = world_pos_to_tile_pos(get_player() -> pos.y);
+			int tile_radius_x = 40; 
+			int tile_radius_y = 30;
 
-				for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
+			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
+			{
+				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
 				{
-					for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
+					if ((x + (y % 2 == 0) ) % 2 == 0) 
 					{
-						if ((x + (y % 2 == 0) ) % 2 == 0) 
-						{
-							Vector4 col = v4(0.0, 0.0, 0.2, 0.35);
-							float x_pos = x * tile_width;
-							float y_pos = y * tile_width;
-							draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
-						}
+						Vector4 col = v4(0.0, 0.0, 0.2, 0.35);
+						float x_pos = x * tile_width;
+						float y_pos = y * tile_width;
+						draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
 					}
 				}
-				// Show which tile is currently selected
-				//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 			}
+			// Show which tile is currently selected
+			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
 
 		// :Render Entities
