@@ -164,7 +164,7 @@ float64 delta_t;
 
 Gfx_Font* font;
 
-u32 font_height = 96;
+u32 font_height = 60;
 
 float screen_width = 480.0;
 
@@ -690,7 +690,7 @@ void do_ui_stuff()
 		{
 			// TODO make inventory fade in out when key pressed.
 
-			float y_pos = 225.0;
+			float y_pos = 240.0;
 
 			int item_count = 0;
 
@@ -704,7 +704,7 @@ void do_ui_stuff()
 				}
 			}
 
-			const float icon_size = 32.0;
+			const float icon_size = 16.0;
 
 			const int icon_row_count = 8;
 
@@ -750,7 +750,7 @@ void do_ui_stuff()
 
 					// Make items start slightly smaller so when sized up they dont get to big
 					{
-						float scale_adjust = -0.3;
+						float scale_adjust = -0.10;
 						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
 					}
 
@@ -758,7 +758,7 @@ void do_ui_stuff()
 					if (is_selected_alpha == 1.0)
 					{
 						// TODO selection polish
-						float scale_adjust = 0.3;
+						float scale_adjust = 0.25;
 						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
 					}
 
@@ -792,7 +792,7 @@ void do_ui_stuff()
 
 						Matrix4 xform = m4_scalar(1.0);
 
-						Vector2 box_size = v2(32.0, 32.0);
+						Vector2 box_size = v2(16.0, 16.0);
 
 						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 
@@ -837,7 +837,7 @@ void do_ui_stuff()
 
 							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 							
-							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -2.0))); // Top center
+							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
 
 							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
@@ -850,11 +850,11 @@ void do_ui_stuff()
 
 			// Mana bar test
 			{
-				float y_pos = 175.0;
+				float y_pos = 240;
 
-				float mana_bar_width = 256.0;
+				float mana_bar_width = icon_size * icon_row_count;
 
-				float x_start_pos = (screen_width * 0.5) - (mana_bar_width * 0.5);
+				float x_start_pos = (screen_width * 0.025);
 
 				float percentage_of_manabar = (mana_bar_width / 100.0);
 
@@ -885,11 +885,11 @@ void do_ui_stuff()
 
 			// Wisdom bar test
 			{
-				float y_pos = 125.0;
+				float y_pos = 220;
 
-				float wisdom_bar_width = 256.0;
+				float wisdom_bar_width = icon_size * icon_row_count;
 
-				float x_start_pos = (screen_width * 0.5) - (wisdom_bar_width * 0.5);
+				float x_start_pos = (screen_width * 0.025);
 
 				float percentage_of_wisdom = (wisdom_bar_width / 100.0);
 
