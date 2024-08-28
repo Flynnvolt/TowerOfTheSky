@@ -176,13 +176,11 @@ const s32 Layer_WORLD = 10;
 
 // :Wizard Testing stuffs
 
-const float base_multiplier = 1.04;
+const float base_multiplier = 1.05;
 
-float cost_multiplier = 1.2;
+float cost_multiplier = 1.001;
 
-float cost_power_multiplier = 1.002;
-
-float power_multiplier = 1.001;
+float power_multiplier = 1.0005;
 
 // Mana
 
@@ -194,15 +192,15 @@ float max_mana = 100.0;
 
 float mana_per_second = 10.0;
 
-// Wisdom
+// Intellect
 
-bool wisdom_unlocked = false;
+bool intellect_unlocked = false;
 
-float current_wisdom = 0.0;
+float current_intellect = 0.0;
 
-float max_wisdom = 50.0;
+float max_intellect = 50.0;
 
-float wisdom_per_second = 0.0;
+float intellect_per_second = 0.0;
 
 // Channel Mana
 
@@ -226,27 +224,53 @@ const float channel_mana_base_power_multiplier = base_multiplier;
 
 float channel_mana_current_power_multiplier = channel_mana_base_power_multiplier;
 
-// Intellect
+// Wisdom
 
-bool intellect_known = false;
+bool wisdom_known = false;
 
-int intellect_level = 0;
+int wisdom_level = 0;
 
-const float intellect_base_cost = 1;
+const float wisdom_base_cost = 1;
 
-float intellect_current_cost = intellect_base_cost;
+float wisdom_current_cost = wisdom_base_cost;
 
-const float intellect_base_max_mana_buff = 100;
+const float wisdom_base_max_mana_buff = 100;
 
-float intellect_current_max_mana_buff = intellect_base_max_mana_buff ;
+float wisdom_current_max_mana_buff = wisdom_base_max_mana_buff;
 
-const float intellect_base_cost_multiplier = base_multiplier;
+const float wisdom_base_cost_multiplier = base_multiplier;
 
-float intellect_current_cost_multiplier = intellect_base_cost_multiplier;
+float wisdom_current_cost_multiplier = wisdom_base_cost_multiplier;
 
-const float intellect_base_power_multiplier = base_multiplier;
+const float wisdom_base_power_multiplier = base_multiplier;
 
-float intellect_current_power_multiplier = intellect_base_power_multiplier;
+float wisdom_current_power_multiplier = wisdom_base_power_multiplier;
+
+// Focus
+
+bool focus_known = false;
+
+int focus_level = 0;
+
+const float focus_base_cost = 50;
+
+const float focus_base_cost_2 = 1;
+
+float focus_current_cost = focus_base_cost;
+
+float focus_current_cost_2 = focus_base_cost_2;
+
+const float focus_base_wisdom_per_second_buff = 0.20;
+
+float focus_current_wisdom_per_second_buff = focus_base_wisdom_per_second_buff;
+
+const float focus_base_cost_multiplier = base_multiplier;
+
+float focus_current_cost_multiplier = focus_base_cost_multiplier;
+
+const float focus_base_power_multiplier = base_multiplier;
+
+float focus_current_power_multiplier = focus_base_power_multiplier;
 
 // :Variables
 
@@ -921,11 +945,25 @@ void do_ui_stuff()
 					{
 						current_mana += mana_per_second * delta_t;
 					}
-					
+
 					// Mana Overflow Check
 					if(current_mana >= max_mana)
 					{
 						current_mana = max_mana;
+					}
+
+					if(channel_mana_level >= 5)
+					{
+						wisdom_known = true;
+
+						//unlock intellect for now for testing other things (shouldn't be unlocked yet)
+
+						if (intellect_unlocked == false)
+						{
+							intellect_unlocked = true;
+							intellect_per_second = 0.5;
+						}
+						
 					}
 
 					// Black background box
@@ -963,60 +1001,65 @@ void do_ui_stuff()
 				}
 			}
 
-			// Wisdom bar
-			if(wisdom_unlocked == true)
+			// intellect bar
+			if(intellect_unlocked == true)
 			{
 				{
 					float y_pos = 220;
 
-					float wisdom_bar_width = icon_size * icon_row_count;
+					float intellect_bar_width = icon_size * icon_row_count;
 
 					float x_start_pos = (screen_width * 0.025);
 
-					int current_wisdom_int = (int)current_wisdom;
+					int current_intellect_int = (int)current_intellect;
 
-					int max_wisdom_int = (int)max_wisdom;
+					int max_intellect_int = (int)max_intellect;
 
-					float percentage_of_wisdom = (wisdom_bar_width / 100.0);
+					float percentage_of_intellect = (intellect_bar_width / 100.0);
 
-					float current_wisdom_percentage = (current_wisdom / max_wisdom) * 100.0f;
+					float current_intellect_percentage = (current_intellect / max_intellect) * 100.0f;
 
-					float wisdom_bar_visual_size = (percentage_of_wisdom * current_wisdom_percentage);
+					float intellect_bar_visual_size = (percentage_of_intellect * current_intellect_percentage);
 
-					if(current_wisdom < max_wisdom)
+					if(current_intellect < max_intellect)
 					{
-						current_wisdom += wisdom_per_second * delta_t;
+						current_intellect += intellect_per_second * delta_t;
 					}
 
-					// Wisdom Overflow Check
-					if(current_wisdom >= max_wisdom)
+					// intellect Overflow Check
+					if(current_intellect >= max_intellect)
 					{
-						current_wisdom = max_wisdom;
+						current_intellect = max_intellect;
+					}
+
+					if(wisdom_level >= 5)
+					{
+						focus_known = true;
 					}
 
 					// Black background box
 					{
 						Matrix4 xform = m4_identity;
 						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(wisdom_bar_width, icon_size), bg_box_color);
+						draw_rect_xform(xform, v2(intellect_bar_width, icon_size), bg_box_color);
 					}
 
-					//  Wisdom fill
+					//  intellect fill
 					{
 						Matrix4 xform = m4_identity;
 						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
+						draw_rect_xform(xform, v2(intellect_bar_visual_size, icon_size), accent_col_purple);
 					}
 
-					// wisdom bar current wisdom display
+					// intellect bar current intellect display
 					{
-						string current_wisdom_string = STR("Wisdom: %i/%i    +%.1f/s"); // %i is where the number goes.
+						string current_intellect_string = STR("Intellect: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-						current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int, wisdom_per_second);
+						current_intellect_string = sprint(get_temporary_allocator(), current_intellect_string, current_intellect_int, max_intellect_int, intellect_per_second);
 
-						Gfx_Text_Metrics metrics = measure_text(font, current_wisdom_string, font_height, v2(0.20, 0.20));
+						Gfx_Text_Metrics metrics = measure_text(font, current_intellect_string, font_height, v2(0.20, 0.20));
 
-						Vector2 draw_pos = v2(x_start_pos + (wisdom_bar_width * 0.5), y_pos + 14);
+						Vector2 draw_pos = v2(x_start_pos + (intellect_bar_width * 0.5), y_pos + 14);
 
 						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 						
@@ -1024,7 +1067,7 @@ void do_ui_stuff()
 
 						draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
-						draw_text(font, current_wisdom_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+						draw_text(font, current_intellect_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 					}
 				}
 			}
@@ -1067,10 +1110,10 @@ void do_ui_stuff()
 								channel_mana_current_power_multiplier *= power_multiplier;
 
 								// Increase cost of upgrade
-								channel_mana_current_cost *= cost_multiplier;
+								channel_mana_current_cost *= channel_mana_current_cost_multiplier;
 
 								// Increase cost multiplier
-								channel_mana_current_cost_multiplier *= cost_power_multiplier;
+								channel_mana_current_cost_multiplier *= cost_multiplier;
 
 								// Level up Upgrade
 								channel_mana_level += 1;
@@ -1078,18 +1121,149 @@ void do_ui_stuff()
 						}
 					}
 
-					// Draw Button
+					// Draw Channel mana Button
 					draw_rect(button_pos, size, col);
 
 					// Draw Button Text
-					string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
+					string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
 
 					Gfx_Text_Metrics metrics = measure_text(font, channel_mana_tooltip, font_height, v2(0.1, 0.1));
-					Vector2 draw_pos = v2(button_pos.x + 7, button_pos.y + 7);
+					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
 					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
 					draw_text(font, channel_mana_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+				}
+			}
+
+			// Level Up wisdom Button
+			if(wisdom_known == true)
+			{
+				{
+					Vector2 size = v2(16.0 , 16.0);
+
+					Vector2 button_pos = v2(150, y_pos - 30);
+
+					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+
+					Vector4 col = fill_col;
+
+					// Check if enough mana for upgrade
+					if(current_intellect > wisdom_current_cost)
+					{
+						// Check if mouse is on button
+						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						{
+							col = COLOR_RED;
+							world_frame.hover_consumed = true;
+
+							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+							{
+								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+								// Spend intellect on Upgrade
+								current_intellect -= wisdom_current_cost;
+								
+								// Apply upgrade
+								max_mana += wisdom_current_max_mana_buff;
+
+								// Power Up Upgrade
+								wisdom_current_max_mana_buff *= wisdom_current_power_multiplier;
+
+								// Increase power multiplier
+								wisdom_current_power_multiplier *= power_multiplier;
+
+								// Increase cost of upgrade
+								wisdom_current_cost *= wisdom_current_cost_multiplier;
+
+								// Increase cost multiplier
+								wisdom_current_cost_multiplier *= cost_multiplier;
+
+								// Level up Upgrade
+								wisdom_level += 1;
+							}
+						}
+					}
+
+					// Draw wisdom Button
+					draw_rect(button_pos, size, col);
+
+					// Draw Button Text
+					string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+
+					Gfx_Text_Metrics metrics = measure_text(font, wisdom_tooltip, font_height, v2(0.1, 0.1));
+					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+					draw_text(font, wisdom_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+				}
+			}
+			
+			// Level Up Focus Button
+			if(focus_known == true)
+			{
+				{
+					Vector2 size = v2(16.0 , 16.0);
+
+					Vector2 button_pos = v2(150, y_pos - 60);
+
+					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+
+					Vector4 col = fill_col;
+
+					// Check if enough mana for upgrade
+					if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
+					{
+						// Check if mouse is on button
+						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						{
+							col = COLOR_RED;
+							world_frame.hover_consumed = true;
+
+							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+							{
+								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+								// Spend mana & intellect on Upgrade
+								current_mana -= focus_current_cost;
+								current_intellect -= focus_current_cost_2;
+								
+								// Apply upgrade
+								intellect_per_second += focus_current_wisdom_per_second_buff;
+
+								// Power Up Upgrade
+								focus_current_wisdom_per_second_buff *= focus_current_power_multiplier;
+
+								// Increase power multiplier
+								focus_current_power_multiplier *= power_multiplier;
+
+								// Increase cost of upgrade
+								focus_current_cost *= focus_current_cost_multiplier;
+
+								focus_current_cost_2 *= focus_current_cost_multiplier;
+
+								// Increase cost multiplier
+								focus_current_cost_multiplier *= cost_multiplier;
+
+								// Level up Upgrade
+								focus_level += 1;
+							}
+						}
+					}
+
+					// Draw focus Button
+					draw_rect(button_pos, size, col);
+
+					// Draw Button Text
+					string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_wisdom_per_second_buff);
+
+					Gfx_Text_Metrics metrics = measure_text(font, focus_tooltip, font_height, v2(0.1, 0.1));
+					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+					draw_text(font, focus_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 				}
 			}
 		}
