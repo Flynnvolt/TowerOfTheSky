@@ -176,13 +176,21 @@ const s32 Layer_WORLD = 10;
 
 // Wizard Testing stuffs
 
-float current_mana = 0;
+// Mana
 
-float max_mana = 100;
+float current_mana = 0.0;
 
-float current_wisdom = 0;
+float max_mana = 100.0;
+
+float mana_per_second = 10.0;
+
+// Wisdom
+
+float current_wisdom = 0.0;
 
 float max_wisdom = 100;
+
+float wisdom_per_second = 0.0;
 
 // :Variables
 
@@ -868,7 +876,7 @@ void do_ui_stuff()
 
 				if(current_mana < max_mana)
 				{
-					current_mana += 0.0050;
+					current_mana += mana_per_second * delta_t;
 				}
 
 				// Black background box
@@ -885,11 +893,11 @@ void do_ui_stuff()
 					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
 				}	
 
-				// Mana bar text display
+				// Mana bar current mana display
 				{
-					string current_mana_string = STR("Mana: %i/%i"); // %i is where the number goes.
+					string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int);
+					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
 
 					Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
 
@@ -925,7 +933,7 @@ void do_ui_stuff()
 
 				if(current_wisdom < max_wisdom)
 				{
-					current_wisdom += 0.0050;
+					current_wisdom += wisdom_per_second * delta_t;
 				}
 
 				// Black background box
@@ -942,11 +950,11 @@ void do_ui_stuff()
 					draw_rect_xform(xform, v2(wisdom_bar_visual_size, icon_size), accent_col_purple);
 				}
 
-				// wisdom bar text display
+				// wisdom bar current wisdom display
 				{
-					string current_wisdom_string = STR("Wisdom: %i/%i"); // %i is where the number goes.
+					string current_wisdom_string = STR("Wisdom: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-					current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int);
+					current_wisdom_string = sprint(get_temporary_allocator(), current_wisdom_string, current_wisdom_int, max_wisdom_int, wisdom_per_second);
 
 					Gfx_Text_Metrics metrics = measure_text(font, current_wisdom_string, font_height, v2(0.20, 0.20));
 
