@@ -174,6 +174,10 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
+float current_mana = 0;
+
+float max_mana = 100;
+
 // :Variables
 
 #define m4_identity m4_make_scale(v3(1, 1, 1))
@@ -834,6 +838,40 @@ void do_ui_stuff()
 						}
 					}
 					slot_index += 1;
+				}
+			}
+
+			// Mana bar test
+			{
+				float y_pos = 175.0;
+
+				float mana_bar_width = 256.0;
+
+				float x_start_pos = (screen_width * 0.5) - (mana_bar_width * 0.5);
+
+				float percentage_of_manabar = (mana_bar_width / 100.0);
+
+				float current_mana_percentage = (current_mana / max_mana) * 100.0f;
+
+				float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
+
+				if(current_mana < max_mana)
+				{
+					current_mana += 0.0050;
+				}
+
+				// Black background box
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
+				}
+
+				// Mana fill
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col);
 				}
 			}
 		}
