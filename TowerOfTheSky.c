@@ -213,6 +213,24 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
+// :Variables
+
+#define m4_identity m4_make_scale(v3(1, 1, 1))
+
+Vector4 bg_box_color = {0, 0, 0, 0.5};
+
+const float entity_selection_radius = 8.0f;
+
+const float player_pickup_radius = 10.0f;
+
+const int exp_vein_health = 3;
+
+const int player_health = 10;
+
+// :Testing Toggle
+
+#define DEV_TESTING
+
 // :Wizard Testing stuffs
 
 const float base_cost_multiplier = 1.1;
@@ -416,9 +434,68 @@ void LevelUpFocus()
     LevelUp(& params);
 }
 
-void draw_resource_bar()
+void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
-	
+	// Increment resource
+	if(*current_resource < *max_resource)
+	{
+		*current_resource += *resource_per_second * delta_t;
+	}
+
+	// Resource Overflow Check
+	if(*current_resource >= *max_resource)
+	{
+		*current_resource = *max_resource;
+	}
+
+	//log("%f %f %f", current_resource, max_resource, resource_per_second);
+
+	float bar_width = icon_size * icon_row_count;
+
+	float x_start_pos = (screen_width * 0.025);
+
+	int current_resource_int = (int)*current_resource;
+
+	int max_resource_int = (int)*max_resource;
+
+	float percentage_of_resource = (bar_width / 100.0);
+
+	float current_resource_percentage = (*current_resource / *max_resource) * 100.0f;
+
+	float bar_visual_size = (percentage_of_resource * current_resource_percentage);
+
+	// Black background box
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
+	}
+
+	// Mana fill
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
+	}	
+
+	// Mana bar current mana display
+	{
+		string current_resource_string = STR("%s: %i/%i    +%.1f/s"); // %i is where the number goes.
+
+		current_resource_string = sprint(get_temporary_allocator(), current_resource_string, *resource_name, current_resource_int, max_resource_int, *resource_per_second);
+
+		Gfx_Text_Metrics metrics = measure_text(font, current_resource_string, font_height, v2(0.20, 0.20));
+
+		Vector2 draw_pos = v2(x_start_pos + (bar_width * 0.5), y_pos + 14);
+
+		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+		
+		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+		draw_text(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+	}
 }
 
 void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
@@ -437,24 +514,6 @@ void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 bu
 
 	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
-							
-// :Variables
-
-#define m4_identity m4_make_scale(v3(1, 1, 1))
-
-Vector4 bg_box_color = {0, 0, 0, 0.5};
-
-const float entity_selection_radius = 8.0f;
-
-const float player_pickup_radius = 10.0f;
-
-const int exp_vein_health = 3;
-
-const int player_health = 10;
-
-// :Testing Toggle
-
-#define DEV_TESTING
 
 // :Sprites
 
@@ -1169,30 +1228,8 @@ void do_ui_stuff()
 			{
 				float y_pos = 240;
 
-				float mana_bar_width = icon_size * icon_row_count;
-
-				float x_start_pos = (screen_width * 0.025);
-
-				int current_mana_int = (int)current_mana;
-
-				int max_mana_int = (int)max_mana;
-
-				float percentage_of_manabar = (mana_bar_width / 100.0);
-
-				float current_mana_percentage = (current_mana / max_mana) * 100.0f;
-
-				float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
-
-				if(current_mana < max_mana)
-				{
-					current_mana += mana_per_second * delta_t;
-				}
-
-				// Mana Overflow Check
-				if(current_mana >= max_mana)
-				{
-					current_mana = max_mana;
-				}
+				string name = STR("Mana");
+				draw_resource_bar(y_pos, & current_mana, & max_mana, & mana_per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
 
 				if(channel_mana_level >= 5)
 				{
@@ -1205,40 +1242,6 @@ void do_ui_stuff()
 						intellect_unlocked = true;
 						intellect_per_second = 0.5;
 					}
-					
-				}
-
-				// Black background box
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
-				}
-
-				// Mana fill
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
-				}	
-
-				// Mana bar current mana display
-				{
-					string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
-
-					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
-
-					Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
-
-					Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
-
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					
-					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-					draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
 			}
 
@@ -1247,67 +1250,12 @@ void do_ui_stuff()
 			{
 				float y_pos = 220;
 
-				float intellect_bar_width = icon_size * icon_row_count;
-
-				float x_start_pos = (screen_width * 0.025);
-
-				int current_intellect_int = (int)current_intellect;
-
-				int max_intellect_int = (int)max_intellect;
-
-				float percentage_of_intellect = (intellect_bar_width / 100.0);
-
-				float current_intellect_percentage = (current_intellect / max_intellect) * 100.0f;
-
-				float intellect_bar_visual_size = (percentage_of_intellect * current_intellect_percentage);
-
-				if(current_intellect < max_intellect)
-				{
-					current_intellect += intellect_per_second * delta_t;
-				}
-
-				// intellect Overflow Check
-				if(current_intellect >= max_intellect)
-				{
-					current_intellect = max_intellect;
-				}
+				string name = STR("Intellect");
+				draw_resource_bar(y_pos, & current_intellect, & max_intellect, & intellect_per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
 
 				if(wisdom_level >= 5)
 				{
 					focus_known = true;
-				}
-
-				// Black background box
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(intellect_bar_width, icon_size), bg_box_color);
-				}
-
-				//  intellect fill
-				{
-					Matrix4 xform = m4_identity;
-					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-					draw_rect_xform(xform, v2(intellect_bar_visual_size, icon_size), accent_col_purple);
-				}
-
-				// intellect bar current intellect display
-				{
-					string current_intellect_string = STR("Intellect: %i/%i    +%.1f/s"); // %i is where the number goes.
-
-					current_intellect_string = sprint(get_temporary_allocator(), current_intellect_string, current_intellect_int, max_intellect_int, intellect_per_second);
-
-					Gfx_Text_Metrics metrics = measure_text(font, current_intellect_string, font_height, v2(0.20, 0.20));
-
-					Vector2 draw_pos = v2(x_start_pos + (intellect_bar_width * 0.5), y_pos + 14);
-
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					
-					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-					draw_text(font, current_intellect_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
 			}
 
