@@ -416,6 +416,11 @@ void LevelUpFocus()
     LevelUp(& params);
 }
 
+void draw_resource_bar()
+{
+	
+}
+
 void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
 {
 	// Setup box for mouse collision
@@ -897,7 +902,8 @@ void set_world_space()
 	}
 
 	// ratio render lock
-	if (sprite_size.x > sprite_size.y) { // long boi
+	if (sprite_size.x > sprite_size.y) 
+	{ // long boi
 
 		// height is a ratio of width
 		Vector2 range_size = range2f_size(rect);
@@ -906,7 +912,8 @@ void set_world_space()
 		float new_height = rect.max.y - rect.min.y;
 		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
 
-	} else if (sprite_size.y > sprite_size.x) { // tall boi
+	} else if (sprite_size.y > sprite_size.x) 
+	{ // tall boi
 		
 		// width is a ratio of height
 		Vector2 range_size = range2f_size(rect);
@@ -1160,151 +1167,147 @@ void do_ui_stuff()
 			// Mana bar
 			if(mana_unlocked == true)
 			{
+				float y_pos = 240;
+
+				float mana_bar_width = icon_size * icon_row_count;
+
+				float x_start_pos = (screen_width * 0.025);
+
+				int current_mana_int = (int)current_mana;
+
+				int max_mana_int = (int)max_mana;
+
+				float percentage_of_manabar = (mana_bar_width / 100.0);
+
+				float current_mana_percentage = (current_mana / max_mana) * 100.0f;
+
+				float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
+
+				if(current_mana < max_mana)
 				{
-					float y_pos = 240;
+					current_mana += mana_per_second * delta_t;
+				}
 
-					float mana_bar_width = icon_size * icon_row_count;
+				// Mana Overflow Check
+				if(current_mana >= max_mana)
+				{
+					current_mana = max_mana;
+				}
 
-					float x_start_pos = (screen_width * 0.025);
+				if(channel_mana_level >= 5)
+				{
+					wisdom_known = true;
 
-					int current_mana_int = (int)current_mana;
+					//unlock intellect for now for testing other things (shouldn't be unlocked yet)
 
-					int max_mana_int = (int)max_mana;
-
-					float percentage_of_manabar = (mana_bar_width / 100.0);
-
-					float current_mana_percentage = (current_mana / max_mana) * 100.0f;
-
-					float mana_bar_visual_size = (percentage_of_manabar * current_mana_percentage);
-
-					if(current_mana < max_mana)
+					if (intellect_unlocked == false)
 					{
-						current_mana += mana_per_second * delta_t;
+						intellect_unlocked = true;
+						intellect_per_second = 0.5;
 					}
+					
+				}
 
-					// Mana Overflow Check
-					if(current_mana >= max_mana)
-					{
-						current_mana = max_mana;
-					}
+				// Black background box
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
+				}
 
-					if(channel_mana_level >= 5)
-					{
-						wisdom_known = true;
+				// Mana fill
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
+				}	
 
-						//unlock intellect for now for testing other things (shouldn't be unlocked yet)
+				// Mana bar current mana display
+				{
+					string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-						if (intellect_unlocked == false)
-						{
-							intellect_unlocked = true;
-							intellect_per_second = 0.5;
-						}
-						
-					}
+					current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
 
-					// Black background box
-					{
-						Matrix4 xform = m4_identity;
-						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(mana_bar_width, icon_size), bg_box_color);
-					}
+					Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
 
-					// Mana fill
-					{
-						Matrix4 xform = m4_identity;
-						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(mana_bar_visual_size, icon_size), accent_col_blue);
-					}	
+					Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
 
-					// Mana bar current mana display
-					{
-						string current_mana_string = STR("Mana: %i/%i    +%.1f/s"); // %i is where the number goes.
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					
+					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
 
-						current_mana_string = sprint(get_temporary_allocator(), current_mana_string, current_mana_int, max_mana_int, mana_per_second);
+					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
-						Gfx_Text_Metrics metrics = measure_text(font, current_mana_string, font_height, v2(0.20, 0.20));
-
-						Vector2 draw_pos = v2(x_start_pos + (mana_bar_width * 0.5), y_pos + 14);
-
-						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-						
-						draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-						draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-						draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
-					}
+					draw_text(font, current_mana_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
 			}
 
 			// intellect bar
 			if(intellect_unlocked == true)
 			{
+				float y_pos = 220;
+
+				float intellect_bar_width = icon_size * icon_row_count;
+
+				float x_start_pos = (screen_width * 0.025);
+
+				int current_intellect_int = (int)current_intellect;
+
+				int max_intellect_int = (int)max_intellect;
+
+				float percentage_of_intellect = (intellect_bar_width / 100.0);
+
+				float current_intellect_percentage = (current_intellect / max_intellect) * 100.0f;
+
+				float intellect_bar_visual_size = (percentage_of_intellect * current_intellect_percentage);
+
+				if(current_intellect < max_intellect)
 				{
-					float y_pos = 220;
+					current_intellect += intellect_per_second * delta_t;
+				}
 
-					float intellect_bar_width = icon_size * icon_row_count;
+				// intellect Overflow Check
+				if(current_intellect >= max_intellect)
+				{
+					current_intellect = max_intellect;
+				}
 
-					float x_start_pos = (screen_width * 0.025);
+				if(wisdom_level >= 5)
+				{
+					focus_known = true;
+				}
 
-					int current_intellect_int = (int)current_intellect;
+				// Black background box
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(intellect_bar_width, icon_size), bg_box_color);
+				}
 
-					int max_intellect_int = (int)max_intellect;
+				//  intellect fill
+				{
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+					draw_rect_xform(xform, v2(intellect_bar_visual_size, icon_size), accent_col_purple);
+				}
 
-					float percentage_of_intellect = (intellect_bar_width / 100.0);
+				// intellect bar current intellect display
+				{
+					string current_intellect_string = STR("Intellect: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-					float current_intellect_percentage = (current_intellect / max_intellect) * 100.0f;
+					current_intellect_string = sprint(get_temporary_allocator(), current_intellect_string, current_intellect_int, max_intellect_int, intellect_per_second);
 
-					float intellect_bar_visual_size = (percentage_of_intellect * current_intellect_percentage);
+					Gfx_Text_Metrics metrics = measure_text(font, current_intellect_string, font_height, v2(0.20, 0.20));
 
-					if(current_intellect < max_intellect)
-					{
-						current_intellect += intellect_per_second * delta_t;
-					}
+					Vector2 draw_pos = v2(x_start_pos + (intellect_bar_width * 0.5), y_pos + 14);
 
-					// intellect Overflow Check
-					if(current_intellect >= max_intellect)
-					{
-						current_intellect = max_intellect;
-					}
+					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+					
+					draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
 
-					if(wisdom_level >= 5)
-					{
-						focus_known = true;
-					}
+					draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
-					// Black background box
-					{
-						Matrix4 xform = m4_identity;
-						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(intellect_bar_width, icon_size), bg_box_color);
-					}
-
-					//  intellect fill
-					{
-						Matrix4 xform = m4_identity;
-						xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-						draw_rect_xform(xform, v2(intellect_bar_visual_size, icon_size), accent_col_purple);
-					}
-
-					// intellect bar current intellect display
-					{
-						string current_intellect_string = STR("Intellect: %i/%i    +%.1f/s"); // %i is where the number goes.
-
-						current_intellect_string = sprint(get_temporary_allocator(), current_intellect_string, current_intellect_int, max_intellect_int, intellect_per_second);
-
-						Gfx_Text_Metrics metrics = measure_text(font, current_intellect_string, font_height, v2(0.20, 0.20));
-
-						Vector2 draw_pos = v2(x_start_pos + (intellect_bar_width * 0.5), y_pos + 14);
-
-						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-						
-						draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-						draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-						draw_text(font, current_intellect_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
-					}
+					draw_text(font, current_intellect_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 				}
 			}
 
@@ -1314,94 +1317,88 @@ void do_ui_stuff()
 			// Level Up Channel Mana Button
 			if(channel_mana_known == true)
 			{
+				Vector2 button_pos = v2(150, y_pos);
+
+				Vector4 color = fill_col;
+
+				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
 				{
-					Vector2 button_pos = v2(150, y_pos);
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+				}
 
-					Vector4 color = fill_col;
-
-					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+				// Check if enough mana for upgrade
+				if(current_mana > channel_mana_current_cost) 
+				{
+					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 					{
 						world_frame.hover_consumed = true;
-						color = COLOR_RED;
+
+						LevelUpChannelMana();
 					}
-
-					// Check if enough mana for upgrade
-					if(current_mana > channel_mana_current_cost) 
-					{
-						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
-						{
-							world_frame.hover_consumed = true;
-
-							LevelUpChannelMana();
-						}
-					}
-
-					string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
-				
-					draw_level_up_button(channel_mana_tooltip, button_size, button_pos, color);	
 				}
+
+				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
+			
+				draw_level_up_button(channel_mana_tooltip, button_size, button_pos, color);	
 			}
 
 			// Level Up wisdom Button
 			if(wisdom_known == true)
 			{
+				Vector2 button_pos = v2(150, y_pos - 30);
+
+				Vector4 color = fill_col;
+
+				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
 				{
-					Vector2 button_pos = v2(150, y_pos - 30);
-
-					Vector4 color = fill_col;
-
-					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+				}
+				
+				// Check if enough mana for upgrade
+				if(current_intellect > wisdom_current_cost)
+				{
+					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 					{
 						world_frame.hover_consumed = true;
-						color = COLOR_RED;
+
+						LevelUpWisdom();
 					}
-					
-					// Check if enough mana for upgrade
-					if(current_intellect > wisdom_current_cost)
-					{
-						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
-						{
-							world_frame.hover_consumed = true;
-
-							LevelUpWisdom();
-						}
-					}
-
-					string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
-
-					draw_level_up_button(wisdom_tooltip, button_size, button_pos, color);	
 				}
+
+				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+
+				draw_level_up_button(wisdom_tooltip, button_size, button_pos, color);	
 			}
 			
 			// Level Up Focus Button
 			if(focus_known == true)
 			{
+				Vector2 button_pos = v2(150, y_pos - 60);
+
+				Vector4 color = fill_col;
+
+				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
 				{
-					Vector2 button_pos = v2(150, y_pos - 60);
-
-					Vector4 color = fill_col;
-
-					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+				}
+				
+				// Check if enough mana & intellect for upgrade
+				if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
+				{
+					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 					{
 						world_frame.hover_consumed = true;
-						color = COLOR_RED;
+
+						LevelUpFocus();
 					}
-					
-					// Check if enough mana & intellect for upgrade
-					if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
-					{
-						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
-						{
-							world_frame.hover_consumed = true;
-
-							LevelUpFocus();
-						}
-					}
-
-					string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
-
-					draw_level_up_button(focus_tooltip, button_size, button_pos, color);	
 				}
+
+				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
+
+				draw_level_up_button(focus_tooltip, button_size, button_pos, color);	
 			}
 		}
 		world_frame.hover_consumed = true;
