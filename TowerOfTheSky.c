@@ -878,20 +878,89 @@ void set_world_space()
 }
 
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
-Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
+
+	Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
+	{
+	SpriteData* sprite = get_sprite(sprite_id);
+	Vector2 sprite_size = get_sprite_size(sprite);
+
+	// make it smoller (padding)
+	{
+		Vector2 size = range2f_size(rect);
+		Vector2 offset = rect.min;
+		rect = range2f_shift(rect, v2_mulf(rect.min, -1));
+		rect.min.x += size.x * pad_pct * 0.5;
+		rect.min.y += size.y * pad_pct * 0.5;
+		rect.max.x -= size.x * pad_pct * 0.5;
+		rect.max.y -= size.y * pad_pct * 0.5;
+		rect = range2f_shift(rect, offset);
+	}
+
+	// ratio render lock
+	if (sprite_size.x > sprite_size.y) { // long boi
+
+		// height is a ratio of width
+		Vector2 range_size = range2f_size(rect);
+		rect.max.y = rect.min.y + (range_size.x * (sprite_size.y/sprite_size.x));
+		// center along the Y
+		float new_height = rect.max.y - rect.min.y;
+		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
+
+	} else if (sprite_size.y > sprite_size.x) { // tall boi
+		
+		// width is a ratio of height
+		Vector2 range_size = range2f_size(rect);
+		rect.max.x = rect.min.x + (range_size.y * (sprite_size.x/sprite_size.y));
+		// center along the X
+		float new_width = rect.max.x - rect.min.x;
+		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
+	}
+
+	return draw_image(sprite->image, rect.min, range2f_size(rect), col);
+}
+
+Draw_Quad* draw_sprite_in_rect_test(SpriteID sprite_id, Matrix4 xform, Range2f rect, Vector4 col, float pad_pct) 
 {
 	SpriteData* sprite = get_sprite(sprite_id);
+	Vector2 sprite_size = get_sprite_size(sprite);
 
-	Vector2 size = range2f_size(rect);
-	Vector2 offset = rect.min;
-	rect = range2f_shift(rect, v2_mulf(rect.min, -1));
-	rect.min.x += size.x * pad_pct * 0.5;
-	rect.min.y += size.y * pad_pct * 0.5;
-	rect.max.x -= size.x * pad_pct * 0.5;
-	rect.max.y -= size.y * pad_pct * 0.5;
-	rect = range2f_shift(rect, offset);
+	// make it smoller (padding)
+	{
+		Vector2 size = range2f_size(rect);
+		Vector2 offset = rect.min;
+		rect = range2f_shift(rect, v2_mulf(rect.min, -1));
+		rect.min.x += size.x * pad_pct * 0.5;
+		rect.min.y += size.y * pad_pct * 0.5;
+		rect.max.x -= size.x * pad_pct * 0.5;
+		rect.max.y -= size.y * pad_pct * 0.5;
+		rect = range2f_shift(rect, offset);
+	}
 
-	return draw_image(sprite -> image, rect.min, range2f_size(rect), col);
+	// ratio render lock
+	if (sprite_size.x > sprite_size.y) 
+	{ 
+		// long boi
+
+		// height is a ratio of width
+		Vector2 range_size = range2f_size(rect);
+		rect.max.y = rect.min.y + (range_size.x * (sprite_size.y / sprite_size.x));
+		// center along the Y
+		float new_height = rect.max.y - rect.min.y;
+		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
+
+	} else if (sprite_size.y > sprite_size.x) 
+	{ 
+		// tall boi
+		
+		// width is a ratio of height
+		Vector2 range_size = range2f_size(rect);
+		rect.max.x = rect.min.x + (range_size.y * (sprite_size.x / sprite_size.y));
+		// center along the X
+		float new_width = rect.max.x - rect.min.x;
+		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
+	}
+
+	return draw_image_xform(sprite -> image, xform, range2f_size(rect), col);
 }
 
 void do_ui_stuff()
@@ -965,8 +1034,8 @@ void do_ui_stuff()
 					Matrix4 xform = m4_scalar(1.0);
 
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-
 					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
+					Vector2 icon_positon = v2(x_start_pos + slot_index_offset, y_pos);
 					
 					// White transparent box to show item slot is filled.
 					Draw_Quad* quad = draw_rect_xform(xform, v2(icon_size, icon_size), v4(1, 1, 1, 0.2));
@@ -987,7 +1056,7 @@ void do_ui_stuff()
 						float scale_adjust = -0.10;
 						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
 					}
-
+					
 					// Make items bigger when selected
 					if (is_selected_alpha == 1.0)
 					{
@@ -1011,9 +1080,15 @@ void do_ui_stuff()
 					}
 
 					xform = m4_translate(xform, v3(icon_size * -0.5,  icon_size * -0.5, 0));
-				
+
 					// Draw Sprite
-					draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE);
+
+					Range2f box = range2f_make_bottom_left(icon_positon, v2(icon_size, icon_size));
+					draw_sprite_in_rect_test(get_sprite_id_from_ItemID(id), xform, box, COLOR_WHITE, 0.0); // test?
+
+					//draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE); // old
+
+					//draw_sprite_in_rect(get_sprite_id_from_ItemID(id), box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
 				
 					// Tooltip
 					if (is_selected_alpha == 1.0)
