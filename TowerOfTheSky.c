@@ -272,6 +272,81 @@ const float focus_base_power_multiplier = base_multiplier;
 
 float focus_current_power_multiplier = focus_base_power_multiplier;
 
+void level_up_channel_mana()
+{
+	// Spend Mana on Upgrade
+	current_mana -= channel_mana_current_cost;
+
+	// Apply upgrade
+	mana_per_second += channel_mana_current_mana_per_second_buff;
+
+	// Power Up Upgrade
+	channel_mana_current_mana_per_second_buff *= channel_mana_current_power_multiplier;
+
+	// Increase power multiplier
+	channel_mana_current_power_multiplier *= power_multiplier;
+
+	// Increase cost of upgrade
+	channel_mana_current_cost *= channel_mana_current_cost_multiplier;
+
+	// Increase cost multiplier
+	channel_mana_current_cost_multiplier *= cost_multiplier;
+
+	// Level up Upgrade
+	channel_mana_level += 1;
+}
+
+void level_up_wisdom()
+{
+	// Spend intellect on Upgrade
+	current_intellect -= wisdom_current_cost;
+	
+	// Apply upgrade
+	max_mana += wisdom_current_max_mana_buff;
+
+	// Power Up Upgrade
+	wisdom_current_max_mana_buff *= wisdom_current_power_multiplier;
+
+	// Increase power multiplier
+	wisdom_current_power_multiplier *= power_multiplier;
+
+	// Increase cost of upgrade
+	wisdom_current_cost *= wisdom_current_cost_multiplier;
+
+	// Increase cost multiplier
+	wisdom_current_cost_multiplier *= cost_multiplier;
+
+	// Level up Upgrade
+	wisdom_level += 1;
+}
+
+void level_up_focus()
+{
+	// Spend mana & intellect on Upgrade
+	current_mana -= focus_current_cost;
+	current_intellect -= focus_current_cost_2;
+
+	// Apply upgrade
+	intellect_per_second += focus_current_wisdom_per_second_buff;
+
+	// Power Up Upgrade
+	focus_current_wisdom_per_second_buff *= focus_current_power_multiplier;
+
+	// Increase power multiplier
+	focus_current_power_multiplier *= power_multiplier;
+
+	// Increase cost of upgrade
+	focus_current_cost *= focus_current_cost_multiplier;
+
+	focus_current_cost_2 *= focus_current_cost_multiplier;
+
+	// Increase cost multiplier
+	focus_current_cost_multiplier *= cost_multiplier;
+
+	// Level up Upgrade
+	focus_level += 1;
+}
+							
 // :Variables
 
 #define m4_identity m4_make_scale(v3(1, 1, 1))
@@ -1097,26 +1172,7 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								// Spend Mana on Upgrade
-								current_mana -= channel_mana_current_cost;
-								
-								// Apply upgrade
-								mana_per_second += channel_mana_current_mana_per_second_buff;
-
-								// Power Up Upgrade
-								channel_mana_current_mana_per_second_buff *= channel_mana_current_power_multiplier;
-
-								// Increase power multiplier
-								channel_mana_current_power_multiplier *= power_multiplier;
-
-								// Increase cost of upgrade
-								channel_mana_current_cost *= channel_mana_current_cost_multiplier;
-
-								// Increase cost multiplier
-								channel_mana_current_cost_multiplier *= cost_multiplier;
-
-								// Level up Upgrade
-								channel_mana_level += 1;
+								level_up_channel_mana();
 							}
 						}
 					}
@@ -1161,26 +1217,7 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								// Spend intellect on Upgrade
-								current_intellect -= wisdom_current_cost;
-								
-								// Apply upgrade
-								max_mana += wisdom_current_max_mana_buff;
-
-								// Power Up Upgrade
-								wisdom_current_max_mana_buff *= wisdom_current_power_multiplier;
-
-								// Increase power multiplier
-								wisdom_current_power_multiplier *= power_multiplier;
-
-								// Increase cost of upgrade
-								wisdom_current_cost *= wisdom_current_cost_multiplier;
-
-								// Increase cost multiplier
-								wisdom_current_cost_multiplier *= cost_multiplier;
-
-								// Level up Upgrade
-								wisdom_level += 1;
+								level_up_wisdom();
 							}
 						}
 					}
@@ -1225,29 +1262,7 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								// Spend mana & intellect on Upgrade
-								current_mana -= focus_current_cost;
-								current_intellect -= focus_current_cost_2;
-								
-								// Apply upgrade
-								intellect_per_second += focus_current_wisdom_per_second_buff;
-
-								// Power Up Upgrade
-								focus_current_wisdom_per_second_buff *= focus_current_power_multiplier;
-
-								// Increase power multiplier
-								focus_current_power_multiplier *= power_multiplier;
-
-								// Increase cost of upgrade
-								focus_current_cost *= focus_current_cost_multiplier;
-
-								focus_current_cost_2 *= focus_current_cost_multiplier;
-
-								// Increase cost multiplier
-								focus_current_cost_multiplier *= cost_multiplier;
-
-								// Level up Upgrade
-								focus_level += 1;
+								level_up_focus();
 							}
 						}
 					}
