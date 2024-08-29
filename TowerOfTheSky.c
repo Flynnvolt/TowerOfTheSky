@@ -1077,7 +1077,9 @@ void do_ui_stuff()
 
 			const int icon_row_count = 8;
 
-			float entire_thing_width = icon_row_count * icon_size;
+			const int icon_row_count_items = 3;
+
+			float entire_thing_width = icon_row_count_items * icon_size;
 			float x_start_pos = (screen_width * 0.5) - (entire_thing_width * 0.5);
 
 			// Black background box
@@ -1267,7 +1269,7 @@ void do_ui_stuff()
 			// Level Up Channel Mana Button
 			if(channel_mana_known == true)
 			{
-				Vector2 button_pos = v2(150, y_pos);
+				Vector2 button_pos = v2(175, y_pos);
 
 				Vector4 color = fill_col;
 
@@ -1296,7 +1298,7 @@ void do_ui_stuff()
 			// Level Up wisdom Button
 			if(wisdom_known == true)
 			{
-				Vector2 button_pos = v2(150, y_pos - 30);
+				Vector2 button_pos = v2(175, y_pos - 30);
 
 				Vector4 color = fill_col;
 
@@ -1325,7 +1327,7 @@ void do_ui_stuff()
 			// Level Up Focus Button
 			if(focus_known == true)
 			{
-				Vector2 button_pos = v2(150, y_pos - 60);
+				Vector2 button_pos = v2(175, y_pos - 60);
 
 				Vector4 color = fill_col;
 
@@ -1371,7 +1373,7 @@ int entry(int argc, char **argv)
 
 	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 1080; 
-	window.fullscreen = true;
+	window.fullscreen = false;
 
 	// Where on the monitor the window starts up at
 	window.x = 0;
