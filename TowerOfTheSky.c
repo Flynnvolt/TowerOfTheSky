@@ -938,7 +938,7 @@ bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 	}
 }
 
-void draw_tooltip_box_string(Draw_Quad* quad, float tooltip_size, string *title)
+void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size, string *title)
 {
 	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
 
@@ -957,7 +957,8 @@ void draw_tooltip_box_string(Draw_Quad* quad, float tooltip_size, string *title)
 	draw_rect_xform(xform, tooltip_box_size, bg_box_color);
 
 	float current_y_pos = icon_center.y;
-	
+
+	// String Display	
 	{
 		Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
 
@@ -975,6 +976,61 @@ void draw_tooltip_box_string(Draw_Quad* quad, float tooltip_size, string *title)
 
 		current_y_pos = draw_pos.y;
 	}
+}
+
+void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip_size, string *title)
+{
+	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+
+	Range2f screen_range = quad_to_range(screen_quad);
+
+	Vector2 icon_center = range2f_get_center(screen_range);
+
+	Matrix4 xform = m4_scalar(1.0);
+
+	Vector2 tooltip_box_size = v2(tooltip_size * 4, tooltip_size * 2);
+
+	xform = m4_translate(xform, v3((tooltip_box_size.x) + (tooltip_size * 4), (- tooltip_box_size.y) + (tooltip_size * 0.5), 0));
+
+	xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
+
+	draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+
+	// String Display	
+
+	Matrix4 text_xform = m4_scalar(1.0);
+
+	text_xform = m4_translate(xform, v3((tooltip_box_size.x * 0.10), (tooltip_box_size.y * 0.65), 0));
+	
+	draw_text_xform(font, *title, font_height, text_xform, v2(0.1, 0.1), COLOR_WHITE);
+}
+
+void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size, string *title)
+{
+	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+
+	Range2f screen_range = quad_to_range(screen_quad);
+
+	Vector2 icon_center = range2f_get_center(screen_range);
+
+	Matrix4 xform = m4_scalar(1.0);
+
+	Vector2 tooltip_box_size = v2(tooltip_size * 5, tooltip_size * 2);
+
+	Vector2 button_position = v2(icon_center.x + (tooltip_box_size.x) + (tooltip_size * 5), icon_center.y + (- tooltip_box_size.y) + (tooltip_size * 0.5));
+
+	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
+	
+	// Draw tooltip background box
+	Draw_Quad* tooltip_quad = draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+
+	// String Display	
+	Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
+	Vector2 draw_pos = v2((button_position.x + (tooltip_box_size.x * 0.5)), (button_position.y + (tooltip_box_size.y * 0.5)));
+	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
 
 // :UI Rendering
@@ -1217,7 +1273,7 @@ void do_ui_stuff()
 
 						string title = sprint(get_temporary_allocator(), STR("%s\nx%i"), name, item -> amount);
 
-						draw_tooltip_box_string(quad, icon_size, & title);
+						draw_tooltip_box_string_below_same_size(quad, icon_size, & title);
 					}
 					slot_index += 1;
 				}
@@ -1273,7 +1329,7 @@ void do_ui_stuff()
 
 				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana_level, channel_mana_current_cost);
 
-				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
+				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
 
 				// Check if enough mana for upgrade
 				if(current_mana > channel_mana_current_cost) 
@@ -1292,7 +1348,7 @@ void do_ui_stuff()
 				{
 					world_frame.hover_consumed = true;
 					color = COLOR_RED;
-					draw_tooltip_box_string(quad, icon_size, & channel_mana_tooltip);
+					draw_tooltip_box_string_to_side_larger(quad, icon_size, & channel_mana_tooltip);
 				}
 			}
 
@@ -1305,7 +1361,7 @@ void do_ui_stuff()
 
 				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom_level, wisdom_current_cost);
 
-				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
@@ -1330,7 +1386,7 @@ void do_ui_stuff()
 				{
 					world_frame.hover_consumed = true;
 					color = COLOR_RED;
-					draw_tooltip_box_string(quad, icon_size, & wisdom_tooltip);
+					draw_tooltip_box_string_to_side_larger(quad, icon_size, & wisdom_tooltip);
 				}
 			}
 			
@@ -1343,7 +1399,7 @@ void do_ui_stuff()
 
 				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus_level, focus_current_cost, focus_current_cost_2);
 
-				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
+				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
@@ -1368,7 +1424,7 @@ void do_ui_stuff()
 				{
 					world_frame.hover_consumed = true;
 					color = COLOR_RED;
-					draw_tooltip_box_string(quad, icon_size, & focus_tooltip);
+					draw_tooltip_box_string_to_side_larger(quad, icon_size, & focus_tooltip);
 				}
 			}
 		}
