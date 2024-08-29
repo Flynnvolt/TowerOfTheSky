@@ -912,6 +912,7 @@ bool check_if_mouse_clicked_button(Vector2 button_pos, Vector2 button_size)
 		return false;
 	}
 }
+
 bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 {
 	Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
@@ -924,6 +925,65 @@ bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 	else
 	{
 		return false;
+	}
+}
+
+void draw_tooltip_box_string_and_number(Draw_Quad* quad, float tooltip_size, string title, string title2, int *title2_int)
+{
+	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+
+	Range2f screen_range = quad_to_range(screen_quad);
+
+	Vector2 icon_center = range2f_get_center(screen_range);
+
+	Matrix4 xform = m4_scalar(1.0);
+
+	Vector2 tooltip_box_size = v2(tooltip_size, tooltip_size);
+
+	xform = m4_translate(xform, v3(tooltip_box_size.x * -0.5, - tooltip_box_size.y - tooltip_size * 0.5, 0));
+
+	xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
+
+	draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+
+	float current_y_pos = icon_center.y;
+	
+	// title 1
+	{
+		Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+
+		Vector2 draw_pos = icon_center;
+
+		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+		
+		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+		draw_pos = v2_add(draw_pos, v2(0, tooltip_size * -0.5));
+
+		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
+
+		draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+
+		current_y_pos = draw_pos.y;
+	}
+
+	// title 2 + title 2 number
+	{
+		string title2 = STR("x%i"); // %i is where the number goes.
+
+		title2 = sprint(get_temporary_allocator(), title2 , *title2_int);
+
+		Gfx_Text_Metrics metrics = measure_text(font, title2, font_height, v2(0.1, 0.1));
+
+		Vector2 draw_pos = v2(icon_center.x, current_y_pos);
+
+		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+		
+		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+		draw_text(font, title2, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 	}
 }
 
@@ -1163,65 +1223,11 @@ void do_ui_stuff()
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
-						Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+						string title = get_ItemID_pretty_name(id);
 
-						Range2f screen_range = quad_to_range(screen_quad);
+						string item_amount = STR("x%i"); // %i is where the number goes.
 
-						Vector2 icon_center = range2f_get_center(screen_range);
-
-						Matrix4 xform = m4_scalar(1.0);
-
-						Vector2 box_size = v2(16.0, 16.0);
-
-						//xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
-
-						xform = m4_translate(xform, v3(box_size.x * -0.5, - box_size.y - icon_size * 0.5, 0));
-
-						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
-
-						draw_rect_xform(xform, box_size, bg_box_color);
-
-						float current_y_pos = icon_center.y;
-						
-						// Draw item name on screen
-						{
-							string title = get_ItemID_pretty_name(id);
-
-							Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
-
-							Vector2 draw_pos = icon_center;
-
-							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-							
-							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-							draw_pos = v2_add(draw_pos, v2(0, icon_size * -0.5));
-
-							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
-
-							draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
-
-							current_y_pos = draw_pos.y;
-						}
-
-						// Draw item amount on screen
-						{
-							string item_amount = STR("x%i"); // %i is where the number goes.
-
-							item_amount = sprint(get_temporary_allocator(), item_amount , item -> amount);
-
-							Gfx_Text_Metrics metrics = measure_text(font, item_amount, font_height, v2(0.1, 0.1));
-
-							Vector2 draw_pos = v2(icon_center.x, current_y_pos);
-
-							draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-							
-							draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-							draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-							draw_text(font, item_amount, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
-						}
+						draw_tooltip_box_string_and_number(quad, icon_size, title, item_amount, & item -> amount);
 					}
 					slot_index += 1;
 				}
