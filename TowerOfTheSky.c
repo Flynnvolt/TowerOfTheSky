@@ -176,9 +176,11 @@ const s32 Layer_WORLD = 10;
 
 // :Wizard Testing stuffs
 
-const float base_multiplier = 1.05;
+const float base_cost_multiplier = 1.1;
 
-float cost_multiplier = 1.001;
+const float base_power_multiplier = 1.05;
+
+float cost_multiplier = 1.005;
 
 float power_multiplier = 1.0005;
 
@@ -216,11 +218,11 @@ const float channel_mana_base_mana_per_second_buff = 2.0;
 
 float channel_mana_current_mana_per_second_buff = channel_mana_base_mana_per_second_buff;
 
-const float channel_mana_base_cost_multiplier = base_multiplier;
+const float channel_mana_base_cost_multiplier = base_cost_multiplier;
 
 float channel_mana_current_cost_multiplier = channel_mana_base_cost_multiplier;
 
-const float channel_mana_base_power_multiplier = base_multiplier;
+const float channel_mana_base_power_multiplier = base_power_multiplier;
 
 float channel_mana_current_power_multiplier = channel_mana_base_power_multiplier;
 
@@ -238,11 +240,11 @@ const float wisdom_base_max_mana_buff = 100;
 
 float wisdom_current_max_mana_buff = wisdom_base_max_mana_buff;
 
-const float wisdom_base_cost_multiplier = base_multiplier;
+const float wisdom_base_cost_multiplier = base_cost_multiplier;
 
 float wisdom_current_cost_multiplier = wisdom_base_cost_multiplier;
 
-const float wisdom_base_power_multiplier = base_multiplier;
+const float wisdom_base_power_multiplier = base_power_multiplier;
 
 float wisdom_current_power_multiplier = wisdom_base_power_multiplier;
 
@@ -264,11 +266,11 @@ const float focus_base_wisdom_per_second_buff = 0.20;
 
 float focus_current_wisdom_per_second_buff = focus_base_wisdom_per_second_buff;
 
-const float focus_base_cost_multiplier = base_multiplier;
+const float focus_base_cost_multiplier = base_cost_multiplier;
 
 float focus_current_cost_multiplier = focus_base_cost_multiplier;
 
-const float focus_base_power_multiplier = base_multiplier;
+const float focus_base_power_multiplier = base_power_multiplier;
 
 float focus_current_power_multiplier = focus_base_power_multiplier;
 
@@ -345,6 +347,23 @@ void level_up_focus()
 
 	// Level up Upgrade
 	focus_level += 1;
+}
+
+void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
+{
+	// Setup box for mouse collision
+	Range2f btn_range = range2f_make_bottom_left(button_position, button_size);
+
+	// Draw Button
+	draw_rect(button_position, button_size, color);
+
+	// Draw Button Text
+	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
+	Vector2 draw_pos = v2((button_position.x + (button_size.x * 0.5)), (button_position.y + (button_size.y * 0.5)));
+	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
 							
 // :Variables
@@ -1147,17 +1166,18 @@ void do_ui_stuff()
 				}
 			}
 
+			// Setup for all buttons for now
+			Vector2 button_size = v2(16.0 , 16.0);
+
 			// Level Up Channel Mana Button
 			if(channel_mana_known == true)
 			{
 				{
-					Vector2 size = v2(16.0 , 16.0);
-
 					Vector2 button_pos = v2(150, y_pos);
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+					Vector4 color = fill_col;
 
-					Vector4 col = fill_col;
+					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
 
 					// Check if enough mana for upgrade
 					if(current_mana > channel_mana_current_cost)
@@ -1165,7 +1185,7 @@ void do_ui_stuff()
 						// Check if mouse is on button
 						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
 						{
-							col = COLOR_RED;
+							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
 							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
@@ -1177,18 +1197,9 @@ void do_ui_stuff()
 						}
 					}
 
-					// Draw Channel mana Button
-					draw_rect(button_pos, size, col);
-
-					// Draw Button Text
 					string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
-
-					Gfx_Text_Metrics metrics = measure_text(font, channel_mana_tooltip, font_height, v2(0.1, 0.1));
-					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
-
-					draw_text(font, channel_mana_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+				
+					draw_level_up_button(channel_mana_tooltip, button_size, button_pos, color);	
 				}
 			}
 
@@ -1196,13 +1207,11 @@ void do_ui_stuff()
 			if(wisdom_known == true)
 			{
 				{
-					Vector2 size = v2(16.0 , 16.0);
-
 					Vector2 button_pos = v2(150, y_pos - 30);
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+					Vector4 color = fill_col;
 
-					Vector4 col = fill_col;
+					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
 
 					// Check if enough mana for upgrade
 					if(current_intellect > wisdom_current_cost)
@@ -1210,7 +1219,7 @@ void do_ui_stuff()
 						// Check if mouse is on button
 						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
 						{
-							col = COLOR_RED;
+							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
 							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
@@ -1222,18 +1231,9 @@ void do_ui_stuff()
 						}
 					}
 
-					// Draw wisdom Button
-					draw_rect(button_pos, size, col);
-
-					// Draw Button Text
 					string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
 
-					Gfx_Text_Metrics metrics = measure_text(font, wisdom_tooltip, font_height, v2(0.1, 0.1));
-					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
-
-					draw_text(font, wisdom_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+					draw_level_up_button(wisdom_tooltip, button_size, button_pos, color);	
 				}
 			}
 			
@@ -1241,13 +1241,11 @@ void do_ui_stuff()
 			if(focus_known == true)
 			{
 				{
-					Vector2 size = v2(16.0 , 16.0);
-
 					Vector2 button_pos = v2(150, y_pos - 60);
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, size);
+					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
 
-					Vector4 col = fill_col;
+					Vector4 color = fill_col;
 
 					// Check if enough mana for upgrade
 					if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
@@ -1255,7 +1253,7 @@ void do_ui_stuff()
 						// Check if mouse is on button
 						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
 						{
-							col = COLOR_RED;
+							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
 							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
@@ -1267,18 +1265,9 @@ void do_ui_stuff()
 						}
 					}
 
-					// Draw focus Button
-					draw_rect(button_pos, size, col);
-
-					// Draw Button Text
 					string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_wisdom_per_second_buff);
 
-					Gfx_Text_Metrics metrics = measure_text(font, focus_tooltip, font_height, v2(0.1, 0.1));
-					Vector2 draw_pos = v2((button_pos.x + (size.x * 0.5)), (button_pos.y + (size.y * 0.5)));
-					draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-					draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
-
-					draw_text(font, focus_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+					draw_level_up_button(focus_tooltip, button_size, button_pos, color);	
 				}
 			}
 		}
