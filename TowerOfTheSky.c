@@ -184,6 +184,10 @@ float cost_multiplier = 1.005;
 
 float power_multiplier = 1.0005;
 
+float no_second_cost = 0.0;
+
+float no_second_resource = 0.0;
+
 // Mana
 
 bool mana_unlocked = true;
@@ -262,9 +266,9 @@ float focus_current_cost = focus_base_cost;
 
 float focus_current_cost_2 = focus_base_cost_2;
 
-const float focus_base_wisdom_per_second_buff = 0.20;
+const float focus_base_intellect_per_second_buff = 0.20;
 
-float focus_current_wisdom_per_second_buff = focus_base_wisdom_per_second_buff;
+float focus_current_intellect_per_second_buff = focus_base_intellect_per_second_buff;
 
 const float focus_base_cost_multiplier = base_cost_multiplier;
 
@@ -274,79 +278,103 @@ const float focus_base_power_multiplier = base_power_multiplier;
 
 float focus_current_power_multiplier = focus_base_power_multiplier;
 
-void level_up_channel_mana()
+typedef struct LevelUpParams LevelUpParams;
+
+struct LevelUpParams
 {
-	// Spend Mana on Upgrade
-	current_mana -= channel_mana_current_cost;
+	float *statToBuff; // Which Stat to Increase
+	float *buffAmount; // Increase by how much
+	float *statBuffMultiplier; // Increase the buff multiplier
+    float *currentResourceSpent; // Resource type spent
+	float *currentResourceSpent_2; // Resource type spent 2
+    float *currentCost; // Current Cost for resource 1
+    float *currentCost2;  // Current Cost for resource 2
+	float *costMultiplier; // Increase the cost multiplier
+    int *level;
+};
 
-	// Apply upgrade
-	mana_per_second += channel_mana_current_mana_per_second_buff;
+void LevelUp(LevelUpParams *params)
+{
+	// Apply upgrade (buff the relevant attribute)
+    *(params -> statToBuff) += *(params -> buffAmount);
 
-	// Power Up Upgrade
-	channel_mana_current_mana_per_second_buff *= channel_mana_current_power_multiplier;
+    // Power up the upgrade
+    *(params -> buffAmount) *= *(params -> statBuffMultiplier);
 
 	// Increase power multiplier
-	channel_mana_current_power_multiplier *= power_multiplier;
+	*(params -> statBuffMultiplier) *= power_multiplier;
 
-	// Increase cost of upgrade
-	channel_mana_current_cost *= channel_mana_current_cost_multiplier;
+    // Spend resources on the upgrade
+    *(params -> currentResourceSpent) -= *(params -> currentCost);
+
+	// Spend 2nd resource (if needed)
+	if (*(params -> currentCost2) > 0)
+	{
+		*(params -> currentResourceSpent_2) -= *(params -> currentCost2);
+	}
+
+    // Increase the cost of the upgrade
+    *(params -> currentCost) *= *(params -> costMultiplier);
 
 	// Increase cost multiplier
-	channel_mana_current_cost_multiplier *= cost_multiplier;
+	*(params -> costMultiplier) *= cost_multiplier;
 
-	// Level up Upgrade
-	channel_mana_level += 1;
+    // Level up the upgrade
+    (*(params -> level))++;
 }
 
-void level_up_wisdom()
+void LevelUpChannelMana()
 {
-	// Spend intellect on Upgrade
-	current_intellect -= wisdom_current_cost;
-	
-	// Apply upgrade
-	max_mana += wisdom_current_max_mana_buff;
+    LevelUpParams params = 
+	{
+		& mana_per_second,
+		& channel_mana_current_mana_per_second_buff,
+		& channel_mana_current_power_multiplier,
+		& current_mana, // resource spent 1
+		& no_second_resource,
+        & channel_mana_current_cost,
+        & no_second_cost,
+		& channel_mana_current_cost_multiplier,
+        & channel_mana_level,
+    };
 
-	// Power Up Upgrade
-	wisdom_current_max_mana_buff *= wisdom_current_power_multiplier;
-
-	// Increase power multiplier
-	wisdom_current_power_multiplier *= power_multiplier;
-
-	// Increase cost of upgrade
-	wisdom_current_cost *= wisdom_current_cost_multiplier;
-
-	// Increase cost multiplier
-	wisdom_current_cost_multiplier *= cost_multiplier;
-
-	// Level up Upgrade
-	wisdom_level += 1;
+    LevelUp(& params);
 }
 
-void level_up_focus()
+void LevelUpWisdom()
 {
-	// Spend mana & intellect on Upgrade
-	current_mana -= focus_current_cost;
-	current_intellect -= focus_current_cost_2;
+    LevelUpParams params = 
+	{
+		& max_mana,
+		& wisdom_current_max_mana_buff,
+		& wisdom_current_power_multiplier,
+        & current_intellect, // resource spent 1
+		& no_second_resource, 
+        & wisdom_current_cost,
+        & no_second_cost,
+		& wisdom_current_cost_multiplier,
+        & wisdom_level,
+    };
 
-	// Apply upgrade
-	intellect_per_second += focus_current_wisdom_per_second_buff;
+    LevelUp(& params);
+}
 
-	// Power Up Upgrade
-	focus_current_wisdom_per_second_buff *= focus_current_power_multiplier;
+void LevelUpFocus()
+{
+    LevelUpParams params = 
+	{
+		& intellect_per_second,
+		& focus_current_intellect_per_second_buff,
+		& focus_current_power_multiplier,
+        & current_mana, // resource spent 1
+		& current_intellect, //resource spent 2
+        & focus_current_cost,
+        & focus_current_cost_2,
+		& focus_current_cost_multiplier,
+        & focus_level
+    };
 
-	// Increase power multiplier
-	focus_current_power_multiplier *= power_multiplier;
-
-	// Increase cost of upgrade
-	focus_current_cost *= focus_current_cost_multiplier;
-
-	focus_current_cost_2 *= focus_current_cost_multiplier;
-
-	// Increase cost multiplier
-	focus_current_cost_multiplier *= cost_multiplier;
-
-	// Level up Upgrade
-	focus_level += 1;
+    LevelUp(& params);
 }
 
 void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
@@ -1192,7 +1220,7 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								level_up_channel_mana();
+								LevelUpChannelMana();
 							}
 						}
 					}
@@ -1226,7 +1254,7 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								level_up_wisdom();
+								LevelUpWisdom();
 							}
 						}
 					}
@@ -1260,12 +1288,12 @@ void do_ui_stuff()
 							{
 								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
-								level_up_focus();
+								LevelUpFocus();
 							}
 						}
 					}
 
-					string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_wisdom_per_second_buff);
+					string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
 
 					draw_level_up_button(focus_tooltip, button_size, button_pos, color);	
 				}
