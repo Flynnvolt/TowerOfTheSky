@@ -498,21 +498,31 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 	}
 }
 
-void draw_level_up_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
+Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
 {
-	// Setup box for mouse collision
-	Range2f btn_range = range2f_make_bottom_left(button_position, button_size);
+	Vector2 button_size_v2 = v2(16.0, 16.0);
 
-	// Draw Button
-	draw_rect(button_position, button_size, color);
+	Matrix4 xform = m4_scalar(1.0);
+
+	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
+
+	Vector2 icon_positon = v2(button_position.x, button_position.y);
+	
+	// White transparent box to show item slot is filled.
+	Draw_Quad* quad = draw_rect_xform(xform, v2(button_size, button_size), color);
+
+	// Setup box for mouse collision
+	Range2f btn_range = range2f_make_bottom_left(button_position, button_size_v2);
 
 	// Draw Button Text
 	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
-	Vector2 draw_pos = v2((button_position.x + (button_size.x * 0.5)), (button_position.y + (button_size.y * 0.5)));
+	Vector2 draw_pos = v2((button_position.x + (button_size_v2.x * 0.5)), (button_position.y + (button_size_v2.y * 0.5)));
 	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
 	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+
+	return quad;
 }
 
 // :Sprites
@@ -928,7 +938,7 @@ bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 	}
 }
 
-void draw_tooltip_box_string_and_number(Draw_Quad* quad, float tooltip_size, string title, string title2, int *title2_int)
+void draw_tooltip_box_string(Draw_Quad* quad, float tooltip_size, string *title)
 {
 	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
 
@@ -948,9 +958,8 @@ void draw_tooltip_box_string_and_number(Draw_Quad* quad, float tooltip_size, str
 
 	float current_y_pos = icon_center.y;
 	
-	// title 1
 	{
-		Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+		Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
 
 		Vector2 draw_pos = icon_center;
 
@@ -962,28 +971,9 @@ void draw_tooltip_box_string_and_number(Draw_Quad* quad, float tooltip_size, str
 
 		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
 
-		draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+		draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 
 		current_y_pos = draw_pos.y;
-	}
-
-	// title 2 + title 2 number
-	{
-		string title2 = STR("x%i"); // %i is where the number goes.
-
-		title2 = sprint(get_temporary_allocator(), title2 , *title2_int);
-
-		Gfx_Text_Metrics metrics = measure_text(font, title2, font_height, v2(0.1, 0.1));
-
-		Vector2 draw_pos = v2(icon_center.x, current_y_pos);
-
-		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-		
-		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-		draw_text(font, title2, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 	}
 }
 
@@ -1223,11 +1213,11 @@ void do_ui_stuff()
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
-						string title = get_ItemID_pretty_name(id);
+						string name = get_ItemID_pretty_name(id);
 
-						string item_amount = STR("x%i"); // %i is where the number goes.
+						string title = sprint(get_temporary_allocator(), STR("%s\nx%i"), name, item -> amount);
 
-						draw_tooltip_box_string_and_number(quad, icon_size, title, item_amount, & item -> amount);
+						draw_tooltip_box_string(quad, icon_size, & title);
 					}
 					slot_index += 1;
 				}
@@ -1270,7 +1260,9 @@ void do_ui_stuff()
 			}
 
 			// Setup for all buttons for now
-			Vector2 button_size = v2(16.0 , 16.0);
+			float button_size = 16.0;
+
+			Vector2 button_size_v2 = v2(16.0, 16.0);
 
 			// Level Up Channel Mana Button
 			if(channel_mana_known == true)
@@ -1279,26 +1271,29 @@ void do_ui_stuff()
 
 				Vector4 color = fill_col;
 
-				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
-				{
-					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-				}
+				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana_level, channel_mana_current_cost);
+
+				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
 
 				// Check if enough mana for upgrade
 				if(current_mana > channel_mana_current_cost) 
 				{
-					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
+					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
 						LevelUpChannelMana();
 					}
 				}
-
-				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second"), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
 			
-				draw_level_up_button(channel_mana_tooltip, button_size, button_pos, color);	
+				Draw_Quad* quad = draw_level_up_button(channel_button_text, button_size, button_pos, color);	
+
+				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				{
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+					draw_tooltip_box_string(quad, icon_size, & channel_mana_tooltip);
+				}
 			}
 
 			// Level Up wisdom Button
@@ -1308,7 +1303,11 @@ void do_ui_stuff()
 
 				Vector4 color = fill_col;
 
-				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom_level, wisdom_current_cost);
+
+				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+
+				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
 					world_frame.hover_consumed = true;
 					color = COLOR_RED;
@@ -1317,7 +1316,7 @@ void do_ui_stuff()
 				// Check if enough mana for upgrade
 				if(current_intellect > wisdom_current_cost)
 				{
-					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
+					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
@@ -1325,9 +1324,14 @@ void do_ui_stuff()
 					}
 				}
 
-				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana"), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+				Draw_Quad* quad = draw_level_up_button(wisdom_button_text, button_size, button_pos, color);	
 
-				draw_level_up_button(wisdom_tooltip, button_size, button_pos, color);	
+				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				{
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+					draw_tooltip_box_string(quad, icon_size, & wisdom_tooltip);
+				}
 			}
 			
 			// Level Up Focus Button
@@ -1337,7 +1341,11 @@ void do_ui_stuff()
 
 				Vector4 color = fill_col;
 
-				if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus_level, focus_current_cost, focus_current_cost_2);
+
+				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
+
+				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
 					world_frame.hover_consumed = true;
 					color = COLOR_RED;
@@ -1346,7 +1354,7 @@ void do_ui_stuff()
 				// Check if enough mana & intellect for upgrade
 				if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
 				{
-					if(check_if_mouse_clicked_button(button_pos, button_size) == true)
+					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
@@ -1354,9 +1362,14 @@ void do_ui_stuff()
 					}
 				}
 
-				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
+				Draw_Quad* quad = draw_level_up_button(focus_button_tooltip, button_size, button_pos, color);	
 
-				draw_level_up_button(focus_tooltip, button_size, button_pos, color);	
+				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				{
+					world_frame.hover_consumed = true;
+					color = COLOR_RED;
+					draw_tooltip_box_string(quad, icon_size, & focus_tooltip);
+				}
 			}
 		}
 		world_frame.hover_consumed = true;
