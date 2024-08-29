@@ -1502,12 +1502,10 @@ int entry(int argc, char **argv)
 			{
 				switch (en -> arch)
 				{	
-					/*
 					case ARCH_player:
 					{
 						break;
 					}
-					*/ 
 
 					default:
 					{
@@ -1541,6 +1539,19 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
+		}
+
+		//Render player
+		{
+			Entity* en = get_player();
+			SpriteData* sprite = get_sprite(en->sprite_id);
+			Matrix4 xform = m4_scalar(1.0);
+			xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
+			xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+			xform         = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, 0.0, 0));
+
+			Vector4 col = COLOR_WHITE;
+			draw_image_xform(sprite->image, xform, get_sprite_size(sprite), col);
 		}
 
 		// Press F1 to Close Game
