@@ -130,6 +130,45 @@ Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad)
 	return ndc_quad;
 }
 
+Vector2 get_mouse_pos_in_ndc()
+{
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	return (Vector2){ndc_x, ndc_y};
+}
+
+Vector2 get_mouse_pos_in_world_space() 
+{
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	// Transform to world coordinates
+	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
+	world_pos = m4_transform(m4_inverse(proj), world_pos);
+	world_pos = m4_transform(view, world_pos);
+	// log("%f, %f", world_pos.x, world_pos.y);
+
+	// Return as 2D vector
+	return (Vector2){ world_pos.x, world_pos.y };
+}
+
 // :Utilities
 
 float sin_breathe(float time, float rate)
@@ -783,46 +822,46 @@ void entity_setup(Entity* en, ArchetypeID id)
 	}
 }
 
-Vector2 get_mouse_pos_in_ndc()
-{
-	float mouse_x = input_frame.mouse_x;
-	float mouse_y = input_frame.mouse_y;
-	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.camera_xform;
-	float window_w = window.width;
-	float window_h = window.height;
-
-	// Normalize the mouse coordinates
-	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
-	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
-
-	return (Vector2){ndc_x, ndc_y};
-}
-
-Vector2 get_mouse_pos_in_world_space() 
-{
-	float mouse_x = input_frame.mouse_x;
-	float mouse_y = input_frame.mouse_y;
-	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.camera_xform;
-	float window_w = window.width;
-	float window_h = window.height;
-
-	// Normalize the mouse coordinates
-	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
-	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
-
-	// Transform to world coordinates
-	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
-	world_pos = m4_transform(m4_inverse(proj), world_pos);
-	world_pos = m4_transform(view, world_pos);
-	// log("%f, %f", world_pos.x, world_pos.y);
-
-	// Return as 2D vector
-	return (Vector2){ world_pos.x, world_pos.y };
-}
-
 // :Functions
+
+bool check_if_mouse_clicked_button(Vector2 button_pos, Vector2 button_size)
+{
+	Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
+
+	// Check if mouse is on button
+	if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+	{
+		if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
+		{
+			consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+
+			// Button clicked
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else
+	{
+		return false;
+	}
+}
+bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
+{
+	Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
+
+	// Check if mouse is on button
+	if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 // :UI Rendering
 
@@ -1205,23 +1244,20 @@ void do_ui_stuff()
 
 					Vector4 color = fill_col;
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
+					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+					{
+						world_frame.hover_consumed = true;
+						color = COLOR_RED;
+					}
 
 					// Check if enough mana for upgrade
-					if(current_mana > channel_mana_current_cost)
+					if(current_mana > channel_mana_current_cost) 
 					{
-						// Check if mouse is on button
-						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 						{
-							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
-							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
-							{
-								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-
-								LevelUpChannelMana();
-							}
+							LevelUpChannelMana();
 						}
 					}
 
@@ -1239,23 +1275,20 @@ void do_ui_stuff()
 
 					Vector4 color = fill_col;
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
-
+					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+					{
+						world_frame.hover_consumed = true;
+						color = COLOR_RED;
+					}
+					
 					// Check if enough mana for upgrade
 					if(current_intellect > wisdom_current_cost)
 					{
-						// Check if mouse is on button
-						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 						{
-							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
-							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
-							{
-								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-
-								LevelUpWisdom();
-							}
+							LevelUpWisdom();
 						}
 					}
 
@@ -1271,25 +1304,22 @@ void do_ui_stuff()
 				{
 					Vector2 button_pos = v2(150, y_pos - 60);
 
-					Range2f btn_range = range2f_make_bottom_left(button_pos, button_size);
-
 					Vector4 color = fill_col;
 
-					// Check if enough mana for upgrade
+					if(check_if_mouse_hovering_button(button_pos, button_size) == true)
+					{
+						world_frame.hover_consumed = true;
+						color = COLOR_RED;
+					}
+					
+					// Check if enough mana & intellect for upgrade
 					if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
 					{
-						// Check if mouse is on button
-						if (range2f_contains(btn_range, get_mouse_pos_in_world_space())) 
+						if(check_if_mouse_clicked_button(button_pos, button_size) == true)
 						{
-							color = COLOR_RED;
 							world_frame.hover_consumed = true;
 
-							if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
-							{
-								consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-
-								LevelUpFocus();
-							}
+							LevelUpFocus();
 						}
 					}
 
