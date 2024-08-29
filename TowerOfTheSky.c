@@ -1373,7 +1373,7 @@ int entry(int argc, char **argv)
 
 	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.scaled_height = 1080; 
-	window.fullscreen = false;
+	window.fullscreen = true;
 
 	// Where on the monitor the window starts up at
 	window.x = 0;
