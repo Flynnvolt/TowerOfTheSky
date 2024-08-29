@@ -1115,8 +1115,9 @@ void do_ui_stuff()
 						is_selected_alpha = 1.0;
 					}
 
+					/*
 					xform = m4_translate(xform, v3(icon_size * 0.5, icon_size * 0.5, 0.0));
-
+	
 					// Make items start slightly smaller so when sized up they dont get to big
 					{
 						float scale_adjust = -0.10;
@@ -1144,17 +1145,18 @@ void do_ui_stuff()
 						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
 						xform = m4_rotate_z(xform, rotate_adjust);
 					}
+					*/
 
 					xform = m4_translate(xform, v3(icon_size * -0.5,  icon_size * -0.5, 0));
 
 					// Draw Sprite
 
 					Range2f box = range2f_make_bottom_left(icon_positon, v2(icon_size, icon_size));
-					draw_sprite_in_rect_test(get_sprite_id_from_ItemID(id), xform, box, COLOR_WHITE, 0.0); // test?
+					//draw_sprite_in_rect_test(get_sprite_id_from_ItemID(id), xform, box, COLOR_WHITE, 0.0); // test?
 
 					//draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE); // old
 
-					//draw_sprite_in_rect(get_sprite_id_from_ItemID(id), box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
+					draw_sprite_in_rect(get_sprite_id_from_ItemID(id), box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
 				
 					// Tooltip
 					if (is_selected_alpha == 1.0)
@@ -1429,7 +1431,7 @@ int entry(int argc, char **argv)
 		}
 
 	// Camera Settings
-	float zoom = 3;
+	float zoom = 4;
 	Vector2 camera_pos = v2(0, 0);
 
 	// :Game Loop
