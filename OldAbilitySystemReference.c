@@ -119,8 +119,6 @@ struct LevelUpParams
     int *level;
 };
 
-float ListOfCosts[] = {25, 30, 35};
-
 void LevelUp(LevelUpParams *params)
 {
 	// Apply upgrade (buff the relevant attribute)
