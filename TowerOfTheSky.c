@@ -1,4 +1,5 @@
 #include "Range.c"
+#include "Abilities.c"
 
 inline float v2_dist(Vector2 a, Vector2 b) 
 {
@@ -230,209 +231,6 @@ const int player_health = 10;
 // :Testing Toggle
 
 #define DEV_TESTING
-
-// :Wizard Testing stuffs
-
-const float base_cost_multiplier = 1.1;
-
-const float base_power_multiplier = 1.05;
-
-float cost_multiplier = 1.005;
-
-float power_multiplier = 1.0005;
-
-float no_second_cost = 0.0;
-
-float no_second_resource = 0.0;
-
-// Mana
-
-bool mana_unlocked = true;
-
-float current_mana = 0.0;
-
-float max_mana = 100.0;
-
-float mana_per_second = 10.0;
-
-// Intellect
-
-bool intellect_unlocked = false;
-
-float current_intellect = 0.0;
-
-float max_intellect = 50.0;
-
-float intellect_per_second = 0.0;
-
-// Channel Mana
-
-bool channel_mana_known = true;
-
-int channel_mana_level = 0;
-
-const float channel_mana_base_cost = 25.0;
-
-float channel_mana_current_cost = channel_mana_base_cost;
-
-const float channel_mana_base_mana_per_second_buff = 2.0;
-
-float channel_mana_current_mana_per_second_buff = channel_mana_base_mana_per_second_buff;
-
-const float channel_mana_base_cost_multiplier = base_cost_multiplier;
-
-float channel_mana_current_cost_multiplier = channel_mana_base_cost_multiplier;
-
-const float channel_mana_base_power_multiplier = base_power_multiplier;
-
-float channel_mana_current_power_multiplier = channel_mana_base_power_multiplier;
-
-// Wisdom
-
-bool wisdom_known = false;
-
-int wisdom_level = 0;
-
-const float wisdom_base_cost = 1;
-
-float wisdom_current_cost = wisdom_base_cost;
-
-const float wisdom_base_max_mana_buff = 100;
-
-float wisdom_current_max_mana_buff = wisdom_base_max_mana_buff;
-
-const float wisdom_base_cost_multiplier = base_cost_multiplier;
-
-float wisdom_current_cost_multiplier = wisdom_base_cost_multiplier;
-
-const float wisdom_base_power_multiplier = base_power_multiplier;
-
-float wisdom_current_power_multiplier = wisdom_base_power_multiplier;
-
-// Focus
-
-bool focus_known = false;
-
-int focus_level = 0;
-
-const float focus_base_cost = 50;
-
-const float focus_base_cost_2 = 1;
-
-float focus_current_cost = focus_base_cost;
-
-float focus_current_cost_2 = focus_base_cost_2;
-
-const float focus_base_intellect_per_second_buff = 0.20;
-
-float focus_current_intellect_per_second_buff = focus_base_intellect_per_second_buff;
-
-const float focus_base_cost_multiplier = base_cost_multiplier;
-
-float focus_current_cost_multiplier = focus_base_cost_multiplier;
-
-const float focus_base_power_multiplier = base_power_multiplier;
-
-float focus_current_power_multiplier = focus_base_power_multiplier;
-
-typedef struct LevelUpParams LevelUpParams;
-
-struct LevelUpParams
-{
-	float *statToBuff; // Which Stat to Increase
-	float *buffAmount; // Increase by how much
-	float *statBuffMultiplier; // Increase the buff multiplier
-    float *currentResourceSpent; // Resource type spent
-	float *currentResourceSpent_2; // Resource type spent 2
-    float *currentCost; // Current Cost for resource 1
-    float *currentCost2;  // Current Cost for resource 2
-	float *costMultiplier; // Increase the cost multiplier
-    int *level;
-};
-
-void LevelUp(LevelUpParams *params)
-{
-	// Apply upgrade (buff the relevant attribute)
-    *(params -> statToBuff) += *(params -> buffAmount);
-
-    // Power up the upgrade
-    *(params -> buffAmount) *= *(params -> statBuffMultiplier);
-
-	// Increase power multiplier
-	*(params -> statBuffMultiplier) *= power_multiplier;
-
-    // Spend resources on the upgrade
-    *(params -> currentResourceSpent) -= *(params -> currentCost);
-
-	// Spend 2nd resource (if needed)
-	if (*(params -> currentCost2) > 0)
-	{
-		*(params -> currentResourceSpent_2) -= *(params -> currentCost2);
-	}
-
-    // Increase the cost of the upgrade
-    *(params -> currentCost) *= *(params -> costMultiplier);
-
-	// Increase cost multiplier
-	*(params -> costMultiplier) *= cost_multiplier;
-
-    // Level up the upgrade
-    (*(params -> level))++;
-}
-
-void LevelUpChannelMana()
-{
-    LevelUpParams params = 
-	{
-		& mana_per_second,
-		& channel_mana_current_mana_per_second_buff,
-		& channel_mana_current_power_multiplier,
-		& current_mana, // resource spent 1
-		& no_second_resource,
-        & channel_mana_current_cost,
-        & no_second_cost,
-		& channel_mana_current_cost_multiplier,
-        & channel_mana_level,
-    };
-
-    LevelUp(& params);
-}
-
-void LevelUpWisdom()
-{
-    LevelUpParams params = 
-	{
-		& max_mana,
-		& wisdom_current_max_mana_buff,
-		& wisdom_current_power_multiplier,
-        & current_intellect, // resource spent 1
-		& no_second_resource, 
-        & wisdom_current_cost,
-        & no_second_cost,
-		& wisdom_current_cost_multiplier,
-        & wisdom_level,
-    };
-
-    LevelUp(& params);
-}
-
-void LevelUpFocus()
-{
-    LevelUpParams params = 
-	{
-		& intellect_per_second,
-		& focus_current_intellect_per_second_buff,
-		& focus_current_power_multiplier,
-        & current_mana, // resource spent 1
-		& current_intellect, //resource spent 2
-        & focus_current_cost,
-        & focus_current_cost_2,
-		& focus_current_cost_multiplier,
-        & focus_level
-    };
-
-    LevelUp(& params);
-}
 
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
@@ -1280,38 +1078,38 @@ void do_ui_stuff()
 			}
 
 			// Mana bar
-			if(mana_unlocked == true)
+			if (mana.unlocked == true)
 			{
 				float y_pos = 240;
 
 				string name = STR("Mana");
-				draw_resource_bar(y_pos, & current_mana, & max_mana, & mana_per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
+				draw_resource_bar(y_pos, & mana.current, & mana.max, & mana.per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
 
-				if(channel_mana_level >= 5)
+				if(channel_mana.level >= 5)
 				{
-					wisdom_known = true;
+					wisdom.unlocked = true;
 
 					//unlock intellect for now for testing other things (shouldn't be unlocked yet)
 
-					if (intellect_unlocked == false)
+					if (intellect.unlocked == false)
 					{
-						intellect_unlocked = true;
-						intellect_per_second = 0.5;
+						intellect.unlocked = true;
+						intellect.per_second = 0.5;
 					}
 				}
 			}
 
 			// intellect bar
-			if(intellect_unlocked == true)
+			if(intellect.unlocked == true)
 			{
 				float y_pos = 220;
 
 				string name = STR("Intellect");
-				draw_resource_bar(y_pos, & current_intellect, & max_intellect, & intellect_per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
+				draw_resource_bar(y_pos, & intellect.current, & intellect.max, & intellect.per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
 
-				if(wisdom_level >= 5)
+				if(wisdom.level >= 5)
 				{
-					focus_known = true;
+					focus.unlocked = true;
 				}
 			}
 
@@ -1321,24 +1119,24 @@ void do_ui_stuff()
 			Vector2 button_size_v2 = v2(16.0, 16.0);
 
 			// Level Up Channel Mana Button
-			if(channel_mana_known == true)
+			if(channel_mana.unlocked == true)
 			{
 				Vector2 button_pos = v2(175, y_pos);
 
 				Vector4 color = fill_col;
 
-				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana_level, channel_mana_current_cost);
+				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana.level, channel_mana.current_costs[0]);
 
-				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana_level, channel_mana_current_cost, channel_mana_current_mana_per_second_buff);
+				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana.level, channel_mana.current_costs[0], channel_mana.current_effect_value);
 
 				// Check if enough mana for upgrade
-				if(current_mana > channel_mana_current_cost) 
+				if(mana.current > channel_mana.current_costs[0]) 
 				{
 					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
-						LevelUpChannelMana();
+						level_up_channel_mana_if_unlocked();
 					}
 				}
 			
@@ -1350,18 +1148,19 @@ void do_ui_stuff()
 					color = COLOR_RED;
 					draw_tooltip_box_string_to_side_larger(quad, icon_size, & channel_mana_tooltip);
 				}
+				log("%.2f, %.2f, %.2f,", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier);
 			}
 
 			// Level Up wisdom Button
-			if(wisdom_known == true)
+			if(wisdom.unlocked == true)
 			{
 				Vector2 button_pos = v2(175, y_pos - 30);
 
 				Vector4 color = fill_col;
 
-				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom_level, wisdom_current_cost);
+				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
 
-				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom_level, wisdom_current_cost, wisdom_current_max_mana_buff);
+				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom.level, wisdom.current_costs[0], wisdom.current_effect_value);
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
@@ -1370,13 +1169,13 @@ void do_ui_stuff()
 				}
 				
 				// Check if enough mana for upgrade
-				if(current_intellect > wisdom_current_cost)
+				if(intellect.current > wisdom.current_costs[0])
 				{
 					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
-						LevelUpWisdom();
+					 	level_up_wisdom_if_unlocked();
 					}
 				}
 
@@ -1391,15 +1190,15 @@ void do_ui_stuff()
 			}
 			
 			// Level Up Focus Button
-			if(focus_known == true)
+			if(focus.unlocked == true)
 			{
 				Vector2 button_pos = v2(175, y_pos - 60);
 
 				Vector4 color = fill_col;
 
-				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus_level, focus_current_cost, focus_current_cost_2);
+				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs);
 
-				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus_level, focus_current_cost, focus_current_cost_2, focus_current_intellect_per_second_buff);
+				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1], focus.current_effect_value);
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 				{
@@ -1408,13 +1207,13 @@ void do_ui_stuff()
 				}
 				
 				// Check if enough mana & intellect for upgrade
-				if(current_mana > focus_current_cost && current_intellect > focus_current_cost_2)
+				if(mana.current > focus.current_costs[0] && intellect.current > focus.current_costs[1])
 				{
 					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 					{
 						world_frame.hover_consumed = true;
 
-						LevelUpFocus();
+						level_up_focus_if_unlocked();
 					}
 				}
 
