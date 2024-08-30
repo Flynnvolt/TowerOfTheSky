@@ -1128,17 +1128,13 @@ void do_ui_stuff()
 
 				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana.level, channel_mana.current_costs[0], channel_mana.current_effect_value);
 
-				// Check if enough mana for upgrade
-				if(mana.current > channel_mana.current_costs[0]) 
+				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 				{
-					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-					{
-						world_frame.hover_consumed = true;
+					world_frame.hover_consumed = true;
 
-						level_up_channel_mana_if_unlocked();
-					}
+					level_up_channel_mana_if_unlocked();
 				}
-			
+
 				Draw_Quad* quad = draw_level_up_button(channel_button_text, button_size, button_pos, color);	
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
@@ -1160,22 +1156,12 @@ void do_ui_stuff()
 				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
 
 				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom.level, wisdom.current_costs[0], wisdom.current_effect_value);
-
-				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				
+				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 				{
 					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-				}
-				
-				// Check if enough mana for upgrade
-				if(intellect.current > wisdom.current_costs[0])
-				{
-					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-					{
-						world_frame.hover_consumed = true;
 
-					 	level_up_wisdom_if_unlocked();
-					}
+					level_up_wisdom_if_unlocked();
 				}
 
 				Draw_Quad* quad = draw_level_up_button(wisdom_button_text, button_size, button_pos, color);	
@@ -1198,24 +1184,14 @@ void do_ui_stuff()
 				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
 
 				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1], focus.current_effect_value);
-
-				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				
+				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 				{
 					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-				}
-				
-				// Check if enough mana & intellect for upgrade
-				if(mana.current > focus.current_costs[0] && intellect.current > focus.current_costs[1])
-				{
-					if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-					{
-						world_frame.hover_consumed = true;
 
-						level_up_focus_if_unlocked();
-					}
+					level_up_focus_if_unlocked();
 				}
-
+			
 				Draw_Quad* quad = draw_level_up_button(focus_button_tooltip, button_size, button_pos, color);	
 
 				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)

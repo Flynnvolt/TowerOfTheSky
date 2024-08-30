@@ -166,7 +166,7 @@ Ability focus =
 // Leveling up abilities
 void level_up_channel_mana_if_unlocked() 
 {
-    if (channel_mana.unlocked && channel_mana.cost_resources[0] -> current >= channel_mana.current_costs[0]) 
+    if (channel_mana.unlocked == true) 
     {
         channel_mana.level_up(& channel_mana);
     }
@@ -174,7 +174,7 @@ void level_up_channel_mana_if_unlocked()
 
 void level_up_wisdom_if_unlocked() 
 {
-    if (wisdom.unlocked && wisdom.cost_resources[0] -> current >= wisdom.current_costs[0]) 
+    if (wisdom.unlocked == true) 
     {
         wisdom.level_up(& wisdom);
     }
@@ -182,7 +182,7 @@ void level_up_wisdom_if_unlocked()
 
 void level_up_focus_if_unlocked() 
 {
-    if (focus.unlocked && focus.cost_resources[0] -> current >= focus.current_costs[0] && focus.cost_resources[1] -> current >= focus.current_costs[1]) 
+    if (focus.unlocked == true) 
     {
         focus.level_up(& focus);
     }
