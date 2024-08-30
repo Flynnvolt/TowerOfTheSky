@@ -1,4 +1,3 @@
-/*
 // :Wizard Testing stuffs
 
 const float base_cost_multiplier = 1.1;
@@ -203,4 +202,3 @@ void LevelUpFocus()
 
     LevelUp(& params);
 }
-*/
