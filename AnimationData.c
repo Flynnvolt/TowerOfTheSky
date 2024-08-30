@@ -1,8 +1,3 @@
-inline float64 Animation_now() 
-{
-    return os_get_elapsed_seconds();
-}
-
 typedef struct AnimationInfo AnimationInfo;
 
 struct AnimationInfo
@@ -96,6 +91,7 @@ void play_animation(AnimationInfo *anim_info, float32 current_time)
 
     /*
     // Uncomment to visualize the sprite sheet animation for debugging
+
     Vector2 sheet_pos = v2(0, 0);
     Vector2 sheet_size = v2(anim_info->anim_sheet->width, anim_info->anim_sheet->height);
     Vector2 frame_pos_in_sheet = v2(anim_sheet_pos_x, anim_sheet_pos_y);
@@ -105,6 +101,12 @@ void play_animation(AnimationInfo *anim_info, float32 current_time)
     draw_image(anim_info->anim_sheet, sheet_pos, sheet_size, COLOR_WHITE); // Draw the sheet
     */
 }
+
+inline float64 Animation_now() 
+{
+    return os_get_elapsed_seconds();
+}
+
 
 void update_animation(AnimationInfo *animation)
 {
@@ -122,6 +124,7 @@ void setup_fireball_anim()
     
     Fireball = create_animation_info
     (
+        // Sprite sheet setup for fireball
         anim_sheet,
         0,  // anim_start_frame_x
         0,  // anim_start_frame_y
