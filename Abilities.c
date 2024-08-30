@@ -71,7 +71,7 @@ struct Ability
 void level_up_ability(Ability* self, Resource* resources[]) 
 {
     // Apply the specific effect of the ability
-    self -> apply_effect(resources, self- > current_effect_value);
+    self -> apply_effect(resources, self -> current_effect_value);
 
     // Calculate the new effect value
     self -> current_effect_value = self -> base_effect_value * self->current_power_multiplier;
