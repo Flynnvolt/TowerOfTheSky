@@ -42,9 +42,9 @@ void apply_wisdom_effect(Resource* resources[], float effect_value)
 
 void apply_focus_effect(Resource* resources[], float effect_value) 
 {
-    if (resources[1] != NULL) 
+    if (resources[0] != NULL) 
     {
-        resources[1] -> per_second += effect_value;  // Increase intellect regen
+        resources[0] -> per_second += effect_value;  // Correctly increase intellect regen
     }
 }
 
