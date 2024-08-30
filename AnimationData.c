@@ -106,6 +106,12 @@ void play_animation(AnimationInfo *anim_info, float32 current_time)
     */
 }
 
+void update_animation(AnimationInfo *animation)
+{
+    float32 current_time = Animation_now(); // Get the current time
+    play_animation(animation, current_time); // Play the animation
+}
+
 // Setup Fireball animation
 AnimationInfo Fireball;
 
@@ -124,10 +130,4 @@ void setup_fireball_anim()
         3,  // number_of_columns
         1   // number_of_rows
     );
-}
-
-void update_animation(AnimationInfo *animation)
-{
-    float32 current_time = Animation_now(); // Get the current time
-    play_animation(animation, current_time); // Play the animation
 }
