@@ -1094,7 +1094,6 @@ void do_ui_stuff()
 					if (intellect.unlocked == false)
 					{
 						intellect.unlocked = true;
-						intellect.per_second = 0.5;
 					}
 				}
 			}
