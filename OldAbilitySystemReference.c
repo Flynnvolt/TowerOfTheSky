@@ -1,3 +1,5 @@
+// Old Ability system for reference (not being used anymore)
+
 // :Wizard Testing stuffs
 
 const float base_cost_multiplier = 1.1;
