@@ -63,7 +63,7 @@ AnimationInfo create_animation_info(
     return anim_info;
 }
 
-void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 render_position)
+void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 position, float32 scale_ratio)
 {
     // Calculate the elapsed time for the animation
     float32 anim_elapsed = fmodf(current_time - anim_info -> anim_start_time, anim_info -> anim_duration);
@@ -81,24 +81,21 @@ void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 rend
     
     u32 anim_sheet_pos_x = anim_index_x * anim_info -> anim_frame_width;
     u32 anim_sheet_pos_y = (anim_info -> number_of_rows - anim_index_y) * anim_info -> anim_frame_height; // Y inverted
-    
+
+    // Scale factor and size calculation
+    float32 frame_width_scaled = anim_info -> anim_frame_width * scale_ratio;
+    float32 frame_height_scaled = anim_info -> anim_frame_height * scale_ratio;
+
+    // Ensure pixel-perfect scaling
+    frame_width_scaled = roundf(frame_width_scaled);
+    frame_height_scaled = roundf(frame_height_scaled);
+
     // Draw the sprite sheet with the UV box for the current frame
-    Draw_Quad *quad = draw_image(anim_info -> anim_sheet, v2(render_position.x, render_position.y), v2(anim_info -> anim_frame_width * 4, anim_info -> anim_frame_height * 4), COLOR_WHITE);
+    Draw_Quad *quad = draw_image(anim_info -> anim_sheet, position, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
     quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info -> anim_sheet -> width;
     quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info -> anim_sheet -> height;
     quad -> uv.x2 = (float32)(anim_sheet_pos_x + anim_info -> anim_frame_width) / (float32)anim_info -> anim_sheet -> width;
     quad -> uv.y2 = (float32)(anim_sheet_pos_y + anim_info -> anim_frame_height) / (float32)anim_info -> anim_sheet -> height;
-
-    /*
-    // Uncomment to visualize the sprite sheet animation for debugging
-    Vector2 sheet_pos = v2(0, 0);
-    Vector2 sheet_size = v2(anim_info -> anim_sheet -> width, anim_info -> anim_sheet -> height);
-    Vector2 frame_pos_in_sheet = v2(anim_sheet_pos_x, anim_sheet_pos_y);
-    Vector2 frame_size = v2(anim_info -> anim_frame_width, anim_info -> anim_frame_height);
-    draw_rect(sheet_pos, sheet_size, COLOR_BLACK); // Draw black background
-    draw_rect(v2_add(sheet_pos, frame_pos_in_sheet), frame_size, COLOR_WHITE); // Draw white rect on current frame
-    draw_image(anim_info -> anim_sheet, sheet_pos, sheet_size, COLOR_WHITE); // Draw the sheet
-    */
 }
 
 inline float64 Animation_now() 
@@ -106,10 +103,10 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-void update_animation(AnimationInfo *animation, Vector2 render_position)
+void update_animation(AnimationInfo *animation, Vector2 position, float32 scale_ratio)
 {
     float32 current_time = Animation_now(); // Get the current time
-    play_animation(animation, current_time, render_position); // Play the animation at the specified position
+    play_animation(animation, current_time, position, scale_ratio); // Play the animation
 }
 
 // Setup Fireball animation

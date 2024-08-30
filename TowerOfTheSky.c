@@ -1377,7 +1377,10 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		update_animation(& Fireball, v2(20, 20));
+		//Draw Fireball Test
+		Vector2 position = v2(20, 20);
+		float32 scale_ratio = 1; 
+		update_animation(& Fireball, position, scale_ratio);
 
 		//Render player
 		{
