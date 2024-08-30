@@ -1,5 +1,6 @@
 #include "Range.c"
 #include "Abilities.c"
+#include "AnimationData.c"
 
 inline float v2_dist(Vector2 a, Vector2 b) 
 {
@@ -1191,6 +1192,8 @@ int entry(int argc, char **argv)
 
 	float64 last_time = os_get_elapsed_seconds();
 
+	float32 anim_start_time = os_get_elapsed_seconds();
+
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
@@ -1211,6 +1214,8 @@ int entry(int argc, char **argv)
 
 	// Spells
 	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
+	
+	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
 	#if CONFIGURATION == DEBUG
 		{
@@ -1372,6 +1377,46 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
+		}
+
+		// Fireball animation test
+		{
+			// Float modulus to "loop" around the timer over the anim duration
+			float32 anim_elapsed = fmodf(now() - anim_start_time, Fireball.anim_duration);
+
+			// Get current progression in animation from 0.0 to 1.0
+			float32 anim_progression_factor = anim_elapsed / Fireball.anim_duration;
+			
+			u32 anim_current_index = Fireball.anim_number_of_frames * anim_progression_factor;
+			u32 anim_absolute_index_in_sheet = Fireball.anim_start_index + anim_current_index;
+			
+			u32 anim_index_x = anim_absolute_index_in_sheet % Fireball.number_of_columns;
+			u32 anim_index_y = anim_absolute_index_in_sheet / Fireball.number_of_columns + 1;
+			
+			u32 anim_sheet_pos_x = anim_index_x * Fireball.anim_frame_width;
+			u32 anim_sheet_pos_y = (Fireball.number_of_rows - anim_index_y) * Fireball.anim_frame_height; // Remember, Y inverted.
+			
+			// Draw the sprite sheet, with the uv box for the current frame.
+			// Uv box is a Vector4 of x1, y1, x2, y2 where each value is a percentage value 0.0 to 1.0
+			// from left to right / bottom to top in the texture.
+			Draw_Quad *quad = draw_image(Fireball.anim_sheet, v2(0, 0), v2(Fireball.anim_frame_width * 4, Fireball.anim_frame_height * 4), COLOR_WHITE);
+			quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)Fireball.anim_sheet -> width;
+			quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)Fireball.anim_sheet -> height;
+			quad -> uv.x2 = (float32)(anim_sheet_pos_x + Fireball.anim_frame_width) /(float32)Fireball.anim_sheet -> width;
+			quad -> uv.y2 = (float32)(anim_sheet_pos_y + Fireball.anim_frame_height) / (float32)Fireball.anim_sheet -> height;
+			
+			/* 
+			// Turn this on if you need to debug sprite sheets not being setup correctly.
+
+			// Visualize sprite sheet animation
+			Vector2 sheet_pos = v2(0, 0);
+			Vector2 sheet_size = v2(Fireball.anim_sheet -> width, Fireball.anim_sheet -> height);
+			Vector2 frame_pos_in_sheet = v2(anim_sheet_pos_x, anim_sheet_pos_y);
+			Vector2 frame_size = v2(Fireball.anim_frame_width, Fireball.anim_frame_height);
+			draw_rect(sheet_pos, sheet_size, COLOR_BLACK); // Draw black background
+			draw_rect(v2_add(sheet_pos, frame_pos_in_sheet), frame_size, COLOR_WHITE); // Draw white rect on current frame
+			draw_image(Fireball.anim_sheet, sheet_pos, sheet_size, COLOR_WHITE); // Draw the seet
+			*/
 		}
 
 		//Render player
