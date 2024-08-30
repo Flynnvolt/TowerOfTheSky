@@ -83,8 +83,8 @@ bool animate_f32_to_target(float* value, float target, float delta_t, float rate
 
 void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
 {
-	animate_f32_to_target(&(value -> x), target.x, delta_t, rate);
-	animate_f32_to_target(&(value -> y), target.y, delta_t, rate);
+	animate_f32_to_target(& (value -> x), target.x, delta_t, rate);
+	animate_f32_to_target(& (value -> y), target.y, delta_t, rate);
 }
 
 Range2f quad_to_range(Draw_Quad quad) 
@@ -888,7 +888,7 @@ void set_world_space()
 		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
 	}
 
-	return draw_image(sprite->image, rect.min, range2f_size(rect), col);
+	return draw_image(sprite -> image, rect.min, range2f_size(rect), col);
 }
 
 void do_ui_stuff()
@@ -1270,7 +1270,7 @@ int entry(int argc, char **argv)
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
 			Entity* en = & world -> entities[i];
-			if (en -> is_valid && en->arch == ARCH_player) 
+			if (en -> is_valid && en -> arch == ARCH_player) 
 			{
 				world_frame.player = en;
 			}
@@ -1382,14 +1382,14 @@ int entry(int argc, char **argv)
 		//Render player
 		{
 			Entity* en = get_player();
-			SpriteData* sprite = get_sprite(en->sprite_id);
+			SpriteData* sprite = get_sprite(en -> sprite_id);
 			Matrix4 xform = m4_scalar(1.0);
 			xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
-			xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+			xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 			xform         = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, 0.0, 0));
 
 			Vector4 col = COLOR_WHITE;
-			draw_image_xform(sprite->image, xform, get_sprite_size(sprite), col);
+			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
 		}
 
 		// Press F1 to Close Game
