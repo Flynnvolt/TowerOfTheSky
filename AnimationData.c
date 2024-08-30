@@ -63,8 +63,12 @@ AnimationInfo create_animation_info(
     return anim_info;
 }
 
-void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 position, float32 scale_ratio)
+inline float32 degrees_to_radians(float32 degrees) 
 {
+    return degrees * (M_PI / 180.0f);
+}
+
+void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 position, float32 scale_ratio, float32 rotation_degrees) {
     // Calculate the elapsed time for the animation
     float32 anim_elapsed = fmodf(current_time - anim_info -> anim_start_time, anim_info -> anim_duration);
 
@@ -90,8 +94,14 @@ void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 posi
     frame_width_scaled = roundf(frame_width_scaled);
     frame_height_scaled = roundf(frame_height_scaled);
 
-    // Draw the sprite sheet with the UV box for the current frame
-    Draw_Quad *quad = draw_image(anim_info -> anim_sheet, position, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
+    // Convert rotation from degrees to radians
+    float32 rotation_radians = degrees_to_radians(rotation_degrees);
+
+    // Create a rotation matrix
+    Matrix4 rotation_matrix = m4_rotate_z(m4_identity(), rotation_radians);
+
+    // Draw the sprite sheet with the UV box for the current frame and apply rotation
+    Draw_Quad *quad = draw_image_xform(anim_info -> anim_sheet, rotation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
     quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info -> anim_sheet -> width;
     quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info -> anim_sheet -> height;
     quad -> uv.x2 = (float32)(anim_sheet_pos_x + anim_info -> anim_frame_width) / (float32)anim_info -> anim_sheet -> width;
@@ -103,10 +113,10 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-void update_animation(AnimationInfo *animation, Vector2 position, float32 scale_ratio)
+void update_animation(AnimationInfo *animation, Vector2 position, float32 scale_ratio, float32 rotation_degrees) 
 {
     float32 current_time = Animation_now(); // Get the current time
-    play_animation(animation, current_time, position, scale_ratio); // Play the animation
+    play_animation(animation, current_time, position, scale_ratio, rotation_degrees); // Play the animation
 }
 
 // Setup Fireball animation
