@@ -341,6 +341,7 @@ enum SpriteID
 	SPRITE_research_station,
 	SPRITE_exp,
 	SPRITE_exp_vein,
+	SPRITE_fireball_sheet,
 	SPRITE_MAX,
 };
 
@@ -889,50 +890,6 @@ void set_world_space()
 	return draw_image(sprite->image, rect.min, range2f_size(rect), col);
 }
 
-Draw_Quad* draw_sprite_in_rect_test(SpriteID sprite_id, Matrix4 xform, Range2f rect, Vector4 col, float pad_pct) 
-{
-	SpriteData* sprite = get_sprite(sprite_id);
-	Vector2 sprite_size = get_sprite_size(sprite);
-
-	// make it smoller (padding)
-	{
-		Vector2 size = range2f_size(rect);
-		Vector2 offset = rect.min;
-		rect = range2f_shift(rect, v2_mulf(rect.min, -1));
-		rect.min.x += size.x * pad_pct * 0.5;
-		rect.min.y += size.y * pad_pct * 0.5;
-		rect.max.x -= size.x * pad_pct * 0.5;
-		rect.max.y -= size.y * pad_pct * 0.5;
-		rect = range2f_shift(rect, offset);
-	}
-
-	// ratio render lock
-	if (sprite_size.x > sprite_size.y) 
-	{ 
-		// long boi
-
-		// height is a ratio of width
-		Vector2 range_size = range2f_size(rect);
-		rect.max.y = rect.min.y + (range_size.x * (sprite_size.y / sprite_size.x));
-		// center along the Y
-		float new_height = rect.max.y - rect.min.y;
-		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
-
-	} else if (sprite_size.y > sprite_size.x) 
-	{ 
-		// tall boi
-		
-		// width is a ratio of height
-		Vector2 range_size = range2f_size(rect);
-		rect.max.x = rect.min.x + (range_size.y * (sprite_size.x / sprite_size.y));
-		// center along the X
-		float new_width = rect.max.x - rect.min.x;
-		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
-	}
-
-	return draw_image_xform(sprite -> image, xform, range2f_size(rect), col);
-}
-
 void do_ui_stuff()
 {
 	set_screen_space();
@@ -1058,7 +1015,6 @@ void do_ui_stuff()
 					// Draw Sprite
 
 					Range2f box = range2f_make_bottom_left(icon_positon, v2(icon_size, icon_size));
-					//draw_sprite_in_rect_test(get_sprite_id_from_ItemID(id), xform, box, COLOR_WHITE, 0.0); // test?
 
 					//draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE); // old
 
@@ -1252,6 +1208,9 @@ int entry(int argc, char **argv)
 
 	// Buildings
 	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator())};
+
+	// Spells
+	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
 
 	#if CONFIGURATION == DEBUG
 		{
