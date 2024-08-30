@@ -13,21 +13,7 @@ struct AnimationInfo
     u32 anim_start_index;
 };
 
-AnimationInfo Fireball = 
-{
-    .anim_sheet = null,
-    .number_of_columns = null,
-    .number_of_rows = null,
-    .anim_number_of_frames = null,
-    .anim_frame_width = null,
-    .anim_frame_height = null,
-    .anim_duration = null,
-    .anim_start_time = null,
-    .anim_start_index = null,
-};
-
-AnimationInfo setup_animation_info
-(
+AnimationInfo create_animation_info(
     Gfx_Image *anim_sheet, 
     u32 anim_start_frame_x,
     u32 anim_start_frame_y,
@@ -60,7 +46,7 @@ AnimationInfo setup_animation_info
     float32 anim_time_per_frame = 1.0 / playback_fps;
     float32 anim_duration = anim_time_per_frame * (float32)anim_number_of_frames;
 
-    // Set up the animation info structure
+    // Return the fully initialized AnimationInfo structure
     AnimationInfo anim_info = 
     {
         .anim_sheet = anim_sheet,
@@ -77,11 +63,16 @@ AnimationInfo setup_animation_info
     return anim_info;
 }
 
+// Setup Fireball animation
+AnimationInfo Fireball;
+
 void setup_fireball_anim()
 {
     Gfx_Image *anim_sheet = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator());
+    assert(anim_sheet, "Could not open Resources/Sprites/fireball_sprite_sheet.png");
     
-    Fireball = setup_animation_info(
+    Fireball = create_animation_info
+    (
         anim_sheet,
         0,  // anim_start_frame_x
         0,  // anim_start_frame_y
