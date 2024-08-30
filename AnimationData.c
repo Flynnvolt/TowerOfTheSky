@@ -107,7 +107,6 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-
 void update_animation(AnimationInfo *animation)
 {
     float32 current_time = Animation_now(); // Get the current time
