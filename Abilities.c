@@ -16,18 +16,18 @@ struct Resource
     float per_second;
 };
 
-// Define the function pointer type for ability effects
-typedef void (*EffectFunction)(Resource* resources[], float effect_value);
-
 Resource mana = {true, 0.0, 100.0, 10.0};
 Resource intellect = {false, 0.0, 50.0, 0.0};
+
+// Define the function pointer type for ability effects
+typedef void (*EffectFunction)(Resource* resources[], float effect_value);
 
 // Effect functions
 void apply_channel_mana_effect(Resource* resources[], float effect_value) 
 {
     if (resources[0] != NULL) 
     {
-        resources[0]->per_second += effect_value;  // Increase mana regen
+        resources[0] -> per_second += effect_value;  // Increase mana regen
     }
 }
 
@@ -35,7 +35,7 @@ void apply_wisdom_effect(Resource* resources[], float effect_value)
 {
     if (resources[0] != NULL) 
     {
-        resources[0]->max += effect_value;  // Increase max mana
+        resources[0] -> max += effect_value;  // Increase max mana
     }
 }
 
@@ -43,7 +43,7 @@ void apply_focus_effect(Resource* resources[], float effect_value)
 {
     if (resources[1] != NULL) 
     {
-        resources[1]->per_second += effect_value;  // Increase intellect regen
+        resources[1] -> per_second += effect_value;  // Increase intellect regen
     }
 }
 
@@ -71,10 +71,10 @@ struct Ability
 void level_up_ability(Ability* self, Resource* resources[]) 
 {
     // Apply the specific effect of the ability
-    self -> apply_effect(resources, self->current_effect_value);
+    self -> apply_effect(resources, self- > current_effect_value);
 
     // Calculate the new effect value
-    self -> current_effect_value = self->base_effect_value * self -> current_power_multiplier;
+    self -> current_effect_value = self -> base_effect_value * self->current_power_multiplier;
 
     // Spend resources and update costs
     for (int i = 0; i < MAX_COSTS; i++) 
@@ -95,13 +95,11 @@ void level_up_ability(Ability* self, Resource* resources[])
             else 
             {
                 log("Not enough resources to level up the ability.\n");
-                //return; // Exit if there are not enough resources
             }
         } 
         else 
         {
-            log("Error: resources[%d] is NULL\n", i);
-            //return; // Exit if resource pointer is NULL
+            log("Error: resources[%i] is NULL\n", i);
         }
     }
 
