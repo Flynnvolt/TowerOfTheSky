@@ -1192,8 +1192,6 @@ int entry(int argc, char **argv)
 
 	float64 last_time = os_get_elapsed_seconds();
 
-	float32 anim_start_time = os_get_elapsed_seconds();
-
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
