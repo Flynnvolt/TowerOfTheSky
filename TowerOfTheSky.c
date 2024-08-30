@@ -1379,7 +1379,7 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		update_fireball_animation();
+		update_animation(& Fireball);
 
 		//Render player
 		{

@@ -126,8 +126,8 @@ void setup_fireball_anim()
     );
 }
 
-void update_fireball_animation()
+void update_animation(AnimationInfo *animation)
 {
     float32 current_time = Animation_now(); // Get the current time
-    play_animation(& Fireball, current_time); // Play the Fireball animation
+    play_animation(animation, current_time); // Play the animation
 }
