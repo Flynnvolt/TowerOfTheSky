@@ -108,97 +108,97 @@ typedef struct LevelUpParams LevelUpParams;
 
 struct LevelUpParams
 {
-	float *statToBuff;			   // Which Stat to Increase
-	float *buffAmount;			   // Increase by how much
-	float *statBuffMultiplier;	   // Increase the buff multiplier
-	float *currentResourceSpent;   // Resource type spent
-	float *currentResourceSpent_2; // Resource type spent 2
-	float *currentCost;			   // Current Cost for resource 1
-	float *currentCost2;		   // Current Cost for resource 2
-	float *costMultiplier;		   // Increase the cost multiplier
-	int *level;
+    float *statToBuff;			   // Which Stat to Increase
+    float *buffAmount;			   // Increase by how much
+    float *statBuffMultiplier;	   // Increase the buff multiplier
+    float *currentResourceSpent;   // Resource type spent
+    float *currentResourceSpent_2; // Resource type spent 2
+    float *currentCost;			   // Current Cost for resource 1
+    float *currentCost2;		   // Current Cost for resource 2
+    float *costMultiplier;		   // Increase the cost multiplier
+    int *level;
 };
 
 void LevelUp(LevelUpParams *params)
 {
-	// Apply upgrade (buff the relevant attribute)
-	*(params->statToBuff) += *(params->buffAmount);
+    // Apply upgrade (buff the relevant attribute)
+    *(params->statToBuff) += *(params->buffAmount);
 
-	// Power up the upgrade
-	*(params->buffAmount) *= *(params->statBuffMultiplier);
+    // Power up the upgrade
+    *(params->buffAmount) *= *(params->statBuffMultiplier);
 
-	// Increase power multiplier
-	*(params->statBuffMultiplier) *= power_multiplier;
+    // Increase power multiplier
+    *(params->statBuffMultiplier) *= power_multiplier;
 
-	// Spend resources on the upgrade
-	*(params->currentResourceSpent) -= *(params->currentCost);
+    // Spend resources on the upgrade
+    *(params->currentResourceSpent) -= *(params->currentCost);
 
-	// Spend 2nd resource (if needed)
-	if (*(params->currentCost2) > 0)
-	{
-		*(params->currentResourceSpent_2) -= *(params->currentCost2);
-	}
+    // Spend 2nd resource (if needed)
+    if (*(params->currentCost2) > 0)
+    {
+        *(params->currentResourceSpent_2) -= *(params->currentCost2);
+    }
 
-	// Increase the cost of the upgrade
-	*(params->currentCost) *= *(params->costMultiplier);
+    // Increase the cost of the upgrade
+    *(params->currentCost) *= *(params->costMultiplier);
 
-	// Increase cost multiplier
-	*(params->costMultiplier) *= cost_multiplier;
+    // Increase cost multiplier
+    *(params->costMultiplier) *= cost_multiplier;
 
-	// Level up the upgrade
-	(*(params->level))++;
+    // Level up the upgrade
+    (*(params->level))++;
 }
 
 void LevelUpChannelMana()
 {
-	LevelUpParams params =
-		{
-			&mana_per_second,
-			&channel_mana_current_mana_per_second_buff,
-			&channel_mana_current_power_multiplier,
-			&current_mana, // resource spent 1
-			&no_second_resource,
-			&channel_mana_current_cost,
-			&no_second_cost,
-			&channel_mana_current_cost_multiplier,
-			&channel_mana_level,
-		};
+    LevelUpParams params =
+        {
+            &mana_per_second,
+            &channel_mana_current_mana_per_second_buff,
+            &channel_mana_current_power_multiplier,
+            &current_mana, // resource spent 1
+            &no_second_resource,
+            &channel_mana_current_cost,
+            &no_second_cost,
+            &channel_mana_current_cost_multiplier,
+            &channel_mana_level,
+        };
 
-	LevelUp(&params);
+    LevelUp(&params);
 }
 
 void LevelUpWisdom()
 {
-	LevelUpParams params =
-		{
-			&max_mana,
-			&wisdom_current_max_mana_buff,
-			&wisdom_current_power_multiplier,
-			&current_intellect, // resource spent 1
-			&no_second_resource,
-			&wisdom_current_cost,
-			&no_second_cost,
-			&wisdom_current_cost_multiplier,
-			&wisdom_level,
-		};
+    LevelUpParams params =
+        {
+            &max_mana,
+            &wisdom_current_max_mana_buff,
+            &wisdom_current_power_multiplier,
+            &current_intellect, // resource spent 1
+            &no_second_resource,
+            &wisdom_current_cost,
+            &no_second_cost,
+            &wisdom_current_cost_multiplier,
+            &wisdom_level,
+        };
 
-	LevelUp(&params);
+    LevelUp(&params);
 }
 
 void LevelUpFocus()
 {
-	LevelUpParams params =
-		{
-			&intellect_per_second,
-			&focus_current_intellect_per_second_buff,
-			&focus_current_power_multiplier,
-			&current_mana,		// resource spent 1
-			&current_intellect, // resource spent 2
-			&focus_current_cost,
-			&focus_current_cost_2,
-			&focus_current_cost_multiplier,
-			&focus_level
-		};
+    LevelUpParams params =
+        {
+            &intellect_per_second,
+            &focus_current_intellect_per_second_buff,
+            &focus_current_power_multiplier,
+            &current_mana,		// resource spent 1
+            &current_intellect, // resource spent 2
+            &focus_current_cost,
+            &focus_current_cost_2,
+            &focus_current_cost_multiplier,
+            &focus_level
+        };
 
-	LevelUp(&params);
+    LevelUp(&params);
 }
