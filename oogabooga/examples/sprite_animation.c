@@ -5,12 +5,12 @@ int entry(int argc, char **argv) {
 	
 	window.title = STR("Sprite animation example");
 	
-	Gfx_Image *anim_sheet = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator());
-	assert(anim_sheet, "Could not open Resources/Sprites/fireball_sprite_sheet.png");
+	Gfx_Image *anim_sheet = load_image_from_disk(STR("oogabooga/examples/male_animation.png"), get_heap_allocator());
+	assert(anim_sheet, "Could not open oogabooga/examples/male_animation.png");
 	
 	// Configure information about the whole image as a sprite sheet
-	u32 number_of_columns = 3;
-	u32 number_of_rows = 1;
+	u32 number_of_columns = 10;
+	u32 number_of_rows = 6;
 	u32 total_number_of_frames = number_of_rows * number_of_columns;
 	
 	u32 anim_frame_width  = anim_sheet->width  / number_of_columns;
@@ -20,10 +20,10 @@ int entry(int argc, char **argv) {
 	// (Inspect sheet image and count the frame indices you want)
 	// In sprite sheet animations, it usually goes down. So Y 0 is actuall the top of the
 	// sprite sheet, and +Y is down on the sprite sheet.
-	u32 anim_start_frame_x = 0;
-	u32 anim_start_frame_y = 0;
-	u32 anim_end_frame_x = 2;
-	u32 anim_end_frame_y = 0;
+	u32 anim_start_frame_x = 2;
+	u32 anim_start_frame_y = 1;
+	u32 anim_end_frame_x = 6;
+	u32 anim_end_frame_y = 2;
 	u32 anim_start_index = anim_start_frame_y * number_of_columns + anim_start_frame_x;
 	u32 anim_end_index   = anim_end_frame_y   * number_of_columns + anim_end_frame_x;
 	u32 anim_number_of_frames = max(anim_end_index, anim_start_index)-min(anim_end_index, anim_start_index)+1;
