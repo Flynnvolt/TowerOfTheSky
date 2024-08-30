@@ -1200,6 +1200,7 @@ void do_ui_stuff()
 					color = COLOR_RED;
 					draw_tooltip_box_string_to_side_larger(quad, icon_size, & focus_tooltip);
 				}
+				//log("Level:%i, intellect regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", focus.level, focus.current_effect_value, focus.current_power_multiplier, focus.current_costs[0], focus.cost_multipliers[0], focus.cost_multipliers[1]);
 			}
 		}
 		world_frame.hover_consumed = true;
