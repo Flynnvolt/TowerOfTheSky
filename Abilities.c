@@ -107,7 +107,7 @@ void level_up_ability(Ability* self)
     self -> apply_effect(self -> effect_resources, self -> current_effect_value);
 
     // Calculate the new effect value
-    self -> current_effect_value = self -> base_effect_value * self->current_power_multiplier;
+    self -> current_effect_value *= self -> current_power_multiplier;
 
     // Increase power multiplier for future levels
     self -> current_power_multiplier *= power_multiplier;
