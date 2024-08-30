@@ -84,7 +84,7 @@ void level_up_ability(Ability* self, Resource* resources[])
             if (resources[i] -> current >= self -> current_costs[i]) 
             {
                 // Spend the resource
-                resources[i]->current -= self -> current_costs[i];
+                resources[i] -> current -= self -> current_costs[i];
 
                 // Increase the cost for the next level
                 self -> current_costs[i] *= self -> cost_multipliers[i];
@@ -94,14 +94,14 @@ void level_up_ability(Ability* self, Resource* resources[])
             } 
             else 
             {
-                printf("Not enough resources to level up the ability.\n");
-                return; // Exit if there are not enough resources
+                log("Not enough resources to level up the ability.\n");
+                //return; // Exit if there are not enough resources
             }
         } 
         else 
         {
-            printf("Error: resources[%d] is NULL\n", i);
-            return; // Exit if resource pointer is NULL
+            log("Error: resources[%d] is NULL\n", i);
+            //return; // Exit if resource pointer is NULL
         }
     }
 

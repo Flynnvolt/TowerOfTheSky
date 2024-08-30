@@ -1148,7 +1148,7 @@ void do_ui_stuff()
 					color = COLOR_RED;
 					draw_tooltip_box_string_to_side_larger(quad, icon_size, & channel_mana_tooltip);
 				}
-				log("%.2f, %.2f, %.2f,", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier);
+				//log("Level:%i, mana Regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier, channel_mana.current_costs[0], channel_mana.cost_multipliers[0], channel_mana.cost_multipliers[1]);
 			}
 
 			// Level Up wisdom Button
