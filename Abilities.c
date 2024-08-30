@@ -150,7 +150,7 @@ Ability focus =
 {
     .unlocked = false,
     .level = 0,
-    .base_costs = {50.0, 1.0},                         // Two different base costs
+    .base_costs = {50.0, 1.0},                         // Base cost: 50 Mana, 1 Intellect
     .current_costs = {50.0, 1.0},
     .cost_multipliers = {base_cost_multiplier, base_cost_multiplier},
     .base_power_multiplier = base_power_multiplier,
