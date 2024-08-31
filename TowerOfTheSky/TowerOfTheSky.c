@@ -37,97 +37,6 @@ const int player_health = 10;
 
 #define DEV_TESTING
 
-void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
-{
-	// Increment resource
-	if(*current_resource < *max_resource)
-	{
-		*current_resource += *resource_per_second * delta_t;
-	}
-
-	// Resource Overflow Check
-	if(*current_resource >= *max_resource)
-	{
-		*current_resource = *max_resource;
-	}
-
-	//log("%f %f %f", current_resource, max_resource, resource_per_second);
-
-	float bar_width = icon_size * icon_row_count;
-
-	float x_start_pos = (screen_width * 0.025);
-
-	int current_resource_int = (int)*current_resource;
-
-	int max_resource_int = (int)*max_resource;
-
-	float percentage_of_resource = (bar_width / 100.0);
-
-	float current_resource_percentage = (*current_resource / *max_resource) * 100.0f;
-
-	float bar_visual_size = (percentage_of_resource * current_resource_percentage);
-
-	// Black background box
-	{
-		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
-	}
-
-	// Bar Fill
-	{
-		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
-	}	
-
-	// Bar current resource display
-	{
-		string current_resource_string = STR("%s: %i/%i    +%.1f/s"); // %i is where the number goes.
-
-		current_resource_string = sprint(get_temporary_allocator(), current_resource_string, *resource_name, current_resource_int, max_resource_int, *resource_per_second);
-
-		Gfx_Text_Metrics metrics = measure_text(font, current_resource_string, font_height, v2(0.20, 0.20));
-
-		Vector2 draw_pos = v2(x_start_pos + (bar_width * 0.5), y_pos + 14);
-
-		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-		
-		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
-
-		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
-
-		draw_text(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
-	}
-}
-
-Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
-{
-	Vector2 button_size_v2 = v2(16.0, 16.0);
-
-	Matrix4 xform = m4_scalar(1.0);
-
-	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
-
-	Vector2 icon_positon = v2(button_position.x, button_position.y);
-	
-	// White transparent box to show item slot is filled.
-	Draw_Quad* quad = draw_rect_xform(xform, v2(button_size, button_size), color);
-
-	// Setup box for mouse collision
-	Range2f btn_range = range2f_make_bottom_left(button_position, button_size_v2);
-
-	// Draw Button Text
-	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
-	Vector2 draw_pos = v2((button_position.x + (button_size_v2.x * 0.5)), (button_position.y + (button_size_v2.y * 0.5)));
-	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
-
-	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
-
-	return quad;
-}
-
 // :Sprites
 
 typedef struct SpriteData SpriteData;
@@ -419,6 +328,98 @@ void entity_setup(Entity* en, ArchetypeID id)
 }
 
 // :Functions
+
+
+void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
+{
+	// Increment resource
+	if(*current_resource < *max_resource)
+	{
+		*current_resource += *resource_per_second * delta_t;
+	}
+
+	// Resource Overflow Check
+	if(*current_resource >= *max_resource)
+	{
+		*current_resource = *max_resource;
+	}
+
+	//log("%f %f %f", current_resource, max_resource, resource_per_second);
+
+	float bar_width = icon_size * icon_row_count;
+
+	float x_start_pos = (screen_width * 0.025);
+
+	int current_resource_int = (int)*current_resource;
+
+	int max_resource_int = (int)*max_resource;
+
+	float percentage_of_resource = (bar_width / 100.0);
+
+	float current_resource_percentage = (*current_resource / *max_resource) * 100.0f;
+
+	float bar_visual_size = (percentage_of_resource * current_resource_percentage);
+
+	// Black background box
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
+	}
+
+	// Bar Fill
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
+	}	
+
+	// Bar current resource display
+	{
+		string current_resource_string = STR("%s: %i/%i    +%.1f/s"); // %i is where the number goes.
+
+		current_resource_string = sprint(get_temporary_allocator(), current_resource_string, *resource_name, current_resource_int, max_resource_int, *resource_per_second);
+
+		Gfx_Text_Metrics metrics = measure_text(font, current_resource_string, font_height, v2(0.20, 0.20));
+
+		Vector2 draw_pos = v2(x_start_pos + (bar_width * 0.5), y_pos + 14);
+
+		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+		
+		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+
+		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
+
+		draw_text(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+	}
+}
+
+Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
+{
+	Vector2 button_size_v2 = v2(16.0, 16.0);
+
+	Matrix4 xform = m4_scalar(1.0);
+
+	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
+
+	Vector2 icon_positon = v2(button_position.x, button_position.y);
+	
+	// White transparent box to show item slot is filled.
+	Draw_Quad* quad = draw_rect_xform(xform, v2(button_size, button_size), color);
+
+	// Setup box for mouse collision
+	Range2f btn_range = range2f_make_bottom_left(button_position, button_size_v2);
+
+	// Draw Button Text
+	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
+	Vector2 draw_pos = v2((button_position.x + (button_size_v2.x * 0.5)), (button_position.y + (button_size_v2.y * 0.5)));
+	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+
+	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+
+	return quad;
+}
 
 bool check_if_mouse_clicked_button(Vector2 button_pos, Vector2 button_size)
 {
