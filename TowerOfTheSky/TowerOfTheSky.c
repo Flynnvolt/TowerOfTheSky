@@ -1178,9 +1178,9 @@ int entry(int argc, char **argv)
 {
 	window.title = STR("Tower of the Sky");
 
-	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_height = 1080; 
-	window.fullscreen = true;
+	window.pixel_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.pixel_height = 1080; 
+	window.fullscreen = false;
 
 	// Where on the monitor the window starts up at
 	window.x = 0;
