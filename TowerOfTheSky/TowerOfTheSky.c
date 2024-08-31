@@ -1120,7 +1120,7 @@ int entry(int argc, char **argv)
 
 			if(mana.current >= fireball_cost)
 			{
-				spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 200.0, 10.0, & Fireball, 1.0);\
+				spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 300.0, 10.0, & Fireball, 1.0);\
 				mana.current -= fireball_cost;
 				//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 			}
@@ -1129,6 +1129,17 @@ int entry(int argc, char **argv)
 
 		int count = 0;
 
+		// Remove inactive projectiles
+		/*
+		for (int i = MAX_PROJECTILES - 1; i >= 0; i--) 
+		{
+			if (!projectiles[i].is_active) 
+			{
+				projectiles[i] = false;
+			}
+		}
+		*/
+
         // Loop through all Projectiles and render / move them.
         for (int i = 0; i < MAX_PROJECTILES; i++) 
         {		
@@ -1136,7 +1147,6 @@ int entry(int argc, char **argv)
             {
                 update_projectile(& projectiles[i], delta_t);
 
-                //log("Projectile is active at position (%f, %f)\n", projectiles[i].position.x, projectiles[i].position.y);
 				count++;
             }
         }
