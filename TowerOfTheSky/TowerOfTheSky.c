@@ -914,8 +914,8 @@ int entry(int argc, char **argv)
 {
 	window.title = STR("Tower of the Sky");
 
-	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_width = 1080; 
+	window.pixel_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.pixel_height = 1080; 
 	window.fullscreen = false;
 
 	// Where on the monitor the window starts up at
@@ -1122,6 +1122,7 @@ int entry(int argc, char **argv)
 			{
 				spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 200.0, 10.0, & Fireball, 1.0);\
 				mana.current -= fireball_cost;
+				//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 			}
 		}
 		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
