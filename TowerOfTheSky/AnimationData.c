@@ -124,7 +124,7 @@ AnimationInfo Fireball;
 
 void setup_fireball_anim()
 {
-    Gfx_Image *anim_sheet = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator());
+    Gfx_Image *anim_sheet = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator());
     assert(anim_sheet, "Could not open Resources/Sprites/fireball_sprite_sheet.png");
     
     Fireball = create_animation_info

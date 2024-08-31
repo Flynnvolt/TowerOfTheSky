@@ -1198,20 +1198,20 @@ int entry(int argc, char **argv)
 	// :Load Sprites
 
 	// Missing Texture Sprite
-	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator())};
+	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator())};
 	
 	// Player
-	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator())};
+	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator())};
 
 	// Items
-	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator())};
-	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator())};
+	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator())};
+	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator())};
 
 	// Buildings
-	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator())};
+	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator())};
 
 	// Spells
-	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
+	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
 	
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
