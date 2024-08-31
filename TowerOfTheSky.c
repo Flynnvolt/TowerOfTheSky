@@ -1379,8 +1379,8 @@ int entry(int argc, char **argv)
 
 		// Fireball Test
 		Vector2 position = v2(20, 20);
-		float32 scale_ratio = 4.0; // No scaling
-		float32 rotation_degrees = 45.0; // Rotate by 45 degrees
+		float32 scale_ratio = 4.0;
+		float32 rotation_degrees = 45.0;
 		update_animation(& Fireball, position, scale_ratio, rotation_degrees);
 
 		//Render player
