@@ -1,203 +1,7 @@
 #include "Range.c"
 #include "Abilities.c"
 #include "AnimationData.c"
-
-inline float v2_dist(Vector2 a, Vector2 b) 
-{
-    return v2_length(v2_sub(a, b));
-}
-
-typedef enum Pivot Pivot;
-
-enum Pivot 
-{
-	PIVOT_bottom_left,
-	PIVOT_bottom_center,
-	PIVOT_bottom_right,
-	PIVOT_center_left,
-	PIVOT_center_center,
-	PIVOT_center_right,
-	PIVOT_top_left,
-	PIVOT_top_center,
-	PIVOT_top_right,
-};
-
-void draw_text_with_pivot(Gfx_Font *font, string text, u32 raster_height, Vector2 position, Vector2 scale, Vector4 color, Pivot pivot) 
-{
-	Gfx_Text_Metrics metrics = measure_text(font, text, raster_height, scale);
-	position = v2_sub(position, metrics.visual_pos_min);
-	Vector2 pivot_mul = {0};
-
-	switch (pivot) 
-	{
-		case PIVOT_bottom_left:
-		{
-			pivot_mul = v2(0.0, 0.0);
-			break;
-		} 
-
-		case PIVOT_center_center:
-		{
-			pivot_mul = v2(0.5, 0.5); 
-			break;
-		} 
-
-		case PIVOT_center_left:
-		{
-			pivot_mul = v2(0.0, 0.5);
-			break;
-		} 
-
-		case PIVOT_top_center:
-		{
-			pivot_mul = v2(0.5, 1.0);
-			break;
-		} 
-
-		default:
-		{
-			log_error("pivot not supported yet. fill in case at draw_text_with_pivot");
-			break;
-		}
-	}
-
-	position = v2_sub(position, v2_mul(metrics.visual_size, pivot_mul));
-	draw_text(font, text, raster_height, position, scale, color);
-}
-
-bool almost_equals(float a, float b, float epsilon) 
-{
- 	return fabs(a - b) <= epsilon;
-}
-
-bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
-{
-	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
-	if (almost_equals(*value, target, 0.001f))
-	{
-		*value = target;
-		return true; // Reached
-	}
-	return false;
-}
-
-void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
-{
-	animate_f32_to_target(& (value -> x), target.x, delta_t, rate);
-	animate_f32_to_target(& (value -> y), target.y, delta_t, rate);
-}
-
-Range2f quad_to_range(Draw_Quad quad) 
-{
-	return (Range2f){quad.bottom_left, quad.top_right};
-}
-
-float float_alpha(float x, float min, float max) 
-{
-	float res = (x-min) / (max-min);
-	res = clamp(res, 0.0, 1.0);
-	return res;
-}
-
-inline float64 now() 
-{
-	return os_get_elapsed_seconds();
-}
-
-float alpha_from_end_time(float64 end_time, float length) 
-{
-	return float_alpha(now(), end_time-length, end_time);
-}
-
-bool has_reached_end_time(float64 end_time) 
-{
-	return now() > end_time;
-}
-
-Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) 
-{
-	// NOTE: we're assuming these are the screen space matricies.
-	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.camera_xform;
-
-	Matrix4 ndc_to_screen_space = m4_identity();
-	ndc_to_screen_space = m4_mul(ndc_to_screen_space, m4_inverse(proj));
-	ndc_to_screen_space = m4_mul(ndc_to_screen_space, view);
-
-	ndc_quad.bottom_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_left), 0, 1)).xy;
-	ndc_quad.bottom_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_right), 0, 1)).xy;
-	ndc_quad.top_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_left), 0, 1)).xy;
-	ndc_quad.top_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_right), 0, 1)).xy;
-
-	return ndc_quad;
-}
-
-Vector2 get_mouse_pos_in_ndc()
-{
-	float mouse_x = input_frame.mouse_x;
-	float mouse_y = input_frame.mouse_y;
-	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.camera_xform;
-	float window_w = window.width;
-	float window_h = window.height;
-
-	// Normalize the mouse coordinates
-	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
-	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
-
-	return (Vector2){ndc_x, ndc_y};
-}
-
-Vector2 get_mouse_pos_in_world_space() 
-{
-	float mouse_x = input_frame.mouse_x;
-	float mouse_y = input_frame.mouse_y;
-	Matrix4 proj = draw_frame.projection;
-	Matrix4 view = draw_frame.camera_xform;
-	float window_w = window.width;
-	float window_h = window.height;
-
-	// Normalize the mouse coordinates
-	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
-	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
-
-	// Transform to world coordinates
-	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
-	world_pos = m4_transform(m4_inverse(proj), world_pos);
-	world_pos = m4_transform(view, world_pos);
-	// log("%f, %f", world_pos.x, world_pos.y);
-
-	// Return as 2D vector
-	return (Vector2){ world_pos.x, world_pos.y };
-}
-
-// :Utilities
-
-float sin_breathe(float time, float rate)
-{
-	return (sin(time * rate) + 1.0 / 2.0);
-}
-
-// :Tile Functions
-
-const int tile_width = 16;
-
-int world_pos_to_tile_pos(float world_pos) 
-{
-	return roundf(world_pos / (float)tile_width);
-}
-
-float tile_pos_to_world_pos(int tile_pos) 
-{
-	return ((float)tile_pos * (float)tile_width);
-}
-
-Vector2 round_v2_to_tile(Vector2 world_pos) 
-{
-	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
-	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
-	return world_pos;
-}
+#include "RandyTutorialMath.c"
 
 // :Global APP
 
@@ -270,14 +74,14 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
 	}
 
-	// Mana fill
+	// Bar Fill
 	{
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
 		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
 	}	
 
-	// Mana bar current mana display
+	// Bar current resource display
 	{
 		string current_resource_string = STR("%s: %i/%i    +%.1f/s"); // %i is where the number goes.
 
@@ -418,9 +222,7 @@ typedef struct ItemData ItemData;
 struct ItemData
 {
 	string pretty_name;
-	//ItemID type;
 	int amount;
-	// :recipe crafting
 	ArchetypeID for_structure;
 	ItemAmount crafting_recipe[MAX_RECIPE_INGREDIENTS];
 	float craft_length;
@@ -435,20 +237,6 @@ ItemData get_item_data(ItemID id)
 		return items[id];
 	}
 	return items[0];
-}
-
-int get_crafting_recipe_count(ItemData item_data) 
-{
-	int count = 0;
-	for (int i = 0; i < MAX_RECIPE_INGREDIENTS; i++) 
-	{
-		if (item_data.crafting_recipe[i].id == 0) 
-		{
-			break;
-		}
-		count += 1;
-	}
-	return count;
 }
 
 SpriteID get_sprite_id_from_ItemID(ItemID item_id)
@@ -501,13 +289,8 @@ struct Entity
 	Vector2 pos;
 	int health;
 	ItemID item;
-	ItemID selected_crafting_item;
-	bool destroyable_world_item;
 	bool is_item;
-	bool workbench_thing;
-	ItemID current_crafting_item;
-	int current_crafting_amount;
-	float64 crafting_end_time;
+	bool destroyable_world_item;
 };
 
 string get_archetype_pretty_name(ArchetypeID arch) 
@@ -527,40 +310,6 @@ string get_archetype_pretty_name(ArchetypeID arch)
 	}
 }
 
-// :Buildings
-
-typedef struct BuildingData BuildingData;
-
-struct BuildingData
-{
-	ArchetypeID to_build;
-	SpriteID icon;
-	int pct_per_research_exp; // this jank will get replaced with a recipe one day
-	// Display Name
-	// Cost
-};
-
-typedef enum BuildingID BuildingID;
-
-enum BuildingID
-{
-	BUILDING_nil,
-	BUILDING_workbench,
-	BUILDING_research_station,
-	BUILDING_MAX,
-};
-
-BuildingData buildings[BUILDING_MAX];
-
-BuildingData get_building_data(BuildingID id)
-{
-    if (id >= 0 && id < BUILDING_MAX)
-    {
-        return buildings[id];
-    }
-    return buildings[0];
-}
-
 // :UX
 
 typedef enum UXState UXState;
@@ -574,7 +323,6 @@ enum UXState
 	UX_workbench,
 	UX_research,
 };
-typedef struct UnlockState UnlockState;
 
 // :World
 
@@ -595,12 +343,6 @@ struct World
 	float building_alpha;
 
 	float building_alpha_target;
-
-	BuildingID placing_building;
-
-	Entity* interacting_with_entity;
-
-	ItemID selected_crafting_item;
 };
 
 World* world = 0;
@@ -656,20 +398,6 @@ void setup_player(Entity* en)
 	en -> health = player_health;
 }
 
-void setup_exp_vein(Entity* en) 
-{
-	en -> arch = ARCH_exp_vein;
-	en -> sprite_id = SPRITE_exp_vein;
-	en -> health = exp_vein_health;
-	en -> destroyable_world_item = true;
-}
-
-void setup_research_station(Entity* en) 
-{
-	en -> arch = ARCH_research_station;
-	en -> sprite_id = SPRITE_research_station;
-}
-
 void setup_item(Entity* en, ItemID item_id) 
 {
 	en -> arch = ARCH_item;
@@ -682,12 +410,6 @@ void entity_setup(Entity* en, ArchetypeID id)
 {
 	switch (id) 
 	{
-		case ARCH_research_station:
-		{
-			setup_research_station(en);
-			break;
-		}
-
 		default: 
 		{
 			log_error("missing entity_setup case entry"); 
@@ -849,8 +571,8 @@ void set_world_space()
 
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
 
-	Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
-	{
+Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
+{
 	SpriteData* sprite = get_sprite(sprite_id);
 	Vector2 sprite_size = get_sprite_size(sprite);
 
@@ -1046,7 +768,7 @@ void do_ui_stuff()
 				{
 					wisdom.unlocked = true;
 
-					//unlock intellect for now for testing other things (shouldn't be unlocked yet)
+					// Unlock intellect for now for testing other things (shouldn't be unlocked yet)
 
 					if (intellect.unlocked == false)
 					{
@@ -1055,7 +777,7 @@ void do_ui_stuff()
 				}
 			}
 
-			// intellect bar
+			// Intellect bar
 			if(intellect.unlocked == true)
 			{
 				float y_pos = 220;
