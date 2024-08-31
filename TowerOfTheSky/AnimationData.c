@@ -101,18 +101,23 @@ void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *pos
     // Create rotation matrix
     Matrix4 rotation_matrix = m4_rotate_z(m4_identity(), rotation_radians);
 
-    // Create translation matrix
-    Matrix4 translation_matrix = m4_translate(m4_identity(), (Vector3){position -> x, position -> y, 0.0f});
+    // Translate the sprite to its center for correct pivoting
+    Vector3 center_translation = { -frame_width_scaled / 2.0f, -frame_height_scaled / 2.0f, 0.0f };
+    Matrix4 center_translation_matrix = m4_translate(m4_identity(), center_translation);
 
-    // Combine rotation and translation into a single transformation matrix
-    Matrix4 rotation_and_translation_matrix = m4_mul(translation_matrix, rotation_matrix);
+    // Create a translation matrix for the sprite's position
+    Vector3 position_3d = { position -> x, position -> y, 0.0f };
+    Matrix4 translation_matrix = m4_translate(m4_identity(), position_3d);
+
+    // Combine center translation, rotation, and position translation into a single transformation matrix
+    Matrix4 transformation_matrix = m4_mul(translation_matrix, m4_mul(rotation_matrix, center_translation_matrix));
 
     // Temp fix for GPU driver issue
     float64 px_width  = 1.0 / (float64)anim_info -> anim_sheet -> width;
     float64 px_height = 1.0 / (float64)anim_info -> anim_sheet -> height;
 
     // Draw the sprite sheet with the UV box for the current frame
-    Draw_Quad *quad = draw_image_xform(anim_info -> anim_sheet, rotation_and_translation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
+    Draw_Quad *quad = draw_image_xform(anim_info -> anim_sheet, transformation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
     quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info -> anim_sheet -> width + (float32)px_width * 0.1f;
     quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info -> anim_sheet -> height + (float32)px_height * 0.1f;
     quad -> uv.x2 = (float32)(anim_sheet_pos_x + anim_info -> anim_frame_width) / (float32)anim_info -> anim_sheet -> width;
