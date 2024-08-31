@@ -2,6 +2,7 @@
 #include "Abilities.c"
 #include "AnimationData.c"
 #include "RandyTutorialMath.c"
+#include "Projectile.c"
 
 // :Global APP
 
@@ -23,6 +24,10 @@ const s32 Layer_WORLD = 10;
 
 #define m4_identity m4_make_scale(v3(1, 1, 1))
 
+#define MAX_PROJECTILES 100 
+
+extern Projectile projectiles[MAX_PROJECTILES];
+
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 const float entity_selection_radius = 8.0f;
@@ -36,6 +41,15 @@ const int player_health = 10;
 // :Testing Toggle
 
 #define DEV_TESTING
+
+// :Game
+
+typedef struct Game Game;
+
+struct Game 
+{
+Projectile *projectiles;
+};
 
 // :Sprites
 
@@ -328,7 +342,6 @@ void entity_setup(Entity* en, ArchetypeID id)
 }
 
 // :Functions
-
 
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
@@ -901,8 +914,8 @@ int entry(int argc, char **argv)
 {
 	window.title = STR("Tower of the Sky");
 
-	window.pixel_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.pixel_height = 1080; 
+	window.scaled_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.scaled_width = 1080; 
 	window.fullscreen = false;
 
 	// Where on the monitor the window starts up at
@@ -1099,12 +1112,34 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-
+		/*
 		// Fireball Test
 		Vector2 position = v2(20, 20);
-		float32 scale_ratio = 4.0;
+		float32 scale_ratio = 1.0;
 		float32 rotation_degrees = 45.0;
 		update_animation(& Fireball, position, scale_ratio, rotation_degrees);
+		*/
+
+		if(is_key_just_pressed(KEY_F3))
+		{
+			spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(10000, 10000), 10.0f, 10.0f, & Fireball, 1.0);
+		}
+		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
+
+		int count = 0;
+
+        // For each projectile
+        for (int i = 0; i < MAX_PROJECTILES; i++) 
+        {		
+            if (projectiles[i].is_active) 
+            {
+                update_projectile(& projectiles[i], delta_t);
+                // Debug output to check if the projectiles are being updated
+                //log("Projectile is active at position (%f, %f)\n", projectiles[i].position.x, projectiles[i].position.y);
+				count++;
+            }
+        }
+		//log("Active Projectiles: %i", count);
 
 		//Render player
 		{
