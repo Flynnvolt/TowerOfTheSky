@@ -83,7 +83,7 @@ void update_projectile(Projectile *projectile, float delta_time)
         //projectile -> is_active = false;  // Deactivate the projectile
     }
 
-    update_animation(&projectile->animation, &projectile->position, projectile->scale, projectile->rotation);
+    update_animation(&projectile->animation, &projectile->position, projectile->scale, & projectile->rotation);
 
     log("Updating projectile at (%f, %f)\n", projectile -> position.x, projectile -> position.y);
 }
