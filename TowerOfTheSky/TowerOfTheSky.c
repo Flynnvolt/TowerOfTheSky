@@ -1112,34 +1112,38 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-		/*
-		// Fireball Test
-		Vector2 position = v2(20, 20);
-		float32 scale_ratio = 1.0;
-		float32 rotation_degrees = 45.0;
-		update_animation(& Fireball, position, scale_ratio, rotation_degrees);
-		*/
 
 		if(is_key_just_pressed(KEY_F3))
 		{
-			spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(10000, 10000), 10.0f, 10.0f, & Fireball, 1.0);
+			// Ghetto Fireball Spawn Test
+			float fireball_cost = (mana.max / 20);
+
+			if(mana.current >= fireball_cost)
+			{
+				spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 200.0, 10.0, & Fireball, 1.0);\
+				mana.current -= fireball_cost;
+			}
 		}
 		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 
 		int count = 0;
 
-        // For each projectile
+        // Loop through all Projectiles and render / move them.
         for (int i = 0; i < MAX_PROJECTILES; i++) 
         {		
             if (projectiles[i].is_active) 
             {
                 update_projectile(& projectiles[i], delta_t);
-                // Debug output to check if the projectiles are being updated
+
                 //log("Projectile is active at position (%f, %f)\n", projectiles[i].position.x, projectiles[i].position.y);
 				count++;
             }
         }
-		//log("Active Projectiles: %i", count);
+
+		if(is_key_just_pressed(KEY_F3))
+		{
+			log("Active Projectiles: %i", count);
+		}
 
 		//Render player
 		{
