@@ -68,49 +68,55 @@ inline float32 degrees_to_radians(float32 degrees)
     return degrees * (M_PI / 180.0f);
 }
 
-void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 scale_ratio, float32 rotation_degrees) 
+void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees) 
 {
     // Calculate the elapsed time for the animation
-    float32 anim_elapsed = fmodf(current_time - anim_info -> anim_start_time, anim_info -> anim_duration);
+    float32 anim_elapsed = fmodf(current_time - anim_info->anim_start_time, anim_info->anim_duration);
 
     // Get the current progression in the animation from 0.0 to 1.0
-    float32 anim_progression_factor = anim_elapsed / anim_info -> anim_duration;
+    float32 anim_progression_factor = anim_elapsed / anim_info->anim_duration;
     
     // Determine the current frame index in the animation sequence
-    u32 anim_current_index = anim_info -> anim_number_of_frames * anim_progression_factor;
-    u32 anim_absolute_index_in_sheet = anim_info -> anim_start_index + anim_current_index;
+    u32 anim_current_index = anim_info->anim_number_of_frames * anim_progression_factor;
+    u32 anim_absolute_index_in_sheet = anim_info->anim_start_index + anim_current_index;
     
     // Calculate the position of the current frame in the sprite sheet
-    u32 anim_index_x = anim_absolute_index_in_sheet % anim_info -> number_of_columns;
-    u32 anim_index_y = anim_absolute_index_in_sheet / anim_info -> number_of_columns + 1;
+    u32 anim_index_x = anim_absolute_index_in_sheet % anim_info->number_of_columns;
+    u32 anim_index_y = anim_absolute_index_in_sheet / anim_info->number_of_columns;
     
-    u32 anim_sheet_pos_x = anim_index_x * anim_info -> anim_frame_width;
-    u32 anim_sheet_pos_y = (anim_info -> number_of_rows - anim_index_y) * anim_info -> anim_frame_height; // Y inverted
+    u32 anim_sheet_pos_x = anim_index_x * anim_info->anim_frame_width;
+    u32 anim_sheet_pos_y = (anim_info->number_of_rows - anim_index_y - 1) * anim_info->anim_frame_height; // Y inverted
 
     // Scale factor and size calculation
-    float32 frame_width_scaled = anim_info -> anim_frame_width * scale_ratio;
-    float32 frame_height_scaled = anim_info -> anim_frame_height * scale_ratio;
+    float32 frame_width_scaled = anim_info->anim_frame_width * scale_ratio;
+    float32 frame_height_scaled = anim_info->anim_frame_height * scale_ratio;
 
     // Ensure pixel-perfect scaling
     frame_width_scaled = roundf(frame_width_scaled);
     frame_height_scaled = roundf(frame_height_scaled);
 
     // Convert rotation from degrees to radians
-    float32 rotation_radians = degrees_to_radians(rotation_degrees);
+    float32 rotation_radians = degrees_to_radians(*rotation_degrees);
 
-    // Create a rotation matrix
+    // Create rotation matrix
     Matrix4 rotation_matrix = m4_rotate_z(m4_identity(), rotation_radians);
 
-    // Temp Charlie fix for some sort of GPU driver issue?
-    float64 px_width  = 1.0/(float64)anim_info->anim_sheet->width;
-    float64 px_height = 1.0/(float64)anim_info->anim_sheet->height;
+    // Create translation matrix
+    Matrix4 translation_matrix = m4_translate(m4_identity(), (Vector3){position->x, position->y, 0.0f});
+
+    // Combine rotation and translation into a single transformation matrix
+    Matrix4 rotation_and_translation_matrix = m4_mul(translation_matrix, rotation_matrix);
+
+    // Temp fix for GPU driver issue
+    float64 px_width  = 1.0 / (float64)anim_info->anim_sheet->width;
+    float64 px_height = 1.0 / (float64)anim_info->anim_sheet->height;
 
     // Draw the sprite sheet with the UV box for the current frame
-    Draw_Quad *quad = draw_image(anim_info -> anim_sheet, *position, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
-    quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info -> anim_sheet -> width + px_width*0.1;
-    quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info -> anim_sheet -> height + px_height*0.1;
-    quad -> uv.x2 = (float32)(anim_sheet_pos_x + anim_info -> anim_frame_width) / (float32)anim_info -> anim_sheet -> width;
-    quad -> uv.y2 = (float32)(anim_sheet_pos_y + anim_info -> anim_frame_height) / (float32)anim_info -> anim_sheet -> height;
+    Draw_Quad *quad = draw_image_xform(anim_info->anim_sheet, rotation_and_translation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
+    quad->uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info->anim_sheet->width + (float32)px_width * 0.1f;
+    quad->uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info->anim_sheet->height + (float32)px_height * 0.1f;
+    quad->uv.x2 = (float32)(anim_sheet_pos_x + anim_info->anim_frame_width) / (float32)anim_info->anim_sheet->width;
+    quad->uv.y2 = (float32)(anim_sheet_pos_y + anim_info->anim_frame_height) / (float32)anim_info->anim_sheet->height;
 }
 
 inline float64 Animation_now() 
@@ -118,7 +124,7 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale_ratio, float32 rotation_degrees) 
+void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees) 
 {
     float32 current_time = Animation_now(); // Get the current time
     play_animation(animation, current_time, position, scale_ratio, rotation_degrees); // Play the animation
