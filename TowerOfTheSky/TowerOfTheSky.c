@@ -38,6 +38,8 @@ const int exp_vein_health = 3;
 
 const int player_health = 10;
 
+const int player_max_health = 100;
+
 // :Testing Toggle
 
 #define DEV_TESTING
@@ -210,7 +212,8 @@ struct Entity
 	SpriteID sprite_id;
 	ArchetypeID arch;
 	Vector2 pos;
-	int health;
+	float health;
+	float max_health;
 	ItemID item;
 	bool is_item;
 	bool destroyable_world_item;
@@ -319,6 +322,7 @@ void setup_player(Entity* en)
 	en -> arch = ARCH_player;
 	en -> sprite_id = SPRITE_player;
 	en -> health = player_health;
+	en -> max_health = player_max_health;
 }
 
 void setup_item(Entity* en, ItemID item_id) 
@@ -367,11 +371,11 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 
 	int max_resource_int = (int)*max_resource;
 
-	float percentage_of_resource = (bar_width / 100.0);
+	float percentage_of_bar_width = (bar_width / 100.0);
 
 	float current_resource_percentage = (*current_resource / *max_resource) * 100.0f;
 
-	float bar_visual_size = (percentage_of_resource * current_resource_percentage);
+	float bar_visual_size = (percentage_of_bar_width * current_resource_percentage);
 
 	// Black background box
 	{
@@ -405,6 +409,49 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 
 		draw_text(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
 	}
+}
+
+void draw_unit_bar(Vector2 position, float *current_value, float *max_value, float *recovery_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color)
+{
+	// Update bar
+	if(*current_value < *max_value)
+	{
+		*current_value += *recovery_per_second * delta_t;
+	}
+
+	// Value overflow check
+	if(*current_value >= *max_value)
+	{
+		*current_value = *max_value;
+	}
+
+	//log("%f %f %f", current_value, max_value, recovery_per_second);
+
+	float bar_width = icon_size * icon_row_count;
+
+	int current_value_int = (int)*current_value;
+
+	int max_value_int = (int)*max_value;
+
+	float percentage_of_bar_width = (bar_width / 100.0);
+
+	float current_fill_percentage = (*current_value / *max_value) * 100.0f;
+
+	float bar_visual_size = (percentage_of_bar_width * current_fill_percentage);
+
+	// Black background box
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(position.x, position.y, 0.0));
+		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
+	}
+
+	// Bar Fill
+	{
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(position.x, position.y, 0.0));
+		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
+	}	
 }
 
 Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
@@ -916,7 +963,7 @@ int entry(int argc, char **argv)
 
 	window.pixel_width = 1920; // We need to set the scaled size if we want to handle system scaling (DPI)
 	window.pixel_height = 1080; 
-	window.fullscreen = false;
+	window.fullscreen = true;
 
 	// Where on the monitor the window starts up at
 	window.x = 0;
@@ -1167,6 +1214,14 @@ int entry(int argc, char **argv)
 
 			Vector4 col = COLOR_WHITE;
 			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
+
+			// Healthbar test values
+			float recovery_per_second = 10;
+
+			Vector2 health_bar_pos = v2((en -> pos.x - 10), (en -> pos.y + sprite -> image -> height - 4));
+
+			// Temperary render player healthbar test
+			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & recovery_per_second, 4, 6, COLOR_RED, bg_box_color);
 		}
 
 		// Press F1 to Close Game

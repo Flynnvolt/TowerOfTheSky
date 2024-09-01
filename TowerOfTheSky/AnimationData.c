@@ -8,9 +8,10 @@ struct AnimationInfo
     u32 anim_number_of_frames;
     u32 anim_frame_width;
     u32 anim_frame_height;
+    u32 anim_start_index;
     float32 anim_duration;
     float32 anim_start_time;
-    u32 anim_start_index;
+    float32 playback_fps;
 };
 
 AnimationInfo create_animation_info(
@@ -20,7 +21,8 @@ AnimationInfo create_animation_info(
     u32 anim_end_frame_x,
     u32 anim_end_frame_y,
     u32 number_of_columns,
-    u32 number_of_rows
+    u32 number_of_rows,
+    float32 playback_fps
 )
 {
     assert(anim_sheet, "Invalid animation sheet provided");
@@ -42,7 +44,6 @@ AnimationInfo create_animation_info(
     assert(anim_end_frame_y < number_of_rows, "anim_end_frame_y is out of bounds");
 
     // Calculate duration per frame in seconds
-    float32 playback_fps = 4;
     float32 anim_time_per_frame = 1.0 / playback_fps;
     float32 anim_duration = anim_time_per_frame * (float32)anim_number_of_frames;
 
@@ -152,6 +153,7 @@ void setup_fireball_anim()
         2,  // anim_end_frame_x
         0,  // anim_end_frame_y
         3,  // number_of_columns
-        1   // number_of_rows
+        1,  // number_of_rows
+        16  // playback_fps
     );
 }
