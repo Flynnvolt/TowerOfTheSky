@@ -36,11 +36,11 @@ const float player_pickup_radius = 10.0f;
 
 const int exp_vein_health = 3;
 
-const int player_health = 10;
+const int player_health = 100;
 
 const int player_max_health = 100;
 
-const int player_regen = 100;
+const int player_regen = 4;
 
 const int target_health = 100;
 
