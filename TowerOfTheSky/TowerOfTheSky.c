@@ -40,6 +40,14 @@ const int player_health = 10;
 
 const int player_max_health = 100;
 
+const int player_regen = 100;
+
+const int target_health = 100;
+
+const int target_max_health = 100;
+
+const int target_regen = 25;
+
 // :Testing Toggle
 
 #define DEV_TESTING
@@ -72,6 +80,7 @@ enum SpriteID
 	SPRITE_exp,
 	SPRITE_exp_vein,
 	SPRITE_fireball_sheet,
+	SPRITE_target,
 	SPRITE_MAX,
 };
 
@@ -106,9 +115,10 @@ enum ArchetypeID
 {
 	ARCH_nil = 0,
 	ARCH_player = 1,
-	ARCH_item = 2,
-	ARCH_exp_vein = 3,
-	ARCH_research_station = 4,
+	ARCH_target = 2,
+	ARCH_item = 3,
+	ARCH_exp_vein = 4,
+	ARCH_research_station = 5,
 	ARCH_MAX,
 };
 
@@ -214,6 +224,7 @@ struct Entity
 	Vector2 pos;
 	float health;
 	float max_health;
+	float health_regen;
 	ItemID item;
 	bool is_item;
 	bool destroyable_world_item;
@@ -323,6 +334,16 @@ void setup_player(Entity* en)
 	en -> sprite_id = SPRITE_player;
 	en -> health = player_health;
 	en -> max_health = player_max_health;
+	en -> health_regen = player_regen;
+}
+
+void setup_target(Entity* en) 
+{
+	en -> arch = ARCH_target;
+	en -> sprite_id = SPRITE_target;
+	en -> health = target_health;
+	en -> max_health = target_max_health;
+	en -> health_regen = target_regen;
 }
 
 void setup_item(Entity* en, ItemID item_id) 
@@ -442,14 +463,14 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 	// Black background box
 	{
 		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3(position.x, position.y, 0.0));
+		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y - (icon_size * 2)), 0.0));
 		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
 	}
 
 	// Bar Fill
 	{
 		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3(position.x, position.y, 0.0));
+		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y - (icon_size * 2)), 0.0));
 		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
 	}	
 }
@@ -992,6 +1013,7 @@ int entry(int argc, char **argv)
 
 	// Buildings
 	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator())};
+	sprites[SPRITE_target] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator())};
 
 	// Spells
 	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
@@ -1014,18 +1036,24 @@ int entry(int argc, char **argv)
 
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
-		{
-			// Setup
-			Entity* player_en = entity_create();
-			setup_player(player_en);
+	// Entity Setup
+	{
+		Entity* player_en = entity_create();
+		setup_player(player_en);
 
-			// :Test stuff
-			#if defined(DEV_TESTING)
-			{
-				world -> inventory_items[ITEM_exp].amount = 50;
-			}
-			#endif
+		// :Test stuff
+		#if defined(DEV_TESTING)
+		{
+			world -> inventory_items[ITEM_exp].amount = 50;
+
+			// Spawn one Target
+			Entity* en = entity_create();
+			setup_target(en);
+			en -> pos = v2(0, 40);
+			en -> pos = round_v2_to_tile(en -> pos);
 		}
+		#endif
+	}
 
 	// Camera Settings
 	float zoom = 4;
@@ -1151,6 +1179,11 @@ int entry(int argc, char **argv)
 
 						draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
 
+						Vector2 health_bar_pos = v2((en -> pos.x), (en -> pos.y + (sprite -> image -> height) + 2));
+
+						// Temp healthbar for non-players
+						draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+
 						//world space current location debug for object pos
 						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
 
@@ -1216,12 +1249,10 @@ int entry(int argc, char **argv)
 			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
 
 			// Healthbar test values
-			float recovery_per_second = 10;
-
-			Vector2 health_bar_pos = v2((en -> pos.x - 10), (en -> pos.y + sprite -> image -> height - 4));
+			Vector2 health_bar_pos = v2((en -> pos.x), (en -> pos.y + (sprite -> image -> height) + 2));
 
 			// Temperary render player healthbar test
-			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & recovery_per_second, 4, 6, COLOR_RED, bg_box_color);
+			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
 		}
 
 		// Press F1 to Close Game

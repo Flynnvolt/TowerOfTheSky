@@ -3,7 +3,7 @@ if not spr then return print('No active sprite') end
 
 local local_path,title = spr.filename:match("^(.+[/\\])(.-).([^.]*)$")
 
-local export_path = "C:/Game Project/TowerOfTheSky/Resources/Sprites"
+local export_path = "C:/Game Project/TowerOfTheSky/TowerOfTheSky/Resources/Sprites"
 local_path = export_path
 
 function layer_export()
