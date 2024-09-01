@@ -228,6 +228,8 @@ struct Entity
 	ItemID item;
 	bool is_item;
 	bool destroyable_world_item;
+	float xRemainder;
+	float yRemainder;
 };
 
 string get_archetype_pretty_name(ArchetypeID arch) 
@@ -368,6 +370,100 @@ void entity_setup(Entity* en, ArchetypeID id)
 
 // :Functions
 
+bool collideAt(int x, int y, Entity *current_entity) 
+{
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity *actor = & world -> entities[i];
+		
+		// Skip ourself so we don't collide with ourself
+		if (actor -> is_valid && actor != current_entity) 
+		{
+			SpriteData* sprite = get_sprite(actor -> sprite_id);
+			int sprite_width = sprite -> image -> width;
+			int sprite_height = sprite -> image -> height;
+			int actor_x_end = actor -> pos.x + sprite_width;
+			int actor_y_end = actor -> pos.y + sprite_height;
+
+			SpriteData* sprite2 = get_sprite(current_entity -> sprite_id);
+
+			// Debugging output
+			log("Checking entity %d: (x: %d, y: %d) against actor at (%d, %d) with width %d and height %d\n", i, x, y, actor -> pos.x, actor -> pos.y, sprite_width, sprite_height);
+
+			// Visual Debug tools
+			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), COLOR_RED);  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), COLOR_RED);  // Draw bounding box
+			draw_rect(v2(x, y), v2(1, 1), COLOR_GREEN);  // Where we are trying to go
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), COLOR_BLUE); // Where we are
+
+			// Check if (x, y) is within bounds
+			if (x >= actor -> pos.x && x < actor_x_end && y >= actor -> pos.y && y < actor_y_end) 
+			{
+				log("Collision detected with entity %d\n", i);
+				return true;
+			}
+		}
+	}
+
+	// If no collisions detected, return false
+	return false;
+}
+
+void MoveEntityX(Entity *entity, float amount) 
+{
+	entity -> xRemainder += amount;
+	int move = roundf(entity -> xRemainder);
+	if (move != 0) 
+	{
+		entity -> xRemainder -= move;
+		int movement_direction = (move > 0) - (move < 0);
+
+		while (move != 0) 
+		{
+			if (!collideAt(entity -> pos.x + movement_direction, entity -> pos.y, entity)) 
+			{
+				entity -> pos.x += movement_direction;
+				move -= movement_direction;
+			}
+			else
+			{
+				break;
+			}
+		}
+	}
+}
+
+void MoveEntityY(Entity *entity, float amount) 
+{
+	entity -> yRemainder += amount;
+	int move = roundf(entity -> yRemainder);
+	if (move != 0) 
+	{
+		entity -> yRemainder -= move;
+		int movement_direction = (move > 0) - (move < 0);
+
+		while (move != 0) 
+		{
+			if (!collideAt(entity -> pos.x, entity -> pos.y + movement_direction, entity)) 
+			{
+				entity -> pos.y += movement_direction;
+				move -= movement_direction;
+			} 
+			else
+			{
+				break;
+			}
+		}
+	}
+}
+
+void updateEntity(Entity *entity, Vector2 movement) 
+{
+	MoveEntityX(entity, movement.x);
+
+	MoveEntityY(entity, movement.y);
+}
+
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
 	// Increment resource
@@ -463,14 +559,14 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 	// Black background box
 	{
 		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y - (icon_size * 2)), 0.0));
+		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y + icon_size), 0.0));
 		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
 	}
 
 	// Bar Fill
 	{
 		Matrix4 xform = m4_identity;
-		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y - (icon_size * 2)), 0.0));
+		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y + icon_size), 0.0));
 		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
 	}	
 }
@@ -1157,6 +1253,10 @@ int entry(int argc, char **argv)
 					default:
 					{
 						SpriteData* sprite = get_sprite(en -> sprite_id);
+
+						// Get sprite dimensions
+						Vector2 sprite_size = get_sprite_size(sprite);
+
 						Matrix4 xform = m4_scalar(1.0);
 
 						if(en -> is_item == true)
@@ -1164,12 +1264,8 @@ int entry(int argc, char **argv)
 							xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
 						}
 
-						// @Volatile with entity placement
+						xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 
-						xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
-						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-						xform = m4_translate(xform, v3(sprite -> image -> width * -0.5, 0.0, 0));
-						
 						Vector4 col = COLOR_WHITE;
 
 						if(world_frame.selected_entity == en)
@@ -1177,9 +1273,9 @@ int entry(int argc, char **argv)
 							col = COLOR_RED;
 						}
 
-						draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
+						draw_image_xform(sprite -> image, xform, sprite_size, col);
 
-						Vector2 health_bar_pos = v2((en -> pos.x), (en -> pos.y + (sprite -> image -> height) + 2));
+						Vector2 health_bar_pos = v2((en -> pos.x + + (sprite -> image -> width * 0.5)), (en -> pos.y + (sprite -> image -> height)));
 
 						// Temp healthbar for non-players
 						draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
@@ -1220,16 +1316,16 @@ int entry(int argc, char **argv)
 		}
 		*/
 
-        // Loop through all Projectiles and render / move them.
-        for (int i = 0; i < MAX_PROJECTILES; i++) 
-        {		
-            if (projectiles[i].is_active) 
-            {
-                update_projectile(& projectiles[i], delta_t);
+		// Loop through all Projectiles and render / move them.
+		for (int i = 0; i < MAX_PROJECTILES; i++) 
+		{		
+			if (projectiles[i].is_active) 
+			{
+				update_projectile(& projectiles[i], delta_t);
 
 				count++;
-            }
-        }
+			}
+		}
 
 		if(is_key_just_pressed(KEY_F3))
 		{
@@ -1239,17 +1335,19 @@ int entry(int argc, char **argv)
 		//Render player
 		{
 			Entity* en = get_player();
-			SpriteData* sprite = get_sprite(en -> sprite_id);
+			SpriteData* sprite = get_sprite(en->sprite_id);
+
+			Vector2 sprite_size = get_sprite_size(sprite);
+
 			Matrix4 xform = m4_scalar(1.0);
-			xform         = m4_translate(xform, v3(0, tile_width * -0.5, 0));
-			xform         = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-			xform         = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, 0.0, 0));
+
+			xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 
 			Vector4 col = COLOR_WHITE;
-			draw_image_xform(sprite -> image, xform, get_sprite_size(sprite), col);
+			draw_image_xform(sprite->image, xform, sprite_size, col);
 
 			// Healthbar test values
-			Vector2 health_bar_pos = v2((en -> pos.x), (en -> pos.y + (sprite -> image -> height) + 2));
+			Vector2 health_bar_pos = v2((en -> pos.x + + (sprite -> image -> width * 0.5)), (en -> pos.y + (sprite -> image -> height)));
 
 			// Temperary render player healthbar test
 			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
@@ -1287,7 +1385,10 @@ int entry(int argc, char **argv)
 
 		input_axis = v2_normalize(input_axis);
 
-		get_player() -> pos = v2_add(get_player() -> pos, v2_mulf(input_axis, 100.0 * delta_t));
+		Entity *player = get_player();
+
+		// Update player position
+		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
 
 		os_update(); 
 		gfx_update();
