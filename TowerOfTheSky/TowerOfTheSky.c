@@ -213,6 +213,7 @@ struct Entity
 	ItemID item;
 	bool is_item;
 	bool destroyable_world_item;
+	bool is_immortal;
 	float xRemainder;
 	float yRemainder;
 };
@@ -259,6 +260,8 @@ struct Projectile
     float radius;
 	float xRemainder;
 	float yRemainder;
+
+	Entity *source_entity; // Caster of the Projectile
 };
 
 Projectile projectiles[MAX_PROJECTILES];
@@ -369,6 +372,7 @@ void setup_target(Entity* en)
 	en -> health = target_health;
 	en -> max_health = target_max_health;
 	en -> health_regen = target_regen;
+	en -> is_immortal = true;
 }
 
 void setup_item(Entity* en, ItemID item_id) 
@@ -418,7 +422,14 @@ void DamageEnemy(Entity *entity, float damage)
 
 	if (entity -> health <= 0)
 	{
-		entity -> is_valid = false;
+		if (entity -> is_immortal == true)
+		{
+			entity -> health = entity -> max_health;
+		}
+		else
+		{
+			entity -> is_valid = false;
+		}
 	}
 }
 
@@ -426,7 +437,7 @@ void DamageEntity(Entity *entity, float damage)
 {
 	ArchetypeID archetype = entity -> arch;
 
-	log("Debug: archetype = %i", archetype);  // Log the archetype value
+	//log("Debug: archetype = %i", archetype);  // Log the archetype value
 
 	switch (archetype) 
 	{
@@ -568,13 +579,12 @@ Vector2 v2_scale(Vector2 v, float32 scale)
     return (Vector2){v.x * scale, v.y * scale};
 }
 
-void spawn_projectile(Vector2 spawn_position, Vector2 target_position, float speed, float damage, AnimationInfo *animation, float32 scale) 
+void spawn_projectile(Entity *source_entity, Vector2 spawn_position, Vector2 target_position, float speed, float damage, AnimationInfo *animation, float32 scale) 
 {
     for (int i = 0; i < MAX_PROJECTILES; i++) 
     {
         if (!projectiles[i].is_active) 
         {
-            // Initialize and add the projectile to the first available inactive slot
             Projectile *projectile = & projectiles[i];
             projectile -> is_active = true;
             projectile -> position = spawn_position;
@@ -583,33 +593,24 @@ void spawn_projectile(Vector2 spawn_position, Vector2 target_position, float spe
             projectile -> damage = damage;
             projectile -> animation = *animation;
             projectile -> scale = scale;
+            projectile -> source_entity = source_entity; // Store the source entity
 
-            // Calculate the direction vector
             Vector2 direction = v2_sub(target_position, spawn_position);
             float32 length = v2_length(direction);
-            
-            // Normalize the direction vector
+
             if (length != 0.0f)
             {
                 direction = v2_scale(direction, 1.0f / length);
             }
 
-            // Calculate velocity
             projectile -> velocity = v2_scale(direction, speed);
-
-            // Calculate rotation in degrees based on the direction
             projectile -> rotation = atan2f(-direction.y, direction.x) * (180.0f / M_PI);
-
-            // Optionally, ensure the rotation is within [0, 360) range
+			
             if (projectile -> rotation < 0.0f)
             {
                 projectile -> rotation += 360.0f;
             }
-
-            //log("Spawned projectile at position (%f, %f) targeting (%f, %f)\n", spawn_position.x, spawn_position.y, target_position.x, target_position.y);
-            //log("Projectile active: %i", projectile -> is_active);
-
-            break; // Exit the loop after adding the projectile
+            break;
         }
     }
 }
@@ -620,7 +621,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
     {
         Entity *entity = & world -> entities[i];
 
-        if (entity -> is_valid) 
+        if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
         {
             SpriteData* sprite = get_sprite(entity -> sprite_id);
             int entity_width = sprite -> image -> width;
@@ -632,15 +633,14 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
             int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
             int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
 
-            // Bounding box collision check
             if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x &&
                 projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
             {
-                return entity; // Return the entity that the projectile collides with
+                return entity;
             }
         }
     }
-    return NULL; // No collision
+    return NULL;
 }
 
 void update_projectile(Projectile *projectile, float delta_time) 
@@ -1531,19 +1531,6 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-
-		if(is_key_just_pressed(KEY_F3))
-		{
-			// Ghetto Fireball Spawn Test
-			float fireball_cost = (mana.max / 20);
-
-			if(mana.current >= fireball_cost)
-			{
-				spawn_projectile(v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 300.0, 10.0, & Fireball, 1.0);\
-				mana.current -= fireball_cost;
-				//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
-			}
-		}
 		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 
 		int count = 0;
@@ -1577,23 +1564,36 @@ int entry(int argc, char **argv)
 
 		//Render player
 		{
-			Entity* en = get_player();
-			SpriteData* sprite = get_sprite(en->sprite_id);
+			Entity* player = get_player();
+			SpriteData* sprite = get_sprite(player -> sprite_id);
 
 			Vector2 sprite_size = get_sprite_size(sprite);
 
 			Matrix4 xform = m4_scalar(1.0);
 
-			xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+			xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
 
 			Vector4 col = COLOR_WHITE;
 			draw_image_xform(sprite->image, xform, sprite_size, col);
 
 			// Healthbar test values
-			Vector2 health_bar_pos = v2((en -> pos.x + + (sprite -> image -> width * 0.5)), (en -> pos.y + (sprite -> image -> height)));
+			Vector2 health_bar_pos = v2((player -> pos.x + (sprite -> image -> width * 0.5)), (player -> pos.y + (sprite -> image -> height)));
 
 			// Temperary render player healthbar test
-			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+
+			if(is_key_just_pressed(KEY_F3))
+			{
+				// Ghetto Fireball Spawn Test
+				float fireball_cost = (mana.current - 5);
+
+				if(mana.current >= fireball_cost)
+				{
+					spawn_projectile(player, v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 300.0, 10.0, & Fireball, 1.0);
+					mana.current -= fireball_cost;
+					//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
+				}
+			}
 		}
 
 		// Press F1 to Close Game
