@@ -257,6 +257,8 @@ struct Projectile
     float damage;
     float scale;
     float radius;
+	float xRemainder;
+	float yRemainder;
 };
 
 Projectile projectiles[MAX_PROJECTILES];
@@ -645,19 +647,39 @@ void update_projectile(Projectile *projectile, float delta_time)
 {
     if (!projectile -> is_active) return;
 
-    // Update position based on velocity
-    projectile -> position = v2_add(projectile -> position, v2_scale(projectile -> velocity, delta_time));
+    // Update position based on velocity scaled by delta time
+    Vector2 movement = v2_scale(projectile -> velocity, delta_time);
+
+    // Accumulate the movement in the remainder variables
+    projectile -> xRemainder += movement.x;
+    projectile -> yRemainder += movement.y;
+
+    // Calculate how much to move this frame (rounded to the nearest pixel)
+    int moveX = roundf(projectile -> xRemainder);
+    int moveY = roundf(projectile -> yRemainder);
+
+    // Update the position and reset the remainders
+    if (moveX != 0) 
+    {
+        projectile -> position.x += moveX;
+        projectile -> xRemainder -= moveX;
+    }
+
+    if (moveY != 0) 
+    {
+        projectile -> position.y += moveY;
+        projectile -> yRemainder -= moveY;
+    }
 
     // Check if the projectile hits any entity
     Entity *hit_entity = projectile_collides_with_entity(projectile);
 
     if (hit_entity) 
     {
-		DamageEntity(hit_entity, projectile -> damage);
+        DamageEntity(hit_entity, projectile -> damage);
 
         // Deactivate the projectile after it hits an entity
         projectile -> is_active = false;
-
         return;
     }
 
