@@ -1,8 +1,4 @@
-#include "Range.c"
-#include "Abilities.c"
-#include "AnimationData.c"
-#include "RandyTutorialMath.c"
-#include "Projectile.c"
+#include "TowerOfTheSky.h"
 
 // :Global APP
 
