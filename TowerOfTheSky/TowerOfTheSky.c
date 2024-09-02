@@ -370,41 +370,41 @@ void entity_setup(Entity* en, ArchetypeID id)
 
 // :Functions
 
-bool collideAt(int x, int y, Entity *current_entity) 
+bool collideAt(Entity *current_entity, int x, int y) 
 {
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-	{
-		Entity *actor = & world -> entities[i];
-		
-		// Skip ourself so we don't collide with ourself
-		if (actor -> is_valid && actor != current_entity) 
-		{
-			SpriteData* sprite = get_sprite(actor -> sprite_id);
-			int sprite_width = sprite -> image -> width;
-			int sprite_height = sprite -> image -> height;
-			int actor_x_end = actor -> pos.x + sprite_width;
-			int actor_y_end = actor -> pos.y + sprite_height;
+    SpriteData* sprite1 = get_sprite(current_entity -> sprite_id);
+    int width1 = sprite1 -> image -> width;
+    int height1 = sprite1 -> image -> height;
 
-			SpriteData* sprite2 = get_sprite(current_entity -> sprite_id);
+    int x_end1 = x + width1;
+    int y_end1 = y + height1;
 
-			// Debugging output
-			log("Checking entity %d: (x: %d, y: %d) against actor at (%d, %d) with width %d and height %d\n", i, x, y, actor -> pos.x, actor -> pos.y, sprite_width, sprite_height);
+    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+    {
+        Entity *actor = &world->entities[i];
 
-			// Visual Debug tools
-			draw_rect(v2(x, y), v2(1 , 1), v4(0, 128, 0, 1));  // Where we are trying to go
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+        // Skip ourselves to avoid self-collision
+        if (actor->is_valid && actor != current_entity) 
+        {
+            SpriteData* sprite2 = get_sprite(actor->sprite_id);
+            int width2 = sprite2 -> image -> width;
+            int height2 = sprite2 -> image -> height;
 
-			// Check if (x, y) is within bounds
-			if (x >= actor -> pos.x && x < actor_x_end && y >= actor -> pos.y && y < actor_y_end) 
-			{
-				log("Collision detected with entity %d\n", i);
-				return true;
-			}
-		}
-	}
+            int actor_x_end = actor->pos.x + width2;
+            int actor_y_end = actor->pos.y + height2;
 
-	// If no collisions detected, return false
-	return false;
+            // Check for bounding box overlap
+            if (x < actor_x_end && x_end1 > actor->pos.x &&
+                y < actor_y_end && y_end1 > actor->pos.y) 
+            {
+                log("Collision detected with entity %d\n", i);
+                return true;
+            }
+        }
+    }
+
+    // No collisions detected
+    return false;
 }
 
 void collide_visual_debug(Entity *current_entity)
@@ -431,38 +431,40 @@ void collide_visual_debug(Entity *current_entity)
 
 void MoveEntityX(Entity *entity, float amount) 
 {
-	entity -> xRemainder += amount;
-	int move = roundf(entity -> xRemainder);
+    entity->xRemainder += amount;
+    int move = roundf(entity->xRemainder);
 
-	if (move != 0) 
-	{
-		entity -> xRemainder -= move;
-		int movement_direction = (move > 0) - (move < 0);
+    if (move != 0) 
+    {
+        entity->xRemainder -= move;
+        int movement_direction = (move > 0) - (move < 0);
 
-		if (!collideAt(entity -> pos.x + movement_direction, entity -> pos.y, entity)) 
-		{
-			entity -> pos.x += movement_direction;
-			move -= movement_direction;
-		}
-	}
+        // Check collision with the bounding box after moving
+        if (!collideAt(entity, entity->pos.x + movement_direction, entity->pos.y)) 
+        {
+            entity->pos.x += movement_direction;
+            move -= movement_direction;
+        }
+    }
 }
 
 void MoveEntityY(Entity *entity, float amount) 
 {
-	entity -> yRemainder += amount;
-	int move = roundf(entity -> yRemainder);
+    entity->yRemainder += amount;
+    int move = roundf(entity->yRemainder);
 
-	if (move != 0) 
-	{
-		entity -> yRemainder -= move;
-		int movement_direction = (move > 0) - (move < 0);
+    if (move != 0) 
+    {
+        entity->yRemainder -= move;
+        int movement_direction = (move > 0) - (move < 0);
 
-		if (!collideAt(entity -> pos.x, entity -> pos.y + movement_direction, entity)) 
-		{
-			entity -> pos.y += movement_direction;
-			move -= movement_direction;
-		} 
-	}
+        // Check collision with the bounding box after moving
+        if (!collideAt(entity, entity->pos.x, entity->pos.y + movement_direction)) 
+        {
+            entity->pos.y += movement_direction;
+            move -= movement_direction;
+        }
+    }
 }
 
 void updateEntity(Entity *entity, Vector2 movement) 
