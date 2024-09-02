@@ -22,8 +22,6 @@ const s32 Layer_WORLD = 10;
 
 #define MAX_PROJECTILES 100 
 
-extern Projectile projectiles[MAX_PROJECTILES];
-
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 const float entity_selection_radius = 8.0f;
@@ -47,15 +45,6 @@ const int target_regen = 25;
 // :Testing Toggle
 
 #define DEV_TESTING
-
-// :Game
-
-typedef struct Game Game;
-
-struct Game 
-{
-Projectile *projectiles;
-};
 
 // :Sprites
 
@@ -245,6 +234,33 @@ string get_archetype_pretty_name(ArchetypeID arch)
 	}
 }
 
+// :Projectiles
+
+typedef struct Projectile Projectile;
+
+struct Projectile 
+{
+    bool is_active;
+
+    AnimationInfo animation;  
+
+    Vector2 position;
+    Vector2 velocity;
+
+    Vector2 target_position; 
+
+    float distance_traveled;
+    float max_distance;
+
+    float speed;              
+    float rotation;
+    float damage;
+    float scale;
+    float radius;
+};
+
+Projectile projectiles[MAX_PROJECTILES];
+
 // :UX
 
 typedef enum UXState UXState;
@@ -294,6 +310,15 @@ struct WorldFrame
 };
 
 WorldFrame world_frame;
+
+// :Game
+
+typedef struct Game Game;
+
+struct Game 
+{
+Projectile *projectiles;
+};
 
 // :Setup
 
@@ -471,6 +496,121 @@ void updateEntity(Entity *entity, Vector2 movement)
 
 	collide_visual_debug(entity);
 }
+
+// Distance between two vectors
+float32 v2_distance(Vector2 a, Vector2 b) 
+{
+    return v2_length(v2_sub(a, b));
+}
+
+// Vector scaling
+Vector2 v2_scale(Vector2 v, float32 scale) 
+{
+    return (Vector2){v.x * scale, v.y * scale};
+}
+
+void spawn_projectile(Vector2 spawn_position, Vector2 target_position, float speed, float damage, AnimationInfo *animation, float32 scale) 
+{
+    for (int i = 0; i < MAX_PROJECTILES; i++) 
+    {
+        if (!projectiles[i].is_active) 
+        {
+            // Initialize and add the projectile to the first available inactive slot
+            Projectile *projectile = & projectiles[i];
+            projectile -> is_active = true;
+            projectile -> position = spawn_position;
+            projectile -> target_position = target_position;
+            projectile -> speed = speed;
+            projectile -> damage = damage;
+            projectile -> animation = *animation;
+            projectile -> scale = scale;
+
+            // Calculate the direction vector
+            Vector2 direction = v2_sub(target_position, spawn_position);
+            float32 length = v2_length(direction);
+            
+            // Normalize the direction vector
+            if (length != 0.0f)
+            {
+                direction = v2_scale(direction, 1.0f / length);
+            }
+
+            // Calculate velocity
+            projectile -> velocity = v2_scale(direction, speed);
+
+            // Calculate rotation in degrees based on the direction
+            projectile -> rotation = atan2f(-direction.y, direction.x) * (180.0f / M_PI);
+
+            // Optionally, ensure the rotation is within [0, 360) range
+            if (projectile -> rotation < 0.0f)
+            {
+                projectile -> rotation += 360.0f;
+            }
+
+            //log("Spawned projectile at position (%f, %f) targeting (%f, %f)\n", spawn_position.x, spawn_position.y, target_position.x, target_position.y);
+            //log("Projectile active: %i", projectile -> is_active);
+
+            break; // Exit the loop after adding the projectile
+        }
+    }
+}
+
+bool projectile_collides_with_entity(Projectile *projectile) 
+{
+    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+    {
+        Entity *entity = & world -> entities[i];
+
+        if (entity -> is_valid) 
+        {
+            SpriteData* sprite = get_sprite(entity->sprite_id);
+            int entity_width = sprite -> image -> width;
+            int entity_height = sprite -> image -> height;
+
+            int entity_x_end = entity->pos.x + entity_width;
+            int entity_y_end = entity->pos.y + entity_height;
+
+            int projectile_x_end = projectile -> position.x + projectile->radius * 2;
+            int projectile_y_end = projectile -> position.y + projectile->radius * 2;
+
+            // Bounding box collision check
+            if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x &&
+                projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void update_projectile(Projectile *projectile, float delta_time) 
+{
+    if (!projectile->is_active) return;
+
+    // Update position based on velocity
+    projectile->position = v2_add(projectile -> position, v2_scale(projectile -> velocity, delta_time));
+
+    // Check if the projectile hits any entity
+    if (projectile_collides_with_entity(projectile)) 
+    {
+        // Handle the collision and deactivate the projectile)
+        projectile -> is_active = false;
+        log("Projectile hit an entity!\n");
+        return;
+    }
+
+    // Check if the projectile has reached the target position
+    if (v2_distance(projectile -> position, projectile -> target_position) < projectile -> speed * delta_time) 
+    {
+        projectile -> position = projectile -> target_position; // Ensure it reaches the target
+        projectile -> is_active = false;  // Deactivate the projectile
+    }
+
+    update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation);
+}
+
+Projectile fireball;
 
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
