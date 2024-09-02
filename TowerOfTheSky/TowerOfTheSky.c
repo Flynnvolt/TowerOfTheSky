@@ -391,10 +391,8 @@ bool collideAt(int x, int y, Entity *current_entity)
 			log("Checking entity %d: (x: %d, y: %d) against actor at (%d, %d) with width %d and height %d\n", i, x, y, actor -> pos.x, actor -> pos.y, sprite_width, sprite_height);
 
 			// Visual Debug tools
-			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), COLOR_RED);  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), COLOR_RED);  // Draw bounding box
-			draw_rect(v2(x, y), v2(1, 1), COLOR_GREEN);  // Where we are trying to go
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), COLOR_BLUE); // Where we are
+			draw_rect(v2(x, y), v2(1 , 1), v4(0, 128, 0, 1));  // Where we are trying to go
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
 
 			// Check if (x, y) is within bounds
 			if (x >= actor -> pos.x && x < actor_x_end && y >= actor -> pos.y && y < actor_y_end) 
@@ -409,26 +407,42 @@ bool collideAt(int x, int y, Entity *current_entity)
 	return false;
 }
 
+void collide_visual_debug(Entity *current_entity)
+{
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity *actor = & world -> entities[i];
+
+		if (actor -> is_valid && actor != current_entity) 
+		{
+			SpriteData* sprite = get_sprite(actor -> sprite_id);
+			int sprite_width = sprite -> image -> width;
+			int sprite_height = sprite -> image -> height;
+
+			SpriteData* sprite2 = get_sprite(current_entity -> sprite_id);
+
+			// Visual Debug tools
+			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+		}
+	}
+}
+
 void MoveEntityX(Entity *entity, float amount) 
 {
 	entity -> xRemainder += amount;
 	int move = roundf(entity -> xRemainder);
+
 	if (move != 0) 
 	{
 		entity -> xRemainder -= move;
 		int movement_direction = (move > 0) - (move < 0);
 
-		while (move != 0) 
+		if (!collideAt(entity -> pos.x + movement_direction, entity -> pos.y, entity)) 
 		{
-			if (!collideAt(entity -> pos.x + movement_direction, entity -> pos.y, entity)) 
-			{
-				entity -> pos.x += movement_direction;
-				move -= movement_direction;
-			}
-			else
-			{
-				break;
-			}
+			entity -> pos.x += movement_direction;
+			move -= movement_direction;
 		}
 	}
 }
@@ -437,23 +451,17 @@ void MoveEntityY(Entity *entity, float amount)
 {
 	entity -> yRemainder += amount;
 	int move = roundf(entity -> yRemainder);
+
 	if (move != 0) 
 	{
 		entity -> yRemainder -= move;
 		int movement_direction = (move > 0) - (move < 0);
 
-		while (move != 0) 
+		if (!collideAt(entity -> pos.x, entity -> pos.y + movement_direction, entity)) 
 		{
-			if (!collideAt(entity -> pos.x, entity -> pos.y + movement_direction, entity)) 
-			{
-				entity -> pos.y += movement_direction;
-				move -= movement_direction;
-			} 
-			else
-			{
-				break;
-			}
-		}
+			entity -> pos.y += movement_direction;
+			move -= movement_direction;
+		} 
 	}
 }
 
@@ -462,6 +470,8 @@ void updateEntity(Entity *entity, Vector2 movement)
 	MoveEntityX(entity, movement.x);
 
 	MoveEntityY(entity, movement.y);
+
+	collide_visual_debug(entity);
 }
 
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
