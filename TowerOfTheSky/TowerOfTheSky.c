@@ -402,21 +402,21 @@ bool collideAt(Entity *current_entity, int x, int y)
 
     for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
     {
-        Entity *actor = &world->entities[i];
+        Entity *actor = &world -> entities[i];
 
         // Skip ourselves to avoid self-collision
-        if (actor->is_valid && actor != current_entity) 
+        if (actor -> is_valid && actor != current_entity) 
         {
-            SpriteData* sprite2 = get_sprite(actor->sprite_id);
+            SpriteData* sprite2 = get_sprite(actor -> sprite_id);
             int width2 = sprite2 -> image -> width;
             int height2 = sprite2 -> image -> height;
 
-            int actor_x_end = actor->pos.x + width2;
-            int actor_y_end = actor->pos.y + height2;
+            int actor_x_end = actor -> pos.x + width2;
+            int actor_y_end = actor-> pos.y + height2;
 
             // Check for bounding box overlap
-            if (x < actor_x_end && x_end1 > actor->pos.x &&
-                y < actor_y_end && y_end1 > actor->pos.y) 
+            if (x < actor_x_end && x_end1 > actor -> pos.x &&
+                y < actor_y_end && y_end1 > actor -> pos.y) 
             {
                 log("Collision detected with entity %d\n", i);
                 return true;
@@ -452,18 +452,18 @@ void collide_visual_debug(Entity *current_entity)
 
 void MoveEntityX(Entity *entity, float amount) 
 {
-    entity->xRemainder += amount;
-    int move = roundf(entity->xRemainder);
+    entity -> xRemainder += amount;
+    int move = roundf(entity -> xRemainder);
 
     if (move != 0) 
     {
-        entity->xRemainder -= move;
+        entity -> xRemainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
         // Check collision with the bounding box after moving
-        if (!collideAt(entity, entity->pos.x + movement_direction, entity->pos.y)) 
+        if (!collideAt(entity, entity -> pos.x + movement_direction, entity -> pos.y)) 
         {
-            entity->pos.x += movement_direction;
+            entity -> pos.x += movement_direction;
             move -= movement_direction;
         }
     }
@@ -471,18 +471,18 @@ void MoveEntityX(Entity *entity, float amount)
 
 void MoveEntityY(Entity *entity, float amount) 
 {
-    entity->yRemainder += amount;
-    int move = roundf(entity->yRemainder);
+    entity -> yRemainder += amount;
+    int move = roundf(entity -> yRemainder);
 
     if (move != 0) 
     {
-        entity->yRemainder -= move;
+        entity -> yRemainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
         // Check collision with the bounding box after moving
-        if (!collideAt(entity, entity->pos.x, entity->pos.y + movement_direction)) 
+        if (!collideAt(entity, entity -> pos.x, entity -> pos.y + movement_direction)) 
         {
-            entity->pos.y += movement_direction;
+            entity -> pos.y += movement_direction;
             move -= movement_direction;
         }
     }
@@ -555,7 +555,7 @@ void spawn_projectile(Vector2 spawn_position, Vector2 target_position, float spe
     }
 }
 
-bool projectile_collides_with_entity(Projectile *projectile) 
+Entity* projectile_collides_with_entity(Projectile *projectile) 
 {
     for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
     {
@@ -563,40 +563,49 @@ bool projectile_collides_with_entity(Projectile *projectile)
 
         if (entity -> is_valid) 
         {
-            SpriteData* sprite = get_sprite(entity->sprite_id);
+            SpriteData* sprite = get_sprite(entity -> sprite_id);
             int entity_width = sprite -> image -> width;
             int entity_height = sprite -> image -> height;
 
-            int entity_x_end = entity->pos.x + entity_width;
-            int entity_y_end = entity->pos.y + entity_height;
+            int entity_x_end = entity -> pos.x + entity_width;
+            int entity_y_end = entity -> pos.y + entity_height;
 
-            int projectile_x_end = projectile -> position.x + projectile->radius * 2;
-            int projectile_y_end = projectile -> position.y + projectile->radius * 2;
+            int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
+            int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
 
             // Bounding box collision check
             if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x &&
                 projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
             {
-                return true;
+                return entity; // Return the entity that the projectile collides with
             }
         }
     }
-    return false;
+    return NULL; // No collision
 }
 
 void update_projectile(Projectile *projectile, float delta_time) 
 {
-    if (!projectile->is_active) return;
+    if (!projectile -> is_active) return;
 
     // Update position based on velocity
-    projectile->position = v2_add(projectile -> position, v2_scale(projectile -> velocity, delta_time));
+    projectile -> position = v2_add(projectile -> position, v2_scale(projectile -> velocity, delta_time));
 
     // Check if the projectile hits any entity
-    if (projectile_collides_with_entity(projectile)) 
+    Entity *hit_entity = projectile_collides_with_entity(projectile);
+    if (hit_entity) 
     {
-        // Handle the collision and deactivate the projectile)
+        // Apply damage or any other effect to the hit entity
+        hit_entity -> health -= projectile -> damage;
+        if (hit_entity -> health <= 0) 
+        {
+            log("Entity %p destroyed!\n", (void *)hit_entity);
+            hit_entity -> is_valid = false;
+            // Handle entity destruction
+        }
+
+        // Deactivate the projectile after it hits an entity
         projectile -> is_active = false;
-        log("Projectile hit an entity!\n");
         return;
     }
 
