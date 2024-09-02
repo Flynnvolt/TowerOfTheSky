@@ -100,7 +100,7 @@ enum ArchetypeID
 {
 	ARCH_nil = 0,
 	ARCH_player = 1,
-	ARCH_target = 2,
+	ARCH_enemy = 2,
 	ARCH_item = 3,
 	ARCH_exp_vein = 4,
 	ARCH_research_station = 5,
@@ -362,7 +362,7 @@ void setup_player(Entity* en)
 
 void setup_target(Entity* en) 
 {
-	en -> arch = ARCH_target;
+	en -> arch = ARCH_enemy;
 	en -> sprite_id = SPRITE_target;
 	en -> health = target_health;
 	en -> max_health = target_max_health;
@@ -390,6 +390,63 @@ void entity_setup(Entity* en, ArchetypeID id)
 }
 
 // :Functions
+
+void PlayerDeath() 
+{
+
+}
+
+void DamagePlayer(Entity *entity, float damage)
+{
+	// We can do fancy player only stuff here if we want to.
+
+	entity -> health -= damage;
+
+	if (entity -> health <= 0)
+	{
+		PlayerDeath();
+	}
+}
+
+void DamageEnemy(Entity *entity, float damage)
+{	
+	// We can do fancy enemy only stuff here if we want to.
+
+	entity -> health -= damage;
+
+	if (entity -> health <= 0)
+	{
+		entity -> is_valid = false;
+	}
+}
+
+void DamageEntity(Entity *entity, float damage)
+{
+	ArchetypeID archetype = entity -> arch;
+
+	log("Debug: archetype = %i", archetype);  // Log the archetype value
+
+	switch (archetype) 
+	{
+		case ARCH_player:
+		{
+			DamagePlayer(entity, damage);
+			break;
+		}
+
+		case ARCH_enemy:
+		{
+			DamageEnemy(entity, damage);
+			break;
+		}
+		
+		default: 
+		{
+			log_error("misconfigured arch in Damage Entity"); 
+			break;
+		}
+	}
+}
 
 bool collideAt(Entity *current_entity, int x, int y) 
 {
@@ -593,19 +650,14 @@ void update_projectile(Projectile *projectile, float delta_time)
 
     // Check if the projectile hits any entity
     Entity *hit_entity = projectile_collides_with_entity(projectile);
+
     if (hit_entity) 
     {
-        // Apply damage or any other effect to the hit entity
-        hit_entity -> health -= projectile -> damage;
-        if (hit_entity -> health <= 0) 
-        {
-            log("Entity %p destroyed!\n", (void *)hit_entity);
-            hit_entity -> is_valid = false;
-            // Handle entity destruction
-        }
+		DamageEntity(hit_entity, projectile -> damage);
 
         // Deactivate the projectile after it hits an entity
         projectile -> is_active = false;
+
         return;
     }
 
@@ -633,6 +685,12 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 	if(*current_resource >= *max_resource)
 	{
 		*current_resource = *max_resource;
+	}
+
+	// Resource underflow check
+	if(*current_resource <= 0)
+	{
+		*current_resource = 0;
 	}
 
 	//log("%f %f %f", current_resource, max_resource, resource_per_second);
@@ -697,6 +755,12 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 	if(*current_value >= *max_value)
 	{
 		*current_value = *max_value;
+	}
+
+	// Value underflow check
+	if(*current_value <= 0)
+	{
+		*current_value = 0;
 	}
 
 	//log("%f %f %f", current_value, max_value, recovery_per_second);
@@ -1486,7 +1550,7 @@ int entry(int argc, char **argv)
 
 		if(is_key_just_pressed(KEY_F3))
 		{
-			log("Active Projectiles: %i", count);
+			//log("Active Projectiles: %i", count);
 		}
 
 		//Render player
