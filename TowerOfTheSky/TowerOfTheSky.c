@@ -579,7 +579,52 @@ Vector2 v2_scale(Vector2 v, float32 scale)
     return (Vector2){v.x * scale, v.y * scale};
 }
 
-void spawn_projectile(Entity *source_entity, Vector2 spawn_position, Vector2 target_position, float speed, float damage, AnimationInfo *animation, float32 scale) 
+typedef struct DebugCircleState DebugCircleState;
+
+struct DebugCircleState
+{
+    bool active;
+    Vector2 center;
+    float radius;
+    float time_remaining;
+};
+
+DebugCircleState circle_state = {0};
+
+void start_debug_circle(DebugCircleState *state, Vector2 center, float radius, float duration) 
+{
+    state -> active = true;
+    state -> center = center;
+    state -> radius = radius;
+    state -> time_remaining = duration;
+}
+
+void update_debug_circle(DebugCircleState *state) 
+{
+    if (state -> active) 
+    {
+        if (state -> time_remaining > 0.0f) 
+        {
+            Vector2 circle_size = v2(state -> radius * 2.0f, state -> radius * 2.0f);
+            Vector4 circle_color = v4(255, 0, 0, 1); // Red color
+
+			// Center it on the position
+            draw_circle(v2(state -> center.x - state -> radius, state -> center.y - state -> radius), circle_size, circle_color);
+
+            // Draw the current position of the circle for debugging
+            draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), state -> center.x, state -> center.y), font_height, state -> center, v2(0.2, 0.2), COLOR_WHITE);
+
+            state -> time_remaining -= delta_t;
+
+            if (state -> time_remaining <= 0.0f) 
+            {
+                state -> active = false;
+            }
+        }
+    }
+}
+
+void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius) 
 {
     for (int i = 0; i < MAX_PROJECTILES; i++) 
     {
@@ -587,25 +632,56 @@ void spawn_projectile(Entity *source_entity, Vector2 spawn_position, Vector2 tar
         {
             Projectile *projectile = & projectiles[i];
             projectile -> is_active = true;
-            projectile -> position = spawn_position;
-            projectile -> target_position = target_position;
             projectile -> speed = speed;
             projectile -> damage = damage;
             projectile -> animation = *animation;
             projectile -> scale = scale;
-            projectile -> source_entity = source_entity; // Store the source entity
+            projectile -> source_entity = source_entity;
 
-            Vector2 direction = v2_sub(target_position, spawn_position);
+            // Calculate the player's center position
+            SpriteData *sprite = get_sprite(source_entity -> sprite_id);
+            Vector2 player_center = v2((source_entity -> pos.x + (sprite -> image -> width * 0.5f)), (source_entity -> pos.y + (sprite->image->height * 0.5f)));
+
+            Vector2 mouse_pos = get_mouse_pos_in_world_space();
+
+            // Direction from the player to mouse
+            Vector2 direction = v2_sub(mouse_pos, player_center);
             float32 length = v2_length(direction);
 
+            // Normalize
             if (length != 0.0f)
             {
                 direction = v2_scale(direction, 1.0f / length);
             }
 
-            projectile -> velocity = v2_scale(direction, speed);
-            projectile -> rotation = atan2f(-direction.y, direction.x) * (180.0f / M_PI);
-			
+            // Calculate the angle to spawn the projectile
+            float angle = atan2f(direction.y, direction.x);
+            Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
+
+            projectile->position = spawn_position;
+
+            // Debug logging
+            // printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
+            // printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
+            // printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
+            // printf("Projectile Direction Angle: %f\n", angle);
+            // printf("Spawn Radius: %f\n", spawn_radius);
+
+            // Draw the debug circle around the player when projectile is cast
+            start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
+
+            // Calculate projectile velocity and rotation
+            Vector2 velocity_direction = v2_sub(mouse_pos, spawn_position);
+            float32 velocity_length = v2_length(velocity_direction);
+
+            if (velocity_length != 0.0f)
+            {
+                velocity_direction = v2_scale(velocity_direction, 1.0f / velocity_length);
+            }
+
+            projectile -> velocity = v2_scale(velocity_direction, speed);
+            projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
+
             if (projectile -> rotation < 0.0f)
             {
                 projectile -> rotation += 360.0f;
@@ -633,8 +709,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
             int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
             int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
 
-            if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x &&
-                projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
+            if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x && projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
             {
                 return entity;
             }
@@ -1450,6 +1525,9 @@ int entry(int argc, char **argv)
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
+		// Debug Visuals
+		update_debug_circle(& circle_state);
+
 		// :Do UI Rendering
 
 		do_ui_stuff();
@@ -1564,8 +1642,8 @@ int entry(int argc, char **argv)
 
 		//Render player
 		{
-			Entity* player = get_player();
-			SpriteData* sprite = get_sprite(player -> sprite_id);
+			Entity *player = get_player();
+			SpriteData *sprite = get_sprite(player -> sprite_id);
 
 			Vector2 sprite_size = get_sprite_size(sprite);
 
@@ -1582,16 +1660,21 @@ int entry(int argc, char **argv)
 			// Temperary render player healthbar test
 			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
 
+			// World space current location debug for object pos
+			draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+
 			if(is_key_just_pressed(KEY_F3))
 			{
+				// Draw the debug circle around the player
+            	// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
+
 				// Ghetto Fireball Spawn Test
 				float fireball_cost = (mana.current - 5);
 
 				if(mana.current >= fireball_cost)
 				{
-					spawn_projectile(player, v2(get_player() -> pos.x, get_player() -> pos.y), v2(get_mouse_pos_in_ndc().x * 1000, get_mouse_pos_in_ndc().y * 1000), 300.0, 10.0, & Fireball, 1.0);
+					spawn_projectile(player, 300.0, 10.0, & Fireball, 1.0, 30.0);
 					mana.current -= fireball_cost;
-					//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 				}
 			}
 		}
