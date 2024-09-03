@@ -254,6 +254,8 @@ struct Projectile
 
     float distance_traveled;
     float max_distance;
+	float time_alive;
+	float max_time_alive;
 
     float speed;              
     float rotation;
@@ -290,13 +292,6 @@ struct TileData
 {
 	Tile tile;
 	Entity* entity_at_tile;
-};
-typedef struct WorldResourceData WorldResourceData;
-
-struct WorldResourceData
-{
-	ArchetypeID arch_id;
-	int dist_from_self;
 };
 
 typedef struct Map Map;
@@ -673,7 +668,7 @@ void update_debug_circle(DebugCircleState *state)
     }
 }
 
-void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius) 
+void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
 {
     for (int i = 0; i < MAX_PROJECTILES; i++) 
     {
@@ -686,6 +681,10 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
             projectile -> animation = *animation;
             projectile -> scale = scale;
             projectile -> source_entity = source_entity;
+            projectile -> distance_traveled = 0.0f;
+            projectile -> max_distance = max_distance;
+            projectile -> time_alive = 0.0f;
+            projectile -> max_time_alive = max_time_alive;
 
             // Calculate the player's center position
             SpriteData *sprite = get_sprite(source_entity -> sprite_id);
@@ -771,6 +770,9 @@ void update_projectile(Projectile *projectile, float delta_time)
 {
     if (!projectile -> is_active) return;
 
+    // Update the time alive
+    projectile -> time_alive += delta_time;
+
     // Update position based on velocity scaled by delta time
     Vector2 movement = v2_scale(projectile -> velocity, delta_time);
 
@@ -795,9 +797,11 @@ void update_projectile(Projectile *projectile, float delta_time)
         projectile -> yRemainder -= moveY;
     }
 
+    // Update the distance traveled
+    projectile -> distance_traveled += v2_length(movement);
+
     // Check if the projectile hits any entity
     Entity *hit_entity = projectile_collides_with_entity(projectile);
-
     if (hit_entity) 
     {
         DamageEntity(hit_entity, projectile -> damage);
@@ -807,11 +811,11 @@ void update_projectile(Projectile *projectile, float delta_time)
         return;
     }
 
-    // Check if the projectile has reached the target position
-    if (v2_distance(projectile -> position, projectile -> target_position) < projectile -> speed * delta_time) 
+    // Check if the projectile should expire
+    if (projectile -> distance_traveled >= projectile->max_distance || projectile -> time_alive >= projectile -> max_time_alive) 
     {
-        projectile -> position = projectile -> target_position; // Ensure it reaches the target
-        projectile -> is_active = false;  // Deactivate the projectile
+        projectile -> is_active = false;
+        return;
     }
 
     update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation);
@@ -1748,7 +1752,7 @@ int entry(int argc, char **argv)
 
 				if(mana.current >= fireball_cost)
 				{
-					spawn_projectile(player, 300.0, 10.0, & Fireball, 1.0, 30.0);
+					spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 30.0, 1000, 5);
 					mana.current -= fireball_cost;
 				}
 			}
