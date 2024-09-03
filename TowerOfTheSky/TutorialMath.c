@@ -3,7 +3,6 @@ bool almost_equals(float a, float b, float epsilon)
  	return fabs(a - b) <= epsilon;
 }
 
-
 bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
 {
 	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
@@ -147,10 +146,24 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 #define clamp_bottom(a, b) max(a, b)
 #define clamp_top(a, b) min(a, b)
 
-bool v4_equals(Vector4 a, Vector4 b) {
+bool v4_equals(Vector4 a, Vector4 b) 
+{
  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 
-bool v2i_equals(Vector2i a, Vector2i b) {
+bool v2i_equals(Vector2i a, Vector2i b) 
+{
  return a.x == b.x && a.y == b.y;
+}
+
+// Distance between two vectors
+float32 v2_distance(Vector2 a, Vector2 b) 
+{
+    return v2_length(v2_sub(a, b));
+}
+
+// Vector scaling
+Vector2 v2_scale(Vector2 v, float32 scale) 
+{
+    return (Vector2){v.x * scale, v.y * scale};
 }

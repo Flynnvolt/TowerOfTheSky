@@ -1,5 +1,15 @@
 #include "TowerOfTheSky.h"
 
+// Defines
+
+#define DEV_TESTING
+
+#define m4_identity m4_make_scale(v3(1, 1, 1))
+
+#define MAX_PROJECTILES 100 
+
+#define MAX_ENTITY_COUNT 1024
+
 // :Global APP
 
 float64 delta_t;
@@ -18,44 +28,11 @@ const s32 Layer_WORLD = 10;
 
 // :Variables
 
-#define m4_identity m4_make_scale(v3(1, 1, 1))
-
-#define MAX_PROJECTILES 100 
-
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 Vector4 color_0;
 
-const float entity_selection_radius = 8.0f;
-
-const float player_pickup_radius = 10.0f;
-
-const int exp_vein_health = 3;
-
-const int player_health = 100;
-
-const int player_max_health = 100;
-
-const int player_regen = 4;
-
-const int target_health = 100;
-
-const int target_max_health = 100;
-
-const int target_regen = 25;
-
-// :Testing Toggle
-
-#define DEV_TESTING
-
 // :Sprites
-
-typedef struct SpriteData SpriteData;
-
-struct SpriteData
-{
-	Gfx_Image* image;
-};
 
 typedef enum SpriteID SpriteID;
 
@@ -72,66 +49,17 @@ enum SpriteID
 	SPRITE_MAX,
 };
 
-SpriteData sprites[SPRITE_MAX];
+typedef struct SpriteData SpriteData;
 
-SpriteData* get_sprite(SpriteID id)
+struct SpriteData
 {
-	if (id >= 0 && id < SPRITE_MAX)
-	{
-		SpriteData* sprite = & sprites[id];
-
-		if (sprite -> image)
-		{
-			return sprite;
-		}
-		else
-		{
-			return & sprites[0];
-		}
-	}
-	return & sprites[0];
-}
-
-Vector2 get_sprite_size(SpriteData* sprite)
-{
-	return (Vector2) {sprite -> image -> width, sprite -> image -> height};
-}
-
-typedef enum ArchetypeID ArchetypeID;
-
-enum ArchetypeID
-{
-	ARCH_nil = 0,
-	ARCH_player = 1,
-	ARCH_enemy = 2,
-	ARCH_item = 3,
-	ARCH_exp_vein = 4,
-	ARCH_stairs = 5,
-	ARCH_research_station = 6,
-	ARCH_MAX,
+	Gfx_Image* image;
+	SpriteID spriteID;
 };
 
-typedef struct ArchetypeData ArchetypeData;
-struct ArchetypeData
-{
-	string pretty_name;
-};
-
-ArchetypeData archetype_data[ARCH_MAX] = {0};
-
-ArchetypeData get_archetype_data(ArchetypeID id) 
-{
-	return archetype_data[id];
-}
-
-string get_archetype_pretty_name(ArchetypeID id) 
-{
-	return get_archetype_data(id).pretty_name;
-}
+typedef enum SpriteID SpriteID;
 
 // :Items
-
-#define MAX_RECIPE_INGREDIENTS 8
 
 typedef enum ItemID ItemID;
 
@@ -144,130 +72,65 @@ enum ItemID
 	ITEM_MAX,
 };
 
-typedef struct InventoryItemData InventoryItemData;
-
-struct InventoryItemData 
-{
-	int amount;
-};
-
-typedef struct ItemAmount ItemAmount;
-
-struct ItemAmount 
-{
-	ItemID id;
-	int amount;
-};
-
 typedef struct ItemData ItemData;
 
 struct ItemData
 {
+	SpriteData* spriteData;
+	bool is_valid;
 	string pretty_name;
+	ItemID itemID;
+	string discription;
 	int amount;
-	ArchetypeID for_structure;
-	ItemAmount crafting_recipe[MAX_RECIPE_INGREDIENTS];
-	float craft_length;
 };
-
-ItemData items[ITEM_MAX];
-
-ItemData get_item_data(ItemID id)
-{
-	if (id >= 0 && id < ITEM_MAX)
-	{
-		return items[id];
-	}
-	return items[0];
-}
-
-SpriteID get_sprite_id_from_ItemID(ItemID item_id)
-{
-	switch (item_id)
-	{
-
-		case ITEM_exp: 
-		{
-			return SPRITE_exp;
-			break;
-		}
-
-		default:
-		{
-			return 0;
-		}
-	}
-}
-
-string get_ItemID_pretty_name(ItemID item_id) 
-{
-	switch (item_id) 
-	{
-		case ITEM_exp: 
-		{
-			return STR("Exp");
-			break;
-		}
-
-		default:
-		{
-			return STR("nil");
-		}
-	}
-}
 
 // :Entities
 
-#define MAX_ENTITY_COUNT 1024
+typedef enum EntityID EntityID;
+
+enum EntityID
+{
+	ENTITY_nil,
+	ENTITY_player,
+	ENTITY_enemy,
+	ENTITY_target,
+	ENTITY_MAX,
+};
 
 typedef struct Entity Entity;
 
 struct Entity
 {
+	EntityID entityID;
 	bool is_valid;
-	bool render_sprite;
-	SpriteID sprite_id;
-	ArchetypeID arch;
+	SpriteData* spriteData;
 	Vector2 pos;
 	float health;
 	float max_health;
 	float health_regen;
-	ItemID item;
-	bool is_item;
-	bool destroyable_world_item;
 	bool is_immortal;
 	float xRemainder;
 	float yRemainder;
 };
+
 typedef enum BuildingID BuildingID;
 
 enum BuildingID 
 {
 	BUILDING_nil,
-	BUILDING_furnace,
-	BUILDING_workbench,
+	BUILDING_stairs,
 	BUILDING_research_station,
-	BUILDING_teleporter1,
 	BUILDING_MAX,
 };
+
 typedef struct BuildingData BuildingData;
+
 struct BuildingData 
 {
-	ArchetypeID to_build;
+	BuildingID buildingID;
 	SpriteID icon;
-	int pct_per_research_exp; // this jank will get replaced with a recipe one day
 	string description;
-	ItemAmount ingredients[8];
-	int ingredients_count;
 };
-
-BuildingData buildings[BUILDING_MAX];
-
-BuildingData get_building_data(BuildingID id) 
-{
-	// note, this isn't a pointer, because this is constant resource data, we don't want to modify
-	return buildings[id];
-}
 
 // :Projectiles
 
@@ -308,47 +171,8 @@ enum UXState
 {
 	UX_nil,
 	UX_inventory,
-	UX_building,
-	UX_build_mode,
-	UX_workbench,
 	UX_research,
 };
-
-typedef Vector2i Tile;
-
-typedef struct TileData TileData;
-
-struct TileData
-{
-	Tile tile;
-	Entity* entity_at_tile;
-};
-
-typedef struct Map Map;
-
-struct Map
-{
-	int width;
-	int height;
-};
-
-Map map = {0};
-
-Tile local_map_to_world_tile(Vector2i local) 
-{
-	return (Tile) 
-	{
-		local.x - floor((float)map.width * 0.5),
-		(local.y-map.height) + floor((float)(map.height) * 0.5) + 1,
-	};
-}
-
-Vector2i world_tile_to_local_map(Tile world) 
-{
-	int x_index = world.x + floor((float)map.width * 0.5);
-	int y_index = world.y + floor((float)map.height * 0.5);
-	return (Vector2i){x_index, y_index};
-}
 
 // :World
 
@@ -362,7 +186,9 @@ struct World
 
 	Projectile projectiles[MAX_PROJECTILES];
 
-	InventoryItemData inventory_items[ITEM_MAX];
+	ItemData items[ITEM_MAX];
+	
+	SpriteData sprites[SPRITE_MAX];
 
 	UXState ux_state;
 
@@ -390,20 +216,50 @@ struct WorldFrame
 
 WorldFrame world_frame;
 
-// :Game
-
-typedef struct Game Game;
-
-struct Game 
-{
-Projectile *projectiles;
-};
-
 // :Setup
 
 Entity* get_player() 
 {
 	return world_frame.player;
+}
+
+void setup_player(Entity* player_en) 
+{
+	player_en -> entityID = ENTITY_player;
+    player_en -> spriteData = & world -> sprites[SPRITE_player];
+	player_en -> health = 100;
+	player_en -> max_health = 100;
+	player_en -> health_regen = 4;
+	player_en -> pos = v2(0, 0);
+	player_en -> pos = round_v2_to_tile(player_en -> pos);
+	player_en -> pos.y -= tile_width * 0.5;
+	player_en -> pos.x -= player_en -> spriteData -> image -> width * 0.5;
+}
+
+void setup_target(Entity* en) 
+{
+	en -> entityID = ENTITY_target;
+    en -> spriteData = & world -> sprites[SPRITE_target];
+	en -> health = 100;
+	en -> max_health = 100;
+	en -> health_regen = 25;
+	en -> is_immortal = true;
+	en -> pos = v2(0, 40);
+	en -> pos = round_v2_to_tile(en -> pos);
+	en -> pos.y -= tile_width * 0.5;
+	en -> pos.x -= en -> spriteData -> image -> width * 0.5;
+}
+
+ItemData setup_exp_item() 
+{
+    ItemData item;
+    item.itemID = ITEM_exp;
+    item.spriteData = & world -> sprites[SPRITE_exp];
+    item.amount = 50;
+    item.is_valid = true; // Mark item as valid
+    item.pretty_name = STR("EXP");
+    item.discription = STR("Experience points for leveling up");
+    return item;
 }
 
 Entity* entity_create() 
@@ -431,59 +287,36 @@ void entity_destroy(Entity* entity)
 	memset(entity, 0, sizeof(Entity));
 }
 
+// :Functions
 
-void setup_player(Entity* en) 
+SpriteData* get_sprite(SpriteID id)
 {
-	en -> arch = ARCH_player;
-	en -> sprite_id = SPRITE_player;
-	en -> health = player_health;
-	en -> max_health = player_max_health;
-	en -> health_regen = player_regen;
-}
-
-void setup_target(Entity* en) 
-{
-	en -> arch = ARCH_enemy;
-	en -> sprite_id = SPRITE_target;
-	en -> health = target_health;
-	en -> max_health = target_max_health;
-	en -> health_regen = target_regen;
-	en -> is_immortal = true;
-}
-
-void setup_stairs(Entity* en) 
-{
-	en -> arch = ARCH_stairs;
-	en -> sprite_id = SPRITE_stairs;
-}
-
-void setup_item(Entity* en, ItemID item_id) 
-{
-	en -> arch = ARCH_item;
-	en -> sprite_id = get_sprite_id_from_ItemID(item_id);
-	en -> is_item = true;
-	en -> item = item_id;
-}
-
-void entity_setup(Entity* en, ArchetypeID id) 
-{
-	switch (id) 
+	if (id >= 0 && id < SPRITE_MAX)
 	{
-		case ARCH_stairs:
-		{
- 			setup_stairs(en); 
-			break;
-		}
+		SpriteData* sprite = & world -> sprites[id];
 
-		default: 
+		if (sprite -> image)
 		{
-			log_error("missing entity_setup case entry"); 
-			break;
+			return sprite;
+		}
+		else
+		{
+			return & world -> sprites[0];
 		}
 	}
+	return & world -> sprites[0];
 }
 
-// :Functions
+Vector2 get_sprite_size(SpriteData* spritedata)
+{
+    if (spritedata == NULL || spritedata -> image == NULL) 
+    {
+        log("Error: spritedata or image is NULL.\n");
+        return (Vector2) {0, 0}; // Return a default value or handle the error as needed
+    }
+
+    return (Vector2) {spritedata -> image -> width, spritedata -> image -> height};
+}
 
 void PlayerDeath() 
 {
@@ -523,19 +356,17 @@ void DamageEnemy(Entity *entity, float damage)
 
 void DamageEntity(Entity *entity, float damage)
 {
-	ArchetypeID archetype = entity -> arch;
+	EntityID entityID = entity -> entityID;
 
-	//log("Debug: archetype = %i", archetype);  // Log the archetype value
-
-	switch (archetype) 
+	switch (entityID) 
 	{
-		case ARCH_player:
+		case ENTITY_player:
 		{
 			DamagePlayer(entity, damage);
 			break;
 		}
 
-		case ARCH_enemy:
+		case ENTITY_enemy:
 		{
 			DamageEnemy(entity, damage);
 			break;
@@ -551,9 +382,9 @@ void DamageEntity(Entity *entity, float damage)
 
 bool collideAt(Entity *current_entity, int x, int y) 
 {
-    SpriteData* sprite1 = get_sprite(current_entity -> sprite_id);
-    int width1 = sprite1 -> image -> width;
-    int height1 = sprite1 -> image -> height;
+    SpriteData* spritedata = current_entity -> spriteData;
+    int width1 = spritedata -> image -> width;
+    int height1 = spritedata -> image -> height;
 
     int x_end1 = x + width1;
     int y_end1 = y + height1;
@@ -565,9 +396,9 @@ bool collideAt(Entity *current_entity, int x, int y)
         // Skip ourselves to avoid self-collision
         if (actor -> is_valid && actor != current_entity) 
         {
-            SpriteData* sprite2 = get_sprite(actor -> sprite_id);
-            int width2 = sprite2 -> image -> width;
-            int height2 = sprite2 -> image -> height;
+            SpriteData* spritedata2 = actor -> spriteData;
+            int width2 = spritedata2 -> image -> width;
+            int height2 = spritedata2 -> image -> height;
 
             int actor_x_end = actor -> pos.x + width2;
             int actor_y_end = actor-> pos.y + height2;
@@ -594,11 +425,11 @@ void collide_visual_debug(Entity *current_entity)
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
-			SpriteData* sprite = get_sprite(actor -> sprite_id);
-			int sprite_width = sprite -> image -> width;
-			int sprite_height = sprite -> image -> height;
+			SpriteData* spritedata = actor -> spriteData;
+			int sprite_width = spritedata -> image -> width;
+			int sprite_height = spritedata -> image -> height;
 
-			SpriteData* sprite2 = get_sprite(current_entity -> sprite_id);
+			SpriteData* spritedata2 = current_entity -> spriteData;
 
 			// Visual Debug tools
 			//draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
@@ -653,18 +484,6 @@ void updateEntity(Entity *entity, Vector2 movement)
 	MoveEntityY(entity, movement.y);
 
 	collide_visual_debug(entity);
-}
-
-// Distance between two vectors
-float32 v2_distance(Vector2 a, Vector2 b) 
-{
-    return v2_length(v2_sub(a, b));
-}
-
-// Vector scaling
-Vector2 v2_scale(Vector2 v, float32 scale) 
-{
-    return (Vector2){v.x * scale, v.y * scale};
 }
 
 typedef struct DebugCircleState DebugCircleState;
@@ -731,8 +550,8 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
             projectile -> max_time_alive = max_time_alive;
 
             // Calculate the player's center position
-            SpriteData *sprite = get_sprite(source_entity -> sprite_id);
-            Vector2 player_center = v2((source_entity -> pos.x + (sprite -> image -> width * 0.5f)), (source_entity -> pos.y + (sprite->image->height * 0.5f)));
+            SpriteData *spritedata = source_entity -> spriteData;
+            Vector2 player_center = v2((source_entity -> pos.x + (spritedata -> image -> width * 0.5f)), (source_entity -> pos.y + (spritedata -> image -> height * 0.5f)));
 
             Vector2 mouse_pos = get_mouse_pos_in_world_space();
 
@@ -791,9 +610,9 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 
         if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
         {
-            SpriteData* sprite = get_sprite(entity -> sprite_id);
-            int entity_width = sprite -> image -> width;
-            int entity_height = sprite -> image -> height;
+            SpriteData* spritedata = entity -> spriteData;
+            int entity_width = spritedata -> image -> width;
+            int entity_height = spritedata -> image -> height;
 
             int entity_x_end = entity -> pos.x + entity_width;
             int entity_y_end = entity -> pos.y + entity_height;
@@ -1074,23 +893,22 @@ void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size
 	float current_y_pos = icon_center.y;
 
 	// String Display	
-	{
-		Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
+	
+	Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
 
-		Vector2 draw_pos = icon_center;
+	Vector2 draw_pos = icon_center;
 
-		draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-		
-		draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
+	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+	
+	draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(-0.5, -1.25))); // Top center
 
-		draw_pos = v2_add(draw_pos, v2(0, tooltip_size * -0.5));
+	draw_pos = v2_add(draw_pos, v2(0, tooltip_size * -0.5));
 
-		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
+	draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
 
-		draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 
-		current_y_pos = draw_pos.y;
-	}
+	current_y_pos = draw_pos.y;
 }
 
 void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip_size, string *title)
@@ -1170,26 +988,20 @@ void world_setup()
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
-	player_en -> pos = v2(0, 0);
-	player_en -> pos = round_v2_to_tile(player_en -> pos);
-	player_en -> pos.y -= tile_width * 0.5;
-	player_en -> pos.x -= get_sprite(player_en -> sprite_id) -> image -> width * 0.5;
 
 	// :test stuff
 	#if defined(DEV_TESTING)
 	{
-		world -> inventory_items[ITEM_exp].amount = 50;
+		world -> items[ITEM_exp] = setup_exp_item();
 
 		// Spawn one Target
 		Entity* en = entity_create();
 		setup_target(en);
-		en -> pos = v2(0, 40);
-		en -> pos = round_v2_to_tile(en -> pos);
-		en -> pos.y -= tile_width * 0.5;
-		en -> pos.x -= get_sprite(en-> sprite_id) -> image -> width * 0.5;
 	}
 	#endif
 }
+
+// :SerialIzation
 
 bool world_save_to_disk() 
 {
@@ -1199,8 +1011,9 @@ bool world_save_to_disk()
 bool world_attempt_load_from_disk() 
 {
 	string result = {0};
-	bool succ = os_read_entire_file_s(STR("world"), &result, temp_allocator);
-	if (!succ) {
+	bool succ = os_read_entire_file_s(STR("world"), & result, temp_allocator);
+	if (!succ) 
+	{
 		log_error("Failed to load world.");
 		return false;
 	}
@@ -1212,7 +1025,8 @@ bool world_attempt_load_from_disk()
 	// That's why this function returns a bool. We handle that at the callsite.
 	// Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
 
-	if (result.count != sizeof(World)) {
+	if (result.count != sizeof(World)) 
+	{
 		log_error("world size different to one on disk.");
 		return false;
 	}
@@ -1223,10 +1037,9 @@ bool world_attempt_load_from_disk()
 
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
 
-Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
+Draw_Quad* draw_sprite_in_rect(SpriteData* spritedata, Range2f rect, Vector4 col, float pad_pct) 
 {
-	SpriteData* sprite = get_sprite(sprite_id);
-	Vector2 sprite_size = get_sprite_size(sprite);
+	Vector2 sprite_size = get_sprite_size(spritedata);
 
 	// make it smoller (padding)
 	{
@@ -1251,7 +1064,8 @@ Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, fl
 		float new_height = rect.max.y - rect.min.y;
 		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
 
-	} else if (sprite_size.y > sprite_size.x) 
+	} 
+	else if (sprite_size.y > sprite_size.x) 
 	{ // tall boi
 		
 		// width is a ratio of height
@@ -1262,7 +1076,7 @@ Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, fl
 		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
 	}
 
-	return draw_image(sprite -> image, rect.min, range2f_size(rect), col);
+	return draw_image(spritedata -> image, rect.min, range2f_size(rect), col);
 }
 
 void do_ui_stuff()
@@ -1301,7 +1115,7 @@ void do_ui_stuff()
 
 			for (int i = 0; i < ITEM_MAX; i++)
 			{
-				InventoryItemData* item = & world -> inventory_items[i];
+				ItemData* item = & world -> items[i];
 
 				if (item -> amount > 0)
 				{
@@ -1328,7 +1142,7 @@ void do_ui_stuff()
 			int slot_index = 0;
 			for (int id = 1; id < ITEM_MAX; id++)
 			{
-				InventoryItemData* item = & world -> inventory_items[id];
+				ItemData* item = & world -> items[id];
 
 				if (item -> amount > 0)
 				{
@@ -1338,7 +1152,7 @@ void do_ui_stuff()
 					Matrix4 xform = m4_scalar(1.0);
 
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-					SpriteData* sprite = get_sprite(get_sprite_id_from_ItemID(id));
+					SpriteData* spritedata = item -> spriteData;
 					Vector2 icon_positon = v2(x_start_pos + slot_index_offset, y_pos);
 					
 					// White transparent box to show item slot is filled.
@@ -1393,12 +1207,12 @@ void do_ui_stuff()
 
 					//draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE); // old
 
-					draw_sprite_in_rect(get_sprite_id_from_ItemID(id), box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
+					draw_sprite_in_rect(spritedata, box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
 				
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
-						string name = get_ItemID_pretty_name(id);
+						string name = item -> pretty_name;
 
 						string title = sprint(get_temporary_allocator(), STR("%s\nx%i"), name, item -> amount);
 
@@ -1573,44 +1387,70 @@ int entry(int argc, char **argv)
 	// :Load Sprites
 
 	// Missing Texture Sprite
-	sprites[0] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator())};
-	
+	world -> sprites[0] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_nil
+	};
+
 	// Player
-	sprites[SPRITE_player] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator())};
+	world -> sprites[SPRITE_player] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_player
+	};
+
+	// Entities
+	world -> sprites[SPRITE_target] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_target
+	};
 
 	// Items
-	sprites[SPRITE_exp] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator())};
-	sprites[SPRITE_exp_vein] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator())};
+	world -> sprites[SPRITE_exp] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp
+	};
 
 	// Buildings
-	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator())};
-	sprites[SPRITE_target] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator())};
-	sprites[SPRITE_stairs] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator())};
+	world -> sprites[SPRITE_research_station] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_research_station
+	};
+
+	world -> sprites[SPRITE_exp_vein] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp_vein
+	};
+
+	world -> sprites[SPRITE_stairs] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_stairs
+	};
 
 	// Spells
-	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
-	
-	setup_fireball_anim(); // Setup fireball animation so it can be used.
+	world -> sprites[SPRITE_fireball_sheet] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_fireball_sheet
+	};
 
 	#if CONFIGURATION == DEBUG
 		{
 			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
 			{
-				SpriteData* sprite = & sprites[i];
+				SpriteData* sprite = & world -> sprites[i];
 				assert(sprite -> image, "Sprite was not setup properly");
 			}
 		}
 	#endif
 
-	// :Building Data Setup
-	{
-		buildings[BUILDING_teleporter1] = (BuildingData)
-		{
-			.to_build = ARCH_stairs,
-			.icon = SPRITE_stairs,
-			.description = STR("A stairway to the next floor."),
-		};
-	}
+	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
 	// :Font Setup
 
@@ -1636,6 +1476,7 @@ int entry(int argc, char **argv)
 	{
 		world_setup();
 	}
+
 	world_save_to_disk();
 
 	// :Game Loop
@@ -1660,9 +1501,10 @@ int entry(int argc, char **argv)
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
 			Entity* en = & world -> entities[i];
-			if (en -> is_valid && en -> arch == ARCH_player) 
+			if (en -> is_valid && en -> entityID == ENTITY_player) 
 			{
 				world_frame.player = en;
+				//log("player found");
 			}
 		}
 
@@ -1745,26 +1587,28 @@ int entry(int argc, char **argv)
 
 			if (en -> is_valid)
 			{
-				switch (en -> arch)
+				switch (en -> entityID)
 				{	
-					case ARCH_player:
+					case ENTITY_player:
 					{
 						break;
 					}
 
 					default:
 					{
-						SpriteData* sprite = get_sprite(en -> sprite_id);
+						SpriteData* spritedata = en -> spriteData;
 
 						// Get sprite dimensions
-						Vector2 sprite_size = get_sprite_size(sprite);
+						Vector2 sprite_size = get_sprite_size(spritedata);
 
 						Matrix4 xform = m4_scalar(1.0);
 
+						/*
 						if(en -> is_item == true)
 						{
 							xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
 						}
+						*/
 
 						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 
@@ -1775,9 +1619,9 @@ int entry(int argc, char **argv)
 							col = COLOR_RED;
 						}
 
-						draw_image_xform(sprite -> image, xform, sprite_size, col);
+						draw_image_xform(spritedata -> image, xform, sprite_size, col);
 
-						Vector2 health_bar_pos = v2((en -> pos.x + + (sprite -> image -> width * 0.5)), (en -> pos.y + (sprite -> image -> height)));
+						Vector2 health_bar_pos = v2((en -> pos.x + + (spritedata -> image -> width * 0.5)), (en -> pos.y + (spritedata -> image -> height)));
 
 						// Temp healthbar for non-players
 						draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
@@ -1824,19 +1668,19 @@ int entry(int argc, char **argv)
 		//Render player
 		{
 			Entity *player = get_player();
-			SpriteData *sprite = get_sprite(player -> sprite_id);
+			SpriteData *spritedata = player -> spriteData;
 
-			Vector2 sprite_size = get_sprite_size(sprite);
+			Vector2 sprite_size = get_sprite_size(spritedata);
 
 			Matrix4 xform = m4_scalar(1.0);
 
 			xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
 
 			Vector4 col = COLOR_WHITE;
-			draw_image_xform(sprite->image, xform, sprite_size, col);
+			draw_image_xform(spritedata -> image, xform, sprite_size, col);
 
 			// Healthbar test values
-			Vector2 health_bar_pos = v2((player -> pos.x + (sprite -> image -> width * 0.5)), (player -> pos.y + (sprite -> image -> height)));
+			Vector2 health_bar_pos = v2((player -> pos.x + (spritedata -> image -> width * 0.5)), (player -> pos.y + (spritedata -> image -> height)));
 
 			// Temperary render player healthbar test
 			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
