@@ -93,7 +93,6 @@ enum EntityID
 	ENTITY_nil,
 	ENTITY_player,
 	ENTITY_enemy,
-	ENTITY_target,
 	ENTITY_MAX,
 };
 
@@ -238,7 +237,7 @@ void setup_player(Entity* player_en)
 
 void setup_target(Entity* en) 
 {
-	en -> entityID = ENTITY_target;
+	en -> entityID = ENTITY_enemy;
     en -> spriteData = & world -> sprites[SPRITE_target];
 	en -> health = 100;
 	en -> max_health = 100;
@@ -316,6 +315,75 @@ Vector2 get_sprite_size(SpriteData* spritedata)
     }
 
     return (Vector2) {spritedata -> image -> width, spritedata -> image -> height};
+}
+
+void LoadSpriteData()
+{
+	// :Load Sprites
+
+	// Missing Texture Sprite
+	world -> sprites[0] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_nil
+	};
+
+	// Player
+	world -> sprites[SPRITE_player] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_player
+	};
+
+	// Entities
+	world -> sprites[SPRITE_target] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_target
+	};
+
+	// Items
+	world -> sprites[SPRITE_exp] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp
+	};
+
+	// Buildings
+	world -> sprites[SPRITE_research_station] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_research_station
+	};
+
+	world -> sprites[SPRITE_exp_vein] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp_vein
+	};
+
+	world -> sprites[SPRITE_stairs] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_stairs
+	};
+
+	// Spells
+	world -> sprites[SPRITE_fireball_sheet] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_fireball_sheet
+	};
+
+	#if CONFIGURATION == DEBUG
+		{
+			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
+			{
+				SpriteData* sprite = & world -> sprites[i];
+				assert(sprite -> image, "Sprite was not setup properly");
+			}
+		}
+	#endif
 }
 
 void PlayerDeath() 
@@ -1384,71 +1452,7 @@ int entry(int argc, char **argv)
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
-	// :Load Sprites
-
-	// Missing Texture Sprite
-	world -> sprites[0] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_nil
-	};
-
-	// Player
-	world -> sprites[SPRITE_player] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_player
-	};
-
-	// Entities
-	world -> sprites[SPRITE_target] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_target
-	};
-
-	// Items
-	world -> sprites[SPRITE_exp] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_exp
-	};
-
-	// Buildings
-	world -> sprites[SPRITE_research_station] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_research_station
-	};
-
-	world -> sprites[SPRITE_exp_vein] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_exp_vein
-	};
-
-	world -> sprites[SPRITE_stairs] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_stairs
-	};
-
-	// Spells
-	world -> sprites[SPRITE_fireball_sheet] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_fireball_sheet
-	};
-
-	#if CONFIGURATION == DEBUG
-		{
-			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
-			{
-				SpriteData* sprite = & world -> sprites[i];
-				assert(sprite -> image, "Sprite was not setup properly");
-			}
-		}
-	#endif
+	LoadSpriteData();
 
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
@@ -1775,6 +1779,7 @@ int entry(int argc, char **argv)
 			if (is_key_just_pressed('K') && is_key_down(KEY_SHIFT)) 
 			{
 				memset(world, 0, sizeof(World));
+				LoadSpriteData();
 				world_setup();
 				log("reset");
 			}
