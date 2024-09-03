@@ -1165,6 +1165,9 @@ void set_world_space()
 // :World init
 void world_setup()
 {
+	//start inventory open
+	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
+
 	Entity* player_en = entity_create();
 	setup_player(player_en);
 	player_en -> pos = v2(0, 0);
@@ -1566,9 +1569,6 @@ int entry(int argc, char **argv)
 	// :Color
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
-
-	//start inventory open
-	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
 	// :Load Sprites
 
