@@ -1404,7 +1404,7 @@ int entry(int argc, char **argv)
 	window.x = 0;
 	window.y = 0;
 
-	window.clear_color = hex_to_rgba(0x2a2d3aff);
+	window.clear_color = COLOR_BLACK;
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 
@@ -1543,13 +1543,16 @@ int entry(int argc, char **argv)
 			{
 				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
 				{
+					Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
+					Vector4 col = color_0;
+
 					if ((x + (y % 2 == 0) ) % 2 == 0) 
 					{
-						Vector4 col = v4(0.0, 0.0, 0.2, 0.35);
-						float x_pos = x * tile_width;
-						float y_pos = y * tile_width;
-						draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
+						col.a = 0.8;
 					}
+					float x_pos = x * tile_width;
+					float y_pos = y * tile_width;
+					draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
 				}
 			}
 			// Show which tile is currently selected
