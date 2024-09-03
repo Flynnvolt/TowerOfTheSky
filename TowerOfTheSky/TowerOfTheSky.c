@@ -537,7 +537,7 @@ bool collideAt(Entity *current_entity, int x, int y)
             if (x < actor_x_end && x_end1 > actor -> pos.x &&
                 y < actor_y_end && y_end1 > actor -> pos.y) 
             {
-                log("Collision detected with entity %d\n", i);
+                //log("Collision detected with entity %d\n", i);
                 return true;
             }
         }
@@ -562,9 +562,9 @@ void collide_visual_debug(Entity *current_entity)
 			SpriteData* sprite2 = get_sprite(current_entity -> sprite_id);
 
 			// Visual Debug tools
-			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+			//draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
 		}
 	}
 }
@@ -1584,9 +1584,6 @@ int entry(int argc, char **argv)
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
-		// Debug Visuals
-		update_debug_circle(& circle_state);
-
 		// :Do UI Rendering
 
 		do_ui_stuff();
@@ -1630,6 +1627,9 @@ int entry(int argc, char **argv)
 			// Show which tile is currently selected
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
+
+		// Debug Visuals
+		//update_debug_circle(& circle_state);
 
 		// :Render Entities
 
@@ -1736,7 +1736,7 @@ int entry(int argc, char **argv)
 			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
 
 			// World space current location debug for object pos
-			draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
 			if(is_key_just_pressed(KEY_F3))
 			{
