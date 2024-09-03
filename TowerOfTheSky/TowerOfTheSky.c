@@ -1167,6 +1167,10 @@ void world_setup()
 {
 	Entity* player_en = entity_create();
 	setup_player(player_en);
+	player_en -> pos = v2(0, 0);
+	player_en -> pos = round_v2_to_tile(player_en -> pos);
+	player_en -> pos.y -= tile_width * 0.5;
+	player_en -> pos.x -= get_sprite(player_en -> sprite_id) -> image -> width * 0.5;
 
 	// :test stuff
 	#if defined(DEV_TESTING)
@@ -1911,23 +1915,29 @@ int entry(int argc, char **argv)
 			player -> pos.y = -world_half_length;
 		}
 
+		// load/save commands
+		// these are at the bottom, because we'll want to have a clean spot to do this to avoid any mid-way operation bugs.
+		{
+			if (is_key_just_pressed('F')) 
+			{
+				world_save_to_disk();
+				log("saved");
+			}
+			if (is_key_just_pressed('R')) 
+			{
+				world_attempt_load_from_disk();
+				log("loaded ");
+			}
+			if (is_key_just_pressed('K') && is_key_down(KEY_SHIFT)) 
+			{
+				memset(world, 0, sizeof(World));
+				world_setup();
+				log("reset");
+			}
+		}
+
 		os_update(); 
 		gfx_update();
-	}
-
-	// load/save commands
-	// these are at the bottom, because we'll want to have a clean spot to do this to avoid any mid-way operation bugs.
-	{
-		if (is_key_just_pressed('F')) 
-		{
-			world_save_to_disk();
-			log("saved");
-		}
-		if (is_key_just_pressed('R')) 
-		{
-			world_attempt_load_from_disk();
-			log("loaded ");
-		}
 	}
 
 	world_save_to_disk();
