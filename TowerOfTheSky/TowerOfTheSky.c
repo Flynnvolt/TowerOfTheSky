@@ -300,8 +300,6 @@ struct Projectile
 	Entity *source_entity; // Caster of the Projectile
 };
 
-Projectile projectiles[MAX_PROJECTILES];
-
 // :UX
 
 typedef enum UXState UXState;
@@ -361,6 +359,8 @@ struct World
 	float64 time_elapsed;
 
 	Entity entities[MAX_ENTITY_COUNT];
+
+	Projectile projectiles[MAX_PROJECTILES];
 
 	InventoryItemData inventory_items[ITEM_MAX];
 
@@ -716,9 +716,9 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 {
     for (int i = 0; i < MAX_PROJECTILES; i++) 
     {
-        if (!projectiles[i].is_active) 
+        if (!world -> projectiles[i].is_active) 
         {
-            Projectile *projectile = & projectiles[i];
+            Projectile *projectile = & world -> projectiles[i];
             projectile -> is_active = true;
             projectile -> speed = speed;
             projectile -> damage = damage;
@@ -1184,6 +1184,36 @@ void world_setup()
 	#endif
 }
 
+bool world_save_to_disk() 
+{
+	return os_write_entire_file_s(STR("world"), (string){sizeof(World), (u8*)world});
+}
+
+bool world_attempt_load_from_disk() 
+{
+	string result = {0};
+	bool succ = os_read_entire_file_s(STR("world"), &result, temp_allocator);
+	if (!succ) {
+		log_error("Failed to load world.");
+		return false;
+	}
+
+	// NOTE, for errors I used to do stuff like this assert:
+	// assert(result.count == sizeof(World), "world size has changed!");
+	//
+	// But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
+	// That's why this function returns a bool. We handle that at the callsite.
+	// Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
+
+	if (result.count != sizeof(World)) {
+		log_error("world size different to one on disk.");
+		return false;
+	}
+
+	memcpy(world, result.data, result.count);
+	return true;
+}
+
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
 
 Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
@@ -1584,12 +1614,25 @@ int entry(int argc, char **argv)
 
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
-
 	// Camera Settings
 	float zoom = 4;
 	Vector2 camera_pos = v2(0, 0);
 
-	world_setup();
+	// world load / setup
+	if (os_is_file_s(STR("world"))) 
+	{
+		bool succ = world_attempt_load_from_disk();
+		if (!succ) 
+		{
+			// just setup a new world if it fails
+			world_setup();
+		}
+	} 
+	else 
+	{
+		world_setup();
+	}
+	world_save_to_disk();
 
 	// :Game Loop
 
@@ -1761,9 +1804,9 @@ int entry(int argc, char **argv)
 		// Loop through all Projectiles and render / move them.
 		for (int i = 0; i < MAX_PROJECTILES; i++) 
 		{		
-			if (projectiles[i].is_active) 
+			if (world -> projectiles[i].is_active) 
 			{
-				update_projectile(& projectiles[i], delta_t);
+				update_projectile(& world -> projectiles[i], delta_t);
 
 				count++;
 			}
@@ -1871,6 +1914,23 @@ int entry(int argc, char **argv)
 		os_update(); 
 		gfx_update();
 	}
+
+	// load/save commands
+	// these are at the bottom, because we'll want to have a clean spot to do this to avoid any mid-way operation bugs.
+	{
+		if (is_key_just_pressed('F')) 
+		{
+			world_save_to_disk();
+			log("saved");
+		}
+		if (is_key_just_pressed('R')) 
+		{
+			world_attempt_load_from_disk();
+			log("loaded ");
+		}
+	}
+
+	world_save_to_disk();
 
 	return 0;
 }
