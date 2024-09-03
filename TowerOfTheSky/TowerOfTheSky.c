@@ -68,6 +68,7 @@ enum SpriteID
 	SPRITE_exp_vein,
 	SPRITE_fireball_sheet,
 	SPRITE_target,
+	SPRITE_stairs,
 	SPRITE_MAX,
 };
 
@@ -105,9 +106,28 @@ enum ArchetypeID
 	ARCH_enemy = 2,
 	ARCH_item = 3,
 	ARCH_exp_vein = 4,
-	ARCH_research_station = 5,
+	ARCH_stairs = 5,
+	ARCH_research_station = 6,
 	ARCH_MAX,
 };
+
+typedef struct ArchetypeData ArchetypeData;
+struct ArchetypeData
+{
+	string pretty_name;
+};
+
+ArchetypeData archetype_data[ARCH_MAX] = {0};
+
+ArchetypeData get_archetype_data(ArchetypeID id) 
+{
+	return archetype_data[id];
+}
+
+string get_archetype_pretty_name(ArchetypeID id) 
+{
+	return get_archetype_data(id).pretty_name;
+}
 
 // :Items
 
@@ -219,22 +239,34 @@ struct Entity
 	float xRemainder;
 	float yRemainder;
 };
+typedef enum BuildingID BuildingID;
 
-string get_archetype_pretty_name(ArchetypeID arch) 
+enum BuildingID 
 {
-	switch (arch) 
-	{
-		case ARCH_research_station:
-		{
-		return STR("Research Station");
-		break;
-		} 
+	BUILDING_nil,
+	BUILDING_furnace,
+	BUILDING_workbench,
+	BUILDING_research_station,
+	BUILDING_teleporter1,
+	BUILDING_MAX,
+};
+typedef struct BuildingData BuildingData;
+struct BuildingData 
+{
+	ArchetypeID to_build;
+	SpriteID icon;
+	int pct_per_research_exp; // this jank will get replaced with a recipe one day
+	string description;
+	ItemAmount ingredients[8];
+	int ingredients_count;
+};
 
-		default:
-		{
-			return STR("nil");
-		}
-	}
+BuildingData buildings[BUILDING_MAX];
+
+BuildingData get_building_data(BuildingID id) 
+{
+	// note, this isn't a pointer, because this is constant resource data, we don't want to modify
+	return buildings[id];
 }
 
 // :Projectiles
@@ -419,6 +451,12 @@ void setup_target(Entity* en)
 	en -> is_immortal = true;
 }
 
+void setup_stairs(Entity* en) 
+{
+	en -> arch = ARCH_stairs;
+	en -> sprite_id = SPRITE_stairs;
+}
+
 void setup_item(Entity* en, ItemID item_id) 
 {
 	en -> arch = ARCH_item;
@@ -431,6 +469,12 @@ void entity_setup(Entity* en, ArchetypeID id)
 {
 	switch (id) 
 	{
+		case ARCH_stairs:
+		{
+ 			setup_stairs(en); 
+			break;
+		}
+
 		default: 
 		{
 			log_error("missing entity_setup case entry"); 
@@ -1507,6 +1551,7 @@ int entry(int argc, char **argv)
 	// Buildings
 	sprites[SPRITE_research_station] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator())};
 	sprites[SPRITE_target] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator())};
+	sprites[SPRITE_stairs] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator())};
 
 	// Spells
 	sprites[SPRITE_fireball_sheet] = (SpriteData){ .image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator())};
@@ -1522,6 +1567,16 @@ int entry(int argc, char **argv)
 			}
 		}
 	#endif
+
+	// :Building Data Setup
+	{
+		buildings[BUILDING_teleporter1] = (BuildingData)
+		{
+			.to_build = ARCH_stairs,
+			.icon = SPRITE_stairs,
+			.description = STR("A stairway to the next floor."),
+		};
+	}
 
 	// :Font Setup
 
