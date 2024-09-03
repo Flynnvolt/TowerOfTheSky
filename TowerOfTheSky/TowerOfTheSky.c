@@ -295,16 +295,8 @@ typedef struct WorldResourceData WorldResourceData;
 
 struct WorldResourceData
 {
-	BiomeID biome_id;
 	ArchetypeID arch_id;
 	int dist_from_self;
-};
-
-// NOTE - trying out a new pattern here. That way we don't have to keep writing up enums to index into these guys. If we need dynamic runtime data, just make an array with the count of this array and have it essentially share the index. Like what I've done below in the world state.
-WorldResourceData world_resources[] = 
-{
-	{ BIOME_forest, ARCH_exp_vein, 10 },
-	// :spawn_res system
 };
 
 typedef struct Map Map;
@@ -313,7 +305,6 @@ struct Map
 {
 	int width;
 	int height;
-	BiomeID* tiles;
 };
 
 Map map = {0};
