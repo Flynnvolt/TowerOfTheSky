@@ -24,6 +24,8 @@ const s32 Layer_WORLD = 10;
 
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
+Vector4 color_0;
+
 const float entity_selection_radius = 8.0f;
 
 const float player_pickup_radius = 10.0f;
@@ -280,12 +282,66 @@ enum UXState
 	UX_research,
 };
 
+typedef Vector2i Tile;
+
+typedef struct TileData TileData;
+
+struct TileData
+{
+	Tile tile;
+	Entity* entity_at_tile;
+};
+typedef struct WorldResourceData WorldResourceData;
+
+struct WorldResourceData
+{
+	BiomeID biome_id;
+	ArchetypeID arch_id;
+	int dist_from_self;
+};
+
+// NOTE - trying out a new pattern here. That way we don't have to keep writing up enums to index into these guys. If we need dynamic runtime data, just make an array with the count of this array and have it essentially share the index. Like what I've done below in the world state.
+WorldResourceData world_resources[] = 
+{
+	{ BIOME_forest, ARCH_exp_vein, 10 },
+	// :spawn_res system
+};
+
+typedef struct Map Map;
+
+struct Map
+{
+	int width;
+	int height;
+	BiomeID* tiles;
+};
+
+Map map = {0};
+
+Tile local_map_to_world_tile(Vector2i local) 
+{
+	return (Tile) 
+	{
+		local.x - floor((float)map.width * 0.5),
+		(local.y-map.height) + floor((float)(map.height) * 0.5) + 1,
+	};
+}
+
+Vector2i world_tile_to_local_map(Tile world) 
+{
+	int x_index = world.x + floor((float)map.width * 0.5);
+	int y_index = world.y + floor((float)map.height * 0.5);
+	return (Vector2i){x_index, y_index};
+}
+
 // :World
 
 typedef struct World World;
 
 struct World
 {
+	float64 time_elapsed;
+
 	Entity entities[MAX_ENTITY_COUNT];
 
 	InventoryItemData inventory_items[ITEM_MAX];
@@ -348,6 +404,7 @@ Entity* entity_create()
 	}
 	assert(entity_found, "No more free entities!");
 	entity_found -> is_valid = true;
+
 	return entity_found;
 }
 
@@ -355,6 +412,7 @@ void entity_destroy(Entity* entity)
 {
 	memset(entity, 0, sizeof(Entity));
 }
+
 
 void setup_player(Entity* en) 
 {
@@ -658,7 +716,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
             float angle = atan2f(direction.y, direction.x);
             Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
 
-            projectile->position = spawn_position;
+            projectile -> position = spawn_position;
 
             // Debug logging
             // printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
@@ -1065,6 +1123,28 @@ void set_world_space()
 	draw_frame.camera_xform = world_frame.world_view;
 }
 
+// :World init
+void world_setup()
+{
+	Entity* player_en = entity_create();
+	setup_player(player_en);
+
+	// :test stuff
+	#if defined(DEV_TESTING)
+	{
+		world -> inventory_items[ITEM_exp].amount = 50;
+
+		// Spawn one Target
+		Entity* en = entity_create();
+		setup_target(en);
+		en -> pos = v2(0, 40);
+		en -> pos = round_v2_to_tile(en -> pos);
+		en -> pos.y -= tile_width * 0.5;
+		en -> pos.x -= get_sprite(en-> sprite_id) -> image -> width * 0.5;
+	}
+	#endif
+}
+
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
 
 Draw_Quad* draw_sprite_in_rect(SpriteID sprite_id, Range2f rect, Vector4 col, float pad_pct) 
@@ -1410,6 +1490,10 @@ int entry(int argc, char **argv)
 
 	float64 last_time = os_get_elapsed_seconds();
 
+	// :Color
+
+	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
+
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
@@ -1450,28 +1534,12 @@ int entry(int argc, char **argv)
 
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
-	// Entity Setup
-	{
-		Entity* player_en = entity_create();
-		setup_player(player_en);
-
-		// :Test stuff
-		#if defined(DEV_TESTING)
-		{
-			world -> inventory_items[ITEM_exp].amount = 50;
-
-			// Spawn one Target
-			Entity* en = entity_create();
-			setup_target(en);
-			en -> pos = v2(0, 40);
-			en -> pos = round_v2_to_tile(en -> pos);
-		}
-		#endif
-	}
 
 	// Camera Settings
 	float zoom = 4;
 	Vector2 camera_pos = v2(0, 0);
+
+	world_setup();
 
 	// :Game Loop
 
@@ -1532,24 +1600,37 @@ int entry(int argc, char **argv)
 
 		do_ui_stuff();
 
-		// :Tile Rendering
+		// :World update
+		{
+			world -> time_elapsed += delta_t;
+		}
+
+		// :Tile rendering
 		{
 			int player_tile_x = world_pos_to_tile_pos(get_player() -> pos.x);
 			int player_tile_y = world_pos_to_tile_pos(get_player() -> pos.y);
-			int tile_radius_x = 40; 
+			int tile_radius_x = 40;
 			int tile_radius_y = 30;
-
 			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
 			{
 				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
 				{
-					Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
-					Vector4 col = color_0;
+					// only render small section of tiles
+					if (x < world_pos_to_tile_pos(-world_half_length)
+					|| x > world_pos_to_tile_pos(world_half_length)
+					|| y < world_pos_to_tile_pos(-world_half_length)
+					|| y > world_pos_to_tile_pos(world_half_length)) 
+					{
+						continue;
+					}
 
+					// checkerboard pattern
+					Vector4 col = color_0;
 					if ((x + (y % 2 == 0) ) % 2 == 0) 
 					{
-						col.a = 0.8;
+						col.a = 0.75;
 					}
+
 					float x_pos = x * tile_width;
 					float y_pos = y * tile_width;
 					draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
@@ -1588,7 +1669,7 @@ int entry(int argc, char **argv)
 							xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
 						}
 
-						xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 
 						Vector4 col = COLOR_WHITE;
 
@@ -1718,6 +1799,24 @@ int entry(int argc, char **argv)
 
 		// Update player position
 		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
+
+		// Player can't leave playzone
+		if (player -> pos.x < -world_half_length) 
+		{
+			player -> pos.x = -world_half_length;
+		}
+		if (player -> pos.x > world_half_length) 
+		{
+			player -> pos.x = world_half_length;
+		}
+		if (player -> pos.y > world_half_length) 
+		{
+			player -> pos.y = world_half_length;
+		}
+		if (player -> pos.y < -world_half_length) 
+		{
+			player -> pos.y = -world_half_length;
+		}
 
 		os_update(); 
 		gfx_update();

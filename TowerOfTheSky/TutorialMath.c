@@ -3,21 +3,22 @@ bool almost_equals(float a, float b, float epsilon)
  	return fabs(a - b) <= epsilon;
 }
 
+
 bool animate_f32_to_target(float* value, float target, float delta_t, float rate) 
 {
 	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
 	if (almost_equals(*value, target, 0.001f))
 	{
 		*value = target;
-		return true; // Reached
+		return true; // reached
 	}
 	return false;
 }
 
 void animate_v2_to_target(Vector2* value, Vector2 target, float delta_t, float rate) 
 {
-	animate_f32_to_target(& (value -> x), target.x, delta_t, rate);
-	animate_f32_to_target(& (value -> y), target.y, delta_t, rate);
+	animate_f32_to_target(&(value -> x), target.x, delta_t, rate);
+	animate_f32_to_target(&(value -> y), target.y, delta_t, rate);
 }
 
 Range2f quad_to_range(Draw_Quad quad) 
@@ -108,6 +109,8 @@ Vector2 get_mouse_pos_in_world_space()
 
 const int tile_width = 16;
 
+const float world_half_length = tile_width * 10;
+
 // :Utilities
 
 float sin_breathe(float time, float rate)
@@ -125,9 +128,29 @@ float tile_pos_to_world_pos(int tile_pos)
 	return ((float)tile_pos * (float)tile_width);
 }
 
+Vector2i v2_world_pos_to_tile_pos(Vector2 world_pos) 
+{
+	return (Vector2i) { world_pos_to_tile_pos(world_pos.x), world_pos_to_tile_pos(world_pos.y) };
+}
+
+Vector2 v2_tile_pos_to_world_pos(Vector2i tile_pos) 
+{
+	return (Vector2) { tile_pos_to_world_pos(tile_pos.x), tile_pos_to_world_pos(tile_pos.y) };
+}
+
 Vector2 round_v2_to_tile(Vector2 world_pos) 
 {
 	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
 	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
 	return world_pos;
+}
+#define clamp_bottom(a, b) max(a, b)
+#define clamp_top(a, b) min(a, b)
+
+bool v4_equals(Vector4 a, Vector4 b) {
+ return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+
+bool v2i_equals(Vector2i a, Vector2i b) {
+ return a.x == b.x && a.y == b.y;
 }
