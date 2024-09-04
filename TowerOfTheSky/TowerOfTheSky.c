@@ -38,14 +38,14 @@ typedef enum SpriteID SpriteID;
 
 enum SpriteID
 {
-	SPRITE_nil,
-	SPRITE_player,
-	SPRITE_research_station,
-	SPRITE_exp,
-	SPRITE_exp_vein,
-	SPRITE_fireball_sheet,
-	SPRITE_target,
-	SPRITE_stairs,
+	SPRITE_nil = 0,
+	SPRITE_player = 1,
+	SPRITE_research_station = 2,
+	SPRITE_exp = 3,
+	SPRITE_exp_vein = 4,
+	SPRITE_fireball_sheet = 5,
+	SPRITE_target = 6,
+	SPRITE_stairs = 7,
 	SPRITE_MAX,
 };
 
@@ -57,7 +57,7 @@ struct SpriteData
 	SpriteID spriteID;
 };
 
-typedef enum SpriteID SpriteID;
+SpriteData sprites[SPRITE_MAX];
 
 // :Items
 
@@ -76,7 +76,7 @@ typedef struct ItemData ItemData;
 
 struct ItemData
 {
-	SpriteData* spriteData;
+	SpriteData spriteData;
 	bool is_valid;
 	string pretty_name;
 	ItemID itemID;
@@ -102,7 +102,7 @@ struct Entity
 {
 	EntityID entityID;
 	bool is_valid;
-	SpriteData* spriteData;
+	SpriteID spriteID;
 	Vector2 pos;
 	float health;
 	float max_health;
@@ -186,8 +186,6 @@ struct World
 	Projectile projectiles[MAX_PROJECTILES];
 
 	ItemData items[ITEM_MAX];
-	
-	SpriteData sprites[SPRITE_MAX];
 
 	UXState ux_state;
 
@@ -225,20 +223,20 @@ Entity* get_player()
 void setup_player(Entity* player_en) 
 {
 	player_en -> entityID = ENTITY_player;
-    player_en -> spriteData = & world -> sprites[SPRITE_player];
+    player_en -> spriteID = SPRITE_player;
 	player_en -> health = 100;
 	player_en -> max_health = 100;
 	player_en -> health_regen = 4;
 	player_en -> pos = v2(0, 0);
 	player_en -> pos = round_v2_to_tile(player_en -> pos);
 	player_en -> pos.y -= tile_width * 0.5;
-	player_en -> pos.x -= player_en -> spriteData -> image -> width * 0.5;
+	player_en -> pos.x -= sprites[player_en -> spriteID].image -> width * 0.5;
 }
 
 void setup_target(Entity* en) 
 {
 	en -> entityID = ENTITY_enemy;
-    en -> spriteData = & world -> sprites[SPRITE_target];
+    en -> spriteID = SPRITE_target;
 	en -> health = 100;
 	en -> max_health = 100;
 	en -> health_regen = 25;
@@ -246,14 +244,14 @@ void setup_target(Entity* en)
 	en -> pos = v2(0, 40);
 	en -> pos = round_v2_to_tile(en -> pos);
 	en -> pos.y -= tile_width * 0.5;
-	en -> pos.x -= en -> spriteData -> image -> width * 0.5;
+	en -> pos.x -= sprites[en -> spriteID].image -> width * 0.5;
 }
 
 ItemData setup_exp_item() 
 {
     ItemData item;
     item.itemID = ITEM_exp;
-    item.spriteData = & world -> sprites[SPRITE_exp];
+    item.spriteData = sprites[SPRITE_exp];
     item.amount = 50;
     item.is_valid = true; // Mark item as valid
     item.pretty_name = STR("EXP");
@@ -288,11 +286,16 @@ void entity_destroy(Entity* entity)
 
 // :Functions
 
+Gfx_Image* get_image_by_id(SpriteID spriteID) 
+{
+    return sprites[spriteID].image;
+}
+
 SpriteData* get_sprite(SpriteID id)
 {
 	if (id >= 0 && id < SPRITE_MAX)
 	{
-		SpriteData* sprite = & world -> sprites[id];
+		SpriteData* sprite = & sprites[id];
 
 		if (sprite -> image)
 		{
@@ -300,21 +303,21 @@ SpriteData* get_sprite(SpriteID id)
 		}
 		else
 		{
-			return & world -> sprites[0];
+			return & sprites[0];
 		}
 	}
-	return & world -> sprites[0];
+	return & sprites[0];
 }
 
-Vector2 get_sprite_size(SpriteData* spritedata)
+Vector2 get_sprite_size(SpriteData spritedata)
 {
-    if (spritedata == NULL || spritedata -> image == NULL) 
+    if (spritedata.image == NULL) 
     {
         log("Error: spritedata or image is NULL.\n");
         return (Vector2) {0, 0}; // Return a default value or handle the error as needed
     }
 
-    return (Vector2) {spritedata -> image -> width, spritedata -> image -> height};
+    return (Vector2) {spritedata.image -> width, spritedata.image -> height};
 }
 
 void LoadSpriteData()
@@ -322,54 +325,54 @@ void LoadSpriteData()
 	// :Load Sprites
 
 	// Missing Texture Sprite
-	world -> sprites[0] = (SpriteData)
+	sprites[0] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_nil
 	};
 
 	// Player
-	world -> sprites[SPRITE_player] = (SpriteData)
+	sprites[SPRITE_player] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_player
 	};
 
 	// Entities
-	world -> sprites[SPRITE_target] = (SpriteData)
+	sprites[SPRITE_target] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_target
 	};
 
 	// Items
-	world -> sprites[SPRITE_exp] = (SpriteData)
+	sprites[SPRITE_exp] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_exp
 	};
 
 	// Buildings
-	world -> sprites[SPRITE_research_station] = (SpriteData)
+	sprites[SPRITE_research_station] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_research_station
 	};
 
-	world -> sprites[SPRITE_exp_vein] = (SpriteData)
+	sprites[SPRITE_exp_vein] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_exp_vein
 	};
 
-	world -> sprites[SPRITE_stairs] = (SpriteData)
+	sprites[SPRITE_stairs] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_stairs
 	};
 
 	// Spells
-	world -> sprites[SPRITE_fireball_sheet] = (SpriteData)
+	sprites[SPRITE_fireball_sheet] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
 		.spriteID = SPRITE_fireball_sheet
@@ -379,7 +382,7 @@ void LoadSpriteData()
 		{
 			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
 			{
-				SpriteData* sprite = & world -> sprites[i];
+				SpriteData* sprite = & sprites[i];
 				assert(sprite -> image, "Sprite was not setup properly");
 			}
 		}
@@ -450,9 +453,9 @@ void DamageEntity(Entity *entity, float damage)
 
 bool collideAt(Entity *current_entity, int x, int y) 
 {
-    SpriteData* spritedata = current_entity -> spriteData;
-    int width1 = spritedata -> image -> width;
-    int height1 = spritedata -> image -> height;
+    SpriteData spritedata = sprites[current_entity -> spriteID];
+    int width1 = spritedata.image -> width;
+    int height1 = spritedata.image -> height;
 
     int x_end1 = x + width1;
     int y_end1 = y + height1;
@@ -464,9 +467,9 @@ bool collideAt(Entity *current_entity, int x, int y)
         // Skip ourselves to avoid self-collision
         if (actor -> is_valid && actor != current_entity) 
         {
-            SpriteData* spritedata2 = actor -> spriteData;
-            int width2 = spritedata2 -> image -> width;
-            int height2 = spritedata2 -> image -> height;
+            SpriteData spritedata2 = sprites[actor -> spriteID];
+            int width2 = spritedata2.image -> width;
+            int height2 = spritedata2.image -> height;
 
             int actor_x_end = actor -> pos.x + width2;
             int actor_y_end = actor-> pos.y + height2;
@@ -493,11 +496,11 @@ void collide_visual_debug(Entity *current_entity)
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
-			SpriteData* spritedata = actor -> spriteData;
-			int sprite_width = spritedata -> image -> width;
-			int sprite_height = spritedata -> image -> height;
+			SpriteData spritedata = sprites[actor -> spriteID];
+			int sprite_width = spritedata.image -> width;
+			int sprite_height = spritedata.image -> height;
 
-			SpriteData* spritedata2 = current_entity -> spriteData;
+			SpriteData spritedata2 = sprites[current_entity -> spriteID];
 
 			// Visual Debug tools
 			//draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
@@ -618,8 +621,8 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
             projectile -> max_time_alive = max_time_alive;
 
             // Calculate the player's center position
-            SpriteData *spritedata = source_entity -> spriteData;
-            Vector2 player_center = v2((source_entity -> pos.x + (spritedata -> image -> width * 0.5f)), (source_entity -> pos.y + (spritedata -> image -> height * 0.5f)));
+            SpriteData spritedata = sprites[source_entity -> spriteID];
+            Vector2 player_center = v2((source_entity -> pos.x + (spritedata.image -> width * 0.5f)), (source_entity -> pos.y + (spritedata.image -> height * 0.5f)));
 
             Vector2 mouse_pos = get_mouse_pos_in_world_space();
 
@@ -678,9 +681,9 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 
         if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
         {
-            SpriteData* spritedata = entity -> spriteData;
-            int entity_width = spritedata -> image -> width;
-            int entity_height = spritedata -> image -> height;
+            SpriteData spritedata = sprites[entity -> spriteID];
+            int entity_width = spritedata.image -> width;
+            int entity_height = spritedata.image -> height;
 
             int entity_x_end = entity -> pos.x + entity_width;
             int entity_y_end = entity -> pos.y + entity_height;
@@ -1051,8 +1054,6 @@ void set_world_space()
 // :World init
 void world_setup()
 {
-	LoadSpriteData();
-
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
@@ -1107,7 +1108,7 @@ bool world_attempt_load_from_disk()
 
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
 
-Draw_Quad* draw_sprite_in_rect(SpriteData* spritedata, Range2f rect, Vector4 col, float pad_pct) 
+Draw_Quad* draw_sprite_in_rect(SpriteData spritedata, Range2f rect, Vector4 col, float pad_pct) 
 {
 	Vector2 sprite_size = get_sprite_size(spritedata);
 
@@ -1146,7 +1147,7 @@ Draw_Quad* draw_sprite_in_rect(SpriteData* spritedata, Range2f rect, Vector4 col
 		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
 	}
 
-	return draw_image(spritedata -> image, rect.min, range2f_size(rect), col);
+	return draw_image(spritedata.image, rect.min, range2f_size(rect), col);
 }
 
 void do_ui_stuff()
@@ -1222,7 +1223,7 @@ void do_ui_stuff()
 					Matrix4 xform = m4_scalar(1.0);
 
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-					SpriteData* spritedata = item -> spriteData;
+					SpriteData spritedata = item -> spriteData;
 					Vector2 icon_positon = v2(x_start_pos + slot_index_offset, y_pos);
 					
 					// White transparent box to show item slot is filled.
@@ -1454,6 +1455,8 @@ int entry(int argc, char **argv)
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
+	LoadSpriteData();
+
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
 	// :Font Setup
@@ -1600,10 +1603,8 @@ int entry(int argc, char **argv)
 
 					default:
 					{
-						SpriteData* spritedata = en -> spriteData;
-
 						// Get sprite dimensions
-						Vector2 sprite_size = get_sprite_size(spritedata);
+						Vector2 sprite_size = get_sprite_size(sprites[en -> spriteID]);
 
 						Matrix4 xform = m4_scalar(1.0);
 
@@ -1623,9 +1624,9 @@ int entry(int argc, char **argv)
 							col = COLOR_RED;
 						}
 
-						draw_image_xform(spritedata -> image, xform, sprite_size, col);
+						draw_image_xform(sprites[en -> spriteID].image, xform, sprite_size, col);
 
-						Vector2 health_bar_pos = v2((en -> pos.x + + (spritedata -> image -> width * 0.5)), (en -> pos.y + (spritedata -> image -> height)));
+						Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> spriteID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> spriteID].image -> height)));
 
 						// Temp healthbar for non-players
 						draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
@@ -1672,7 +1673,7 @@ int entry(int argc, char **argv)
 		//Render player
 		{
 			Entity *player = get_player();
-			SpriteData *spritedata = player -> spriteData;
+			SpriteData spritedata = sprites[player -> spriteID];
 
 			Vector2 sprite_size = get_sprite_size(spritedata);
 
@@ -1681,10 +1682,10 @@ int entry(int argc, char **argv)
 			xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
 
 			Vector4 col = COLOR_WHITE;
-			draw_image_xform(spritedata -> image, xform, sprite_size, col);
+			draw_image_xform(spritedata.image, xform, sprite_size, col);
 
 			// Healthbar test values
-			Vector2 health_bar_pos = v2((player -> pos.x + (spritedata -> image -> width * 0.5)), (player -> pos.y + (spritedata -> image -> height)));
+			Vector2 health_bar_pos = v2((player -> pos.x + (spritedata.image -> width * 0.5)), (player -> pos.y + (spritedata.image -> height)));
 
 			// Temperary render player healthbar test
 			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
