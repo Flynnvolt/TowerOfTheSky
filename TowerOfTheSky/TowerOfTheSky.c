@@ -1051,6 +1051,8 @@ void set_world_space()
 // :World init
 void world_setup()
 {
+	LoadSpriteData();
+
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
@@ -1452,8 +1454,6 @@ int entry(int argc, char **argv)
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
-	LoadSpriteData();
-
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
 	// :Font Setup
@@ -1779,7 +1779,6 @@ int entry(int argc, char **argv)
 			if (is_key_just_pressed('K') && is_key_down(KEY_SHIFT)) 
 			{
 				memset(world, 0, sizeof(World));
-				LoadSpriteData();
 				world_setup();
 				log("reset");
 			}
