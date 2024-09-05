@@ -625,22 +625,26 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 
             // Calculate the player's center position
             SpriteData spritedata = sprites[source_entity -> spriteID];
-            Vector2 player_center = v2((source_entity -> pos.x + (spritedata.image -> width * 0.5f)), (source_entity -> pos.y + (spritedata.image -> height * 0.5f)));
+            Vector2 player_center = v2((source_entity -> pos.x + (spritedata.image -> width * 0.5f)), 
+                                       (source_entity -> pos.y + (spritedata.image -> height * 0.5f)));
 
             Vector2 mouse_pos = get_mouse_pos_in_world_space();
 
-            // Direction from the player to mouse
+            // Calculate direction from player to mouse
             Vector2 direction = v2_sub(mouse_pos, player_center);
             float32 length = v2_length(direction);
 
-            // Normalize
+            // Normalize the direction vector (to get the direction to shoot in)
+            Vector2 normalized_direction = direction;
             if (length != 0.0f)
             {
-                direction = v2_scale(direction, 1.0f / length);
+                normalized_direction = v2_scale(direction, 1.0f / length);
             }
 
-            // Calculate the angle to spawn the projectile
-            float angle = atan2f(direction.y, direction.x);
+            // Calculate the angle based on the direction from player center to mouse
+            float angle = atan2f(normalized_direction.y, normalized_direction.x);
+
+            // Spawn the projectile at the edge of the spawn_radius circle, based on the calculated angle
             Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
 
             projectile -> position = spawn_position;
@@ -655,21 +659,19 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
             // Draw the debug circle around the player when projectile is cast
             start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
 
-            // Calculate projectile velocity and rotation
-            Vector2 velocity_direction = v2_sub(mouse_pos, spawn_position);
-            float32 velocity_length = v2_length(velocity_direction);
-
-            if (velocity_length != 0.0f)
+            // Use the actual direction to the mouse (not the spawn position) for velocity calculation
+            if (length != 0.0f)
             {
-                velocity_direction = v2_scale(velocity_direction, 1.0f / velocity_length);
-            }
+                Vector2 velocity_direction = normalized_direction;  // Already normalized direction
+                projectile -> velocity = v2_scale(velocity_direction, speed);
 
-            projectile -> velocity = v2_scale(velocity_direction, speed);
-            projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
+                // Set rotation based on the direction the projectile is moving
+                projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
 
-            if (projectile -> rotation < 0.0f)
-            {
-                projectile -> rotation += 360.0f;
+                if (projectile -> rotation < 0.0f)
+                {
+                    projectile -> rotation += 360.0f;
+                }
             }
             break;
         }
