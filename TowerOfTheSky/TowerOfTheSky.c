@@ -10,6 +10,10 @@
 
 #define MAX_ENTITY_COUNT 1024
 
+#define MAX_TILE_COUNT 1024
+
+#define MAX_FLOOR_COUNT 1024
+
 // :Global APP
 
 float64 delta_t;
@@ -173,6 +177,26 @@ enum UXState
 	UX_research,
 };
 
+typedef Vector2i Tile;
+ 
+typedef struct TileData TileData;
+
+struct TileData 
+{
+	Tile tile;
+	BuildingData building;
+};
+
+typedef struct FloorData FloorData;
+
+struct FloorData
+{
+	int floorID;
+	TileData tiles[MAX_TILE_COUNT];
+	Entity entities[MAX_ENTITY_COUNT];
+	Projectile projectiles[MAX_PROJECTILES];
+};
+
 // :World
 
 typedef struct World World;
@@ -181,13 +205,11 @@ struct World
 {
 	float64 time_elapsed;
 
-	Entity entities[MAX_ENTITY_COUNT];
+	UXState ux_state;
 
-	Projectile projectiles[MAX_PROJECTILES];
+	FloorData floors[MAX_FLOOR_COUNT];
 
 	ItemData items[ITEM_MAX];
-
-	UXState ux_state;
 
 	float inventory_alpha;
 
@@ -268,7 +290,7 @@ Entity* entity_create()
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity* existing_entity = & world -> entities[i];
+		Entity* existing_entity = & world -> floors -> entities[i];
 
 		if (!existing_entity -> is_valid) 
 		{
@@ -480,7 +502,7 @@ bool collideAt(Entity *current_entity, int x, int y)
 
     for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
     {
-        Entity *actor = &world -> entities[i];
+        Entity *actor = & world -> floors -> entities[i];
 
         // Skip ourselves to avoid self-collision
         if (actor -> is_valid && actor != current_entity) 
@@ -510,7 +532,7 @@ void collide_visual_debug(Entity *current_entity)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *actor = & world -> entities[i];
+		Entity *actor = & world -> floors -> entities[i];
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
@@ -624,9 +646,9 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 {
     for (int i = 0; i < MAX_PROJECTILES; i++) 
     {
-        if (!world -> projectiles[i].is_active) 
+        if (!world -> floors -> projectiles[i].is_active) 
         {
-            Projectile *projectile = & world -> projectiles[i];
+            Projectile *projectile = & world -> floors -> projectiles[i];
             projectile -> is_active = true;
             projectile -> speed = speed;
             projectile -> damage = damage;
@@ -697,7 +719,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 {
     for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
     {
-        Entity *entity = & world -> entities[i];
+        Entity *entity = & world -> floors -> entities[i];
 
         if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
         {
@@ -1527,7 +1549,7 @@ int entry(int argc, char **argv)
 		// find player
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
-			Entity* en = & world -> entities[i];
+			Entity* en = & world -> floors -> entities[i];
 			if (en -> is_valid && en -> entityID == ENTITY_player) 
 			{
 				world_frame.player = en;
@@ -1609,7 +1631,7 @@ int entry(int argc, char **argv)
 
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
-			Entity* en = & world -> entities[i];
+			Entity* en = & world -> floors -> entities[i];
 
 			if (en -> is_valid)
 			{
@@ -1676,9 +1698,9 @@ int entry(int argc, char **argv)
 		// Loop through all Projectiles and render / move them.
 		for (int i = 0; i < MAX_PROJECTILES; i++) 
 		{		
-			if (world -> projectiles[i].is_active) 
+			if (world -> floors -> projectiles[i].is_active) 
 			{
-				update_projectile(& world -> projectiles[i], delta_t);
+				update_projectile(& world -> floors -> projectiles[i], delta_t);
 
 				count++;
 			}
