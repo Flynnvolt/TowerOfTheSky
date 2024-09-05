@@ -1772,8 +1772,8 @@ int entry(int argc, char **argv)
 			float scale_factor = player_radius / distance;
 
 			// Adjust the player's position to the boundary of the circle
-			get_player() -> pos.x *= scale_factor;
-			get_player() -> pos.y *= scale_factor;
+			player -> pos.x *= scale_factor;
+			player -> pos.y *= scale_factor;
 		}
 
 		// load/save commands
