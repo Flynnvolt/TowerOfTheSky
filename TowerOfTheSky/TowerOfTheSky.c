@@ -1466,7 +1466,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 4;
+	float zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
@@ -1550,37 +1550,36 @@ int entry(int argc, char **argv)
 
 		// :Tile rendering
 		{
-			int player_tile_x = world_pos_to_tile_pos(get_player() -> pos.x);
-			int player_tile_y = world_pos_to_tile_pos(get_player() -> pos.y);
-			int tile_radius_x = 40;
-			int tile_radius_y = 30;
-			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++) 
+			float tile_radius = 30.0; 
+			float tile_radius_squared = tile_radius * tile_radius;
+
+			float half_tile_width = tile_width * 0.5f;
+
+			for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
 			{
-				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++) 
+				for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
 				{
-					// only render small section of tiles
-					if (x < world_pos_to_tile_pos(-world_half_length)
-					|| x > world_pos_to_tile_pos(world_half_length)
-					|| y < world_pos_to_tile_pos(-world_half_length)
-					|| y > world_pos_to_tile_pos(world_half_length)) 
-					{
-						continue;
-					}
+					float dx = (float)x;
+					float dy = (float)y;
+					float distance_squared = dx * dx + dy * dy;
 
-					// checkerboard pattern
-					Vector4 col = color_0;
-					if ((x + (y % 2 == 0) ) % 2 == 0) 
+					if (distance_squared <= tile_radius_squared) 
 					{
-						col.a = 0.75;
+						// Checkerboard pattern
+						Vector4 col = color_0;
+						if (((x + y) % 2) == 0) 
+						{
+							col.a = 0.75;
+						}
+						
+						float x_pos = x * tile_width;
+						float y_pos = y * tile_width;
+						draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
 					}
-
-					float x_pos = x * tile_width;
-					float y_pos = y * tile_width;
-					draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
 				}
 			}
-			// Show which tile is currently selected
-			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
+			// Optionally show which tile is currently selected
+			// draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
 		}
 
 		// Debug Visuals
@@ -1746,6 +1745,7 @@ int entry(int argc, char **argv)
 		// Update player position
 		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
 
+		/*
 		// Player can't leave playzone
 		if (player -> pos.x < -world_half_length) 
 		{
@@ -1763,6 +1763,7 @@ int entry(int argc, char **argv)
 		{
 			player -> pos.y = -world_half_length;
 		}
+		*/
 
 		// load/save commands
 		// these are at the bottom, because we'll want to have a clean spot to do this to avoid any mid-way operation bugs.
