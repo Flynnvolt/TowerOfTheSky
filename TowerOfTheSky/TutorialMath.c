@@ -32,21 +32,6 @@ float float_alpha(float x, float min, float max)
 	return res;
 }
 
-inline float64 now() 
-{
-	return os_get_elapsed_seconds();
-}
-
-float alpha_from_end_time(float64 end_time, float length) 
-{
-	return float_alpha(now(), end_time-length, end_time);
-}
-
-bool has_reached_end_time(float64 end_time) 
-{
-	return now() > end_time;
-}
-
 Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad) 
 {
 	// NOTE: we're assuming these are the screen space matricies.

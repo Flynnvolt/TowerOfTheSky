@@ -289,6 +289,21 @@ void entity_destroy(Entity* entity)
 
 // :Functions
 
+inline float64 now() 
+{
+	return world -> time_elapsed;
+}
+
+float alpha_from_end_time(float64 end_time, float length) 
+{
+	return float_alpha(now(), end_time-length, end_time);
+}
+
+bool has_reached_end_time(float64 end_time) 
+{
+	return now() > end_time;
+}
+
 Gfx_Image* get_image_by_id(SpriteID spriteID) 
 {
     return sprites[spriteID].image;
