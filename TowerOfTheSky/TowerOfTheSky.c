@@ -231,6 +231,9 @@ void setup_player(Entity* player_en)
 	player_en -> pos = round_v2_to_tile(player_en -> pos);
 	player_en -> pos.y -= tile_width * 0.5;
 	player_en -> pos.x -= sprites[player_en -> spriteID].image -> width * 0.5;
+
+	// Center X and Y
+	//player_en -> pos = v2((player_en -> pos.x - sprites[player_en -> spriteID].image -> width * 0.5),(player_en -> pos.y - sprites[player_en -> spriteID].image -> height * 0.5));
 }
 
 void setup_target(Entity* en) 
@@ -241,7 +244,7 @@ void setup_target(Entity* en)
 	en -> max_health = 100;
 	en -> health_regen = 25;
 	en -> is_immortal = true;
-	en -> pos = v2(0, 40);
+	en -> pos = v2(0, 100);
 	en -> pos = round_v2_to_tile(en -> pos);
 	en -> pos.y -= tile_width * 0.5;
 	en -> pos.x -= sprites[en -> spriteID].image -> width * 0.5;
@@ -504,7 +507,7 @@ void collide_visual_debug(Entity *current_entity)
 
 			// Visual Debug tools
 			//draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite2 -> image -> width, sprite2 -> image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(spritedata2.image -> width, spritedata2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
 			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
 		}
 	}
@@ -1466,7 +1469,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 1;
+	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
@@ -1563,7 +1566,7 @@ int entry(int argc, char **argv)
 					float dy = (float)y;
 					float distance_squared = dx * dx + dy * dy;
 
-					if (distance_squared <= tile_radius_squared) 
+					if (distance_squared < tile_radius_squared) 
 					{
 						// Checkerboard pattern
 						Vector4 col = color_0;
@@ -1579,7 +1582,8 @@ int entry(int argc, char **argv)
 				}
 			}
 			// Optionally show which tile is currently selected
-			// draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), /*v4(0.5, 0.5, 0.5, 0.5)*/ v4(0.5, 0.0, 0.0, 1.0));
+			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
 		}
 
 		// Debug Visuals
