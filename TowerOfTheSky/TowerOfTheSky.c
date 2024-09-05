@@ -1553,7 +1553,6 @@ int entry(int argc, char **argv)
 
 		// :Tile rendering
 		{
-			float tile_radius = 30.0; 
 			float tile_radius_squared = tile_radius * tile_radius;
 
 			float half_tile_width = tile_width * 0.5f;
@@ -1696,6 +1695,12 @@ int entry(int argc, char **argv)
 			// World space current location debug for object pos
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
+			// Draw (REAL) Player pos as blue pixel
+			//draw_rect(v2(player -> pos.x, player -> pos.y), v2(1, 1), v4(0, 255, 255, 1));
+
+			// Draw player pos offset to be centered on the center of the sprite (NOT REAL POS)
+			//draw_rect(v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y + sprites[player -> spriteID].image -> height * 0.5)), v2(1, 1), v4(0, 255, 0, 1));
+
 			if(is_key_just_pressed(KEY_F3))
 			{
 				// Draw the debug circle around the player
@@ -1743,31 +1748,35 @@ int entry(int argc, char **argv)
 		}
 
 		input_axis = v2_normalize(input_axis);
-
+		
+		// Lock player to a circle about the size of the play area.
 		Entity *player = get_player();
 
 		// Update player position
 		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
 
-		/*
-		// Player can't leave playzone
-		if (player -> pos.x < -world_half_length) 
+		// Define the smaller radius for the player's confinement area
+		float player_radius = (tile_radius * tile_width) - tile_width;
+
+		// Get player position with sprite size offset for X only
+		Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
+
+		// Calculate the distance from the center of the circle
+		float dx = player_pos.x;
+		float dy = player_pos.y;
+		float distance_squared = dx * dx + dy * dy;
+
+		// Check if the player is outside the circle
+		if (distance_squared > player_radius * player_radius) 
 		{
-			player -> pos.x = -world_half_length;
+			// Normalize the player's position vector
+			float distance = sqrtf(distance_squared);
+			float scale_factor = player_radius / distance;
+
+			// Adjust the player's position to the boundary of the circle
+			get_player()->pos.x *= scale_factor;
+			get_player()->pos.y *= scale_factor;
 		}
-		if (player -> pos.x > world_half_length) 
-		{
-			player -> pos.x = world_half_length;
-		}
-		if (player -> pos.y > world_half_length) 
-		{
-			player -> pos.y = world_half_length;
-		}
-		if (player -> pos.y < -world_half_length) 
-		{
-			player -> pos.y = -world_half_length;
-		}
-		*/
 
 		// load/save commands
 		// these are at the bottom, because we'll want to have a clean spot to do this to avoid any mid-way operation bugs.

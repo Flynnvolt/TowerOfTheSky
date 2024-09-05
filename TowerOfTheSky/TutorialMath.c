@@ -108,7 +108,7 @@ Vector2 get_mouse_pos_in_world_space()
 
 const int tile_width = 16;
 
-const float world_half_length = tile_width * 10;
+float tile_radius = 30.0; 
 
 // :Utilities
 
