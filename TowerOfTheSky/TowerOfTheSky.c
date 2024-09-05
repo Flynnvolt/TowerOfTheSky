@@ -1749,19 +1749,17 @@ int entry(int argc, char **argv)
 
 		input_axis = v2_normalize(input_axis);
 		
-		// Lock player to a circle about the size of the play area.
 		Entity *player = get_player();
 
-		// Update player position
+		// Update player position based on input
 		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
-
-		// Define the smaller radius for the player's confinement area
-		float player_radius = (tile_radius * tile_width) - tile_width;
 
 		// Get player position with sprite size offset for X only
 		Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
 
-		// Calculate the distance from the center of the circle
+		// Lock player to a circle about the size of the play area.
+		float player_radius = (tile_radius * tile_width) - tile_width;
+
 		float dx = player_pos.x;
 		float dy = player_pos.y;
 		float distance_squared = dx * dx + dy * dy;
@@ -1769,13 +1767,13 @@ int entry(int argc, char **argv)
 		// Check if the player is outside the circle
 		if (distance_squared > player_radius * player_radius) 
 		{
-			// Normalize the player's position vector
+			// Normalize the player's position
 			float distance = sqrtf(distance_squared);
 			float scale_factor = player_radius / distance;
 
 			// Adjust the player's position to the boundary of the circle
-			get_player()->pos.x *= scale_factor;
-			get_player()->pos.y *= scale_factor;
+			get_player() -> pos.x *= scale_factor;
+			get_player() -> pos.y *= scale_factor;
 		}
 
 		// load/save commands
