@@ -82,9 +82,9 @@ struct ItemData
 {
 	SpriteData spriteData;
 	bool is_valid;
-	string pretty_name;
 	ItemID itemID;
-	string discription;
+    char pretty_name[32];
+    char description[128];
 	int amount;
 };
 
@@ -280,9 +280,9 @@ ItemData setup_exp_item()
     item.itemID = ITEM_exp;
     item.spriteData = sprites[SPRITE_exp];
     item.amount = 50;
-    item.is_valid = true; // Mark item as valid
-    item.pretty_name = STR("EXP");
-    item.discription = STR("Experience points for leveling up");
+    item.is_valid = true;
+    strcpy(item.pretty_name, "EXP"); 
+    strcpy(item.description, "Experience points for leveling up"); 
     return item;
 }
 
@@ -1409,9 +1409,11 @@ void do_ui_stuff()
 					// Tooltip
 					if (is_selected_alpha == 1.0)
 					{
-						string name = item -> pretty_name;
+						string name = tprintf("%s", item -> pretty_name);
 
 						string title = sprint(get_temporary_allocator(), STR("%s\nx%i"), name, item -> amount);
+
+						//log("%s", item -> pretty_name);
 
 						draw_tooltip_box_string_below_same_size(quad, icon_size, & title);
 					}
