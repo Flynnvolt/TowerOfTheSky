@@ -131,8 +131,10 @@ typedef struct BuildingData BuildingData;
 struct BuildingData 
 {
 	BuildingID buildingID;
-	SpriteID icon;
-	string description;
+	SpriteData spriteData;
+	bool is_valid;
+    char pretty_name[32];
+    char description[128];
 };
 
 // :Projectiles
@@ -286,6 +288,17 @@ ItemData setup_exp_item()
     return item;
 }
 
+BuildingData setup_building_stairs() 
+{
+    BuildingData building;
+    building.buildingID = BUILDING_stairs;
+    building.spriteData = sprites[SPRITE_stairs];
+    building.is_valid = true;
+    strcpy( building.pretty_name, "Stairs"); 
+    strcpy(building.description, "Travel between floors"); 
+    return  building;
+}
+
 Entity* entity_create() 
 {
 	Entity* entity_found = 0;
@@ -345,12 +358,13 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
             }
         }
     }
-    
+    /*
     // initialize remaining unused tiles
     for (int i = tile_count; i < MAX_TILE_COUNT; i++) 
     {
         memset(& floor -> tiles[i], 0, sizeof(TileData));
     }
+	*/
 	//log("%i", tile_count);
 }
 
@@ -380,6 +394,20 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
         // Render tile
         draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
     }
+		// render building test
+		TileData* tile_data = & floor -> tiles[0];
+		if(tile_data -> building.buildingID != 0)
+		{
+			SpriteData spritedata = tile_data -> building.spriteData;
+
+			Vector2 sprite_size = v2(30, 21);
+
+			Matrix4 xform = m4_scalar(1.0);
+
+			xform = m4_translate(xform, v3(tile_data -> tile.x, tile_data -> tile.y, 0));
+
+			draw_image_xform(sprites[tile_data -> building.spriteData.spriteID].image, xform, sprite_size, COLOR_WHITE);
+		}
 }
 
 inline float64 now() 
@@ -1182,6 +1210,9 @@ void world_setup()
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
 	world -> floors[world -> current_floor] = floor;
+
+	// setup testing building
+	world -> floors[world -> current_floor].tiles[0].building = setup_building_stairs();
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);

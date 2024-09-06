@@ -50,7 +50,7 @@ Allocator get_initialization_allocator() {
 // We could fix it by merging free nodes every now and then
 // BUT: We aren't really supposed to allocate/deallocate directly on the heap too much anyways...
 
-#define MAX_HEAP_BLOCK_SIZE align_next(MB(500), os.page_size)
+#define MAX_HEAP_BLOCK_SIZE align_next(MB(1000), os.page_size)
 #define DEFAULT_HEAP_BLOCK_SIZE (min(MAX_HEAP_BLOCK_SIZE, program_memory_capacity))
 #define HEAP_ALIGNMENT (sizeof(Heap_Free_Node))
 typedef struct Heap_Free_Node Heap_Free_Node;
