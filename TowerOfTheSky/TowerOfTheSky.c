@@ -318,28 +318,11 @@ int get_current_floor()
     return world -> current_floor;
 }
 
-int get_tile_index(int x, int y)
-{
-    int grid_width = 30;  // Define this according to the size of your tile grid
-
-    // Calculate the index for (x, y)
-    int index = (y * grid_width) + x;
-
-    // Ensure the index is within bounds (between 0 and MAX_TILE_COUNT)
-    if (index < 0 || index >= MAX_TILE_COUNT)
-    {
-        // Handle out-of-bounds index (return -1 or handle appropriately)
-        return -1;
-    }
-
-    return index;
-}
-
-void populate_floor_with_circular_tile_data(FloorData* floor, float tile_radius, int tile_width)
+void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_width)
 {
     float tile_radius_squared = tile_radius * tile_radius;
     
-    int tile_count = 0; // Keep track of how many tiles are populated
+    int tile_count = 0;
     for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
     {
         for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
@@ -350,25 +333,25 @@ void populate_floor_with_circular_tile_data(FloorData* floor, float tile_radius,
 
             if (distance_squared < tile_radius_squared && tile_count < MAX_TILE_COUNT) 
             {
-                // Store tile data for tiles inside the circle
-                TileData* tile_data = &floor->tiles[tile_count];
-                tile_data->tile.x = x;
-                tile_data->tile.y = y;
 
-                // Optionally, initialize the building data
-                // For now, let's just zero it out
-                memset(&tile_data->building, 0, sizeof(BuildingData));
+                TileData* tile_data = & floor -> tiles[tile_count];
+                tile_data -> tile.x = x;
+                tile_data -> tile.y = y;
+
+                // zero building data for now
+                memset(& tile_data -> building, 0, sizeof(BuildingData));
 
                 tile_count++;
             }
         }
     }
     
-    // Optionally, initialize remaining unused tiles if needed
+    // initialize remaining unused tiles
     for (int i = tile_count; i < MAX_TILE_COUNT; i++) 
     {
-        memset(&floor->tiles[i], 0, sizeof(TileData));
+        memset(& floor -> tiles[i], 0, sizeof(TileData));
     }
+	//log("%i", tile_count);
 }
 
 void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
@@ -377,18 +360,11 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
-        TileData* tile_data = &floor->tiles[i];
+        TileData* tile_data = & floor -> tiles[i];
         
-        // Check if this tile has valid data
-        if (tile_data->tile.x == 0 && tile_data->tile.y == 0) 
-		{
-            // Assuming that an invalid/empty tile has zeroed coordinates and building data
-            continue; // Skip rendering this tile if it's not used
-        }
-
         // Get the tile's x and y position
-        int x = tile_data->tile.x;
-        int y = tile_data->tile.y;
+        int x = tile_data -> tile.x;
+        int y = tile_data -> tile.y;
 
         // Checkerboard pattern
         Vector4 col = color_0;
@@ -401,7 +377,7 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
         float x_pos = x * tile_width;
         float y_pos = y * tile_width;
         
-        // Render the tile as a rectangle
+        // Render tile
         draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
     }
 }
@@ -1203,7 +1179,7 @@ void world_setup()
 	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
 
 	// Populate the floor with circular tile data
-	populate_floor_with_circular_tile_data(& floor, tile_radius, tile_width);
+	create_circle_floor_data(& floor, tile_radius, tile_width);
 
 	world -> floors[world -> current_floor] = floor;
 
