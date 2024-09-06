@@ -12,7 +12,7 @@
 
 #define MAX_TILE_COUNT 4096
 
-#define MAX_FLOOR_COUNT 1024
+#define MAX_FLOOR_COUNT 10
 
 // :Global APP
 
@@ -326,6 +326,11 @@ Entity* get_player()
 	return world_frame.player;
 }
 
+int get_current_floor()
+{
+    return world -> current_floor;
+}
+
 void setup_player(Entity* player_en) 
 {
 	player_en -> entityID = ENTITY_player;
@@ -385,7 +390,7 @@ Entity* entity_create()
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity* existing_entity = & world -> floors -> entities[i];
+		Entity* existing_entity = & world -> floors[get_current_floor()].entities[i];
 
 		if (!existing_entity -> is_valid) 
 		{
@@ -405,11 +410,6 @@ void entity_destroy(Entity* entity)
 }
 
 // :Functions
-
-int get_current_floor()
-{
-    return world -> current_floor;
-}
 
 void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_width)
 {
@@ -1234,7 +1234,7 @@ void world_setup()
         TileData tile_data = floor.tiles[i];
         
         // Get the tile's x and y position
-        int x = tile_data.tile.x;
+        int x = tile_data.tile.x; 
         int y = tile_data.tile.y;
 
 		//Place a staircase building at 5, 5
