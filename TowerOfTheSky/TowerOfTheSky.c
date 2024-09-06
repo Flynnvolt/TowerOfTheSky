@@ -241,6 +241,86 @@ WorldFrame world_frame;
 
 // :Setup
 
+Vector2 get_sprite_size(SpriteData spritedata)
+{
+    if (spritedata.image == NULL) 
+    {
+        log("Error: spritedata or image is NULL.\n");
+        return (Vector2) {0, 0}; // Return a default value or handle the error as needed
+    }
+
+    return (Vector2) {spritedata.image -> width, spritedata.image -> height};
+}
+
+void LoadSpriteData()
+{
+	// :Load Sprites
+
+	// Missing Texture Sprite
+	sprites[0] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_nil
+	};
+
+	// Player
+	sprites[SPRITE_player] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_player
+	};
+
+	// Entities
+	sprites[SPRITE_target] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_target
+	};
+
+	// Items
+	sprites[SPRITE_exp] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp
+	};
+
+	// Buildings
+	sprites[SPRITE_research_station] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_research_station
+	};
+
+	sprites[SPRITE_exp_vein] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_exp_vein
+	};
+
+	sprites[SPRITE_stairs] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_stairs
+	};
+
+	// Spells
+	sprites[SPRITE_fireball_sheet] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_fireball_sheet
+	};
+
+	#if CONFIGURATION == DEBUG
+		{
+			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
+			{
+				SpriteData* sprite = & sprites[i];
+				assert(sprite -> image, "Sprite was not setup properly");
+			}
+		}
+	#endif
+}
+
 Entity* get_player() 
 {
 	return world_frame.player;
@@ -394,20 +474,37 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
         // Render tile
         draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
     }
-		// render building test
-		TileData* tile_data = & floor -> tiles[0];
+}
+
+void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
+{
+    float half_tile_width = tile_width * 0.5f;
+
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        TileData* tile_data = & floor -> tiles[i];
+        
+        // Get the tile's x and y position
+        int x = tile_data -> tile.x;
+        int y = tile_data -> tile.y;
+
+		// Calculate world position for the tile
+        float x_pos = x * tile_width;
+        float y_pos = y * tile_width;
+
 		if(tile_data -> building.buildingID != 0)
 		{
 			SpriteData spritedata = tile_data -> building.spriteData;
 
-			Vector2 sprite_size = v2(30, 21);
+			Vector2 sprite_size = get_sprite_size(spritedata);
 
 			Matrix4 xform = m4_scalar(1.0);
 
-			xform = m4_translate(xform, v3(tile_data -> tile.x, tile_data -> tile.y, 0));
+			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
 
 			draw_image_xform(sprites[tile_data -> building.spriteData.spriteID].image, xform, sprite_size, COLOR_WHITE);
 		}
+    }
 }
 
 inline float64 now() 
@@ -446,86 +543,6 @@ SpriteData* get_sprite(SpriteID id)
 		}
 	}
 	return & sprites[0];
-}
-
-Vector2 get_sprite_size(SpriteData spritedata)
-{
-    if (spritedata.image == NULL) 
-    {
-        log("Error: spritedata or image is NULL.\n");
-        return (Vector2) {0, 0}; // Return a default value or handle the error as needed
-    }
-
-    return (Vector2) {spritedata.image -> width, spritedata.image -> height};
-}
-
-void LoadSpriteData()
-{
-	// :Load Sprites
-
-	// Missing Texture Sprite
-	sprites[0] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_nil
-	};
-
-	// Player
-	sprites[SPRITE_player] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_player
-	};
-
-	// Entities
-	sprites[SPRITE_target] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_target
-	};
-
-	// Items
-	sprites[SPRITE_exp] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_exp
-	};
-
-	// Buildings
-	sprites[SPRITE_research_station] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_research_station
-	};
-
-	sprites[SPRITE_exp_vein] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_exp_vein
-	};
-
-	sprites[SPRITE_stairs] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_stairs
-	};
-
-	// Spells
-	sprites[SPRITE_fireball_sheet] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_fireball_sheet
-	};
-
-	#if CONFIGURATION == DEBUG
-		{
-			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
-			{
-				SpriteData* sprite = & sprites[i];
-				assert(sprite -> image, "Sprite was not setup properly");
-			}
-		}
-	#endif
 }
 
 void PlayerDeath() 
@@ -1212,7 +1229,20 @@ void world_setup()
 	world -> floors[world -> current_floor] = floor;
 
 	// setup testing building
-	world -> floors[world -> current_floor].tiles[0].building = setup_building_stairs();
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        TileData tile_data = floor.tiles[i];
+        
+        // Get the tile's x and y position
+        int x = tile_data.tile.x;
+        int y = tile_data.tile.y;
+
+		//Place a staircase building at 5, 5
+		if(x == 5 && y == 5)
+		{
+			world -> floors[world -> current_floor].tiles[i].building = setup_building_stairs();
+		}
+    }
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
@@ -1625,7 +1655,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 3;
+	float zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
@@ -1712,6 +1742,8 @@ int entry(int argc, char **argv)
 		FloorData* floor_data = & world -> floors[current_floor];
 
 		render_floor_tiles(floor_data, tile_width, color_0);
+		
+		render_buildings(floor_data, tile_width, color_0);
 
 		/*
 		// :Tile rendering
