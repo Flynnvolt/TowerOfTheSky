@@ -10,7 +10,7 @@
 
 #define MAX_ENTITY_COUNT 1024
 
-#define MAX_TILE_COUNT 1024
+#define MAX_TILE_COUNT 4096
 
 #define MAX_FLOOR_COUNT 1024
 
@@ -211,6 +211,8 @@ struct World
 
 	ItemData items[ITEM_MAX];
 
+	int current_floor;
+
 	float inventory_alpha;
 
 	float inventory_alpha_target;
@@ -310,6 +312,99 @@ void entity_destroy(Entity* entity)
 }
 
 // :Functions
+
+int get_current_floor()
+{
+    return world -> current_floor;
+}
+
+int get_tile_index(int x, int y)
+{
+    int grid_width = 30;  // Define this according to the size of your tile grid
+
+    // Calculate the index for (x, y)
+    int index = (y * grid_width) + x;
+
+    // Ensure the index is within bounds (between 0 and MAX_TILE_COUNT)
+    if (index < 0 || index >= MAX_TILE_COUNT)
+    {
+        // Handle out-of-bounds index (return -1 or handle appropriately)
+        return -1;
+    }
+
+    return index;
+}
+
+void populate_floor_with_circular_tile_data(FloorData* floor, float tile_radius, int tile_width)
+{
+    float tile_radius_squared = tile_radius * tile_radius;
+    
+    int tile_count = 0; // Keep track of how many tiles are populated
+    for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
+    {
+        for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
+        {
+            float dx = (float)x;
+            float dy = (float)y;
+            float distance_squared = dx * dx + dy * dy;
+
+            if (distance_squared < tile_radius_squared && tile_count < MAX_TILE_COUNT) 
+            {
+                // Store tile data for tiles inside the circle
+                TileData* tile_data = &floor->tiles[tile_count];
+                tile_data->tile.x = x;
+                tile_data->tile.y = y;
+
+                // Optionally, initialize the building data
+                // For now, let's just zero it out
+                memset(&tile_data->building, 0, sizeof(BuildingData));
+
+                tile_count++;
+            }
+        }
+    }
+    
+    // Optionally, initialize remaining unused tiles if needed
+    for (int i = tile_count; i < MAX_TILE_COUNT; i++) 
+    {
+        memset(&floor->tiles[i], 0, sizeof(TileData));
+    }
+}
+
+void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
+{
+    float half_tile_width = tile_width * 0.5f;
+
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        TileData* tile_data = &floor->tiles[i];
+        
+        // Check if this tile has valid data
+        if (tile_data->tile.x == 0 && tile_data->tile.y == 0) 
+		{
+            // Assuming that an invalid/empty tile has zeroed coordinates and building data
+            continue; // Skip rendering this tile if it's not used
+        }
+
+        // Get the tile's x and y position
+        int x = tile_data->tile.x;
+        int y = tile_data->tile.y;
+
+        // Checkerboard pattern
+        Vector4 col = color_0;
+        if (((x + y) % 2) == 0) 
+        {
+            col.a = 0.75;
+        }
+        
+        // Calculate world position for the tile
+        float x_pos = x * tile_width;
+        float y_pos = y * tile_width;
+        
+        // Render the tile as a rectangle
+        draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
+    }
+}
 
 inline float64 now() 
 {
@@ -1099,6 +1194,19 @@ void world_setup()
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
+	if(world -> current_floor == null)
+	{
+		world -> current_floor = 0;
+	}
+
+	FloorData floor;
+	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
+
+	// Populate the floor with circular tile data
+	populate_floor_with_circular_tile_data(& floor, tile_radius, tile_width);
+
+	world -> floors[world -> current_floor] = floor;
+
 	Entity* player_en = entity_create();
 	setup_player(player_en);
 
@@ -1590,6 +1698,13 @@ int entry(int argc, char **argv)
 			world -> time_elapsed += delta_t;
 		}
 
+		int current_floor = get_current_floor();
+
+		FloorData* floor_data = & world -> floors[current_floor];
+
+		render_floor_tiles(floor_data, tile_width, color_0);
+
+		/*
 		// :Tile rendering
 		{
 			float tile_radius_squared = tile_radius * tile_radius;
@@ -1623,6 +1738,7 @@ int entry(int argc, char **argv)
 			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
 		}
+		*/
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
