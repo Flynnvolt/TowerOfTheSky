@@ -324,6 +324,16 @@ void LoadSpriteData()
 
 Entity* get_player() 
 {
+	// find player
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity* en = & world -> floors[world -> current_floor].entities[i];
+		if (en -> is_valid && en -> entityID == ENTITY_player) 
+		{
+			world_frame.player = en;
+			//log("player found");
+		}
+	}
 	return world_frame.player;
 }
 
@@ -1737,17 +1747,6 @@ int entry(int argc, char **argv)
 		last_time = current_time;
 
 		//log("Window Width:%i, Window Height:%i", window.scaled_width, window.scaled_height);
-
-		// find player
-		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-		{
-			Entity* en = & world -> floors[world -> current_floor].entities[i];
-			if (en -> is_valid && en -> entityID == ENTITY_player) 
-			{
-				world_frame.player = en;
-				//log("player found");
-			}
-		}
 
 		// :Frame Update
 
