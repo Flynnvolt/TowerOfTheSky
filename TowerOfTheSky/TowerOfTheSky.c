@@ -1655,7 +1655,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 1;
+	float zoom = 3;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
