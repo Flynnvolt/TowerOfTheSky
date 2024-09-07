@@ -449,7 +449,7 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 }
 
 void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
-{
+{	
     float half_tile_width = tile_width * 0.5f;
 
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
@@ -458,7 +458,7 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
         
         // Get the tile's x and y position
         int x = tile_data -> tile.x;
-        int y = tile_data -> tile.y;
+       	int y = tile_data -> tile.y;
 
         // Checkerboard pattern
         Vector4 col = color_0;
@@ -474,6 +474,16 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
         // Render tile
         draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
     }
+	// Debug:
+	/*
+	Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
+	int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
+	int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
+	
+	// Display world space position of tile and tile X, Y
+	draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
+	draw_text(font, sprint(get_temporary_allocator(), STR("%.1f %.1f (%i, %i)"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_x)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
+	*/
 }
 
 void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
@@ -1744,42 +1754,6 @@ int entry(int argc, char **argv)
 		render_floor_tiles(floor_data, tile_width, color_0);
 		
 		render_buildings(floor_data, tile_width, color_0);
-
-		/*
-		// :Tile rendering
-		{
-			float tile_radius_squared = tile_radius * tile_radius;
-
-			float half_tile_width = tile_width * 0.5f;
-
-			for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
-			{
-				for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
-				{
-					float dx = (float)x;
-					float dy = (float)y;
-					float distance_squared = dx * dx + dy * dy;
-
-					if (distance_squared < tile_radius_squared) 
-					{
-						// Checkerboard pattern
-						Vector4 col = color_0;
-						if (((x + y) % 2) == 0) 
-						{
-							col.a = 0.75;
-						}
-						
-						float x_pos = x * tile_width;
-						float y_pos = y * tile_width;
-						draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
-					}
-				}
-			}
-			// Optionally show which tile is currently selected
-			//draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
-		}
-		*/
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
