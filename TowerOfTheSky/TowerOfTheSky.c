@@ -49,7 +49,8 @@ enum SpriteID
 	SPRITE_exp_vein = 4,
 	SPRITE_fireball_sheet = 5,
 	SPRITE_target = 6,
-	SPRITE_stairs = 7,
+	SPRITE_stairs_up = 7,
+	SPRITE_stairs_down = 8,
 	SPRITE_MAX,
 };
 
@@ -122,7 +123,8 @@ typedef enum BuildingID BuildingID;
 enum BuildingID 
 {
 	BUILDING_nil,
-	BUILDING_stairs,
+	BUILDING_stairs_up,
+	BUILDING_stairs_down,
 	BUILDING_research_station,
 	BUILDING_MAX,
 };
@@ -298,10 +300,16 @@ void LoadSpriteData()
 		.spriteID = SPRITE_exp_vein
 	};
 
-	sprites[SPRITE_stairs] = (SpriteData)
+	sprites[SPRITE_stairs_up] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs.png"), get_heap_allocator()), 
-		.spriteID = SPRITE_stairs
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_stairs_up
+	};
+
+	sprites[SPRITE_stairs_down] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_stairs_down
 	};
 
 	// Spells
@@ -394,16 +402,28 @@ ItemData setup_exp_item()
     return item;
 }
 
-BuildingData setup_building_stairs() 
+BuildingData setup_building_stairs_up()
 {
     BuildingData building;
-    building.buildingID = BUILDING_stairs;
-    building.spriteData = sprites[SPRITE_stairs];
+    building.buildingID = BUILDING_stairs_up;
+    building.spriteData = sprites[SPRITE_stairs_up];
     building.is_valid = true;
     strcpy(building.pretty_name, "Stairs"); 
     strcpy(building.description, "Travel between floors"); 
     return  building;
 }
+
+BuildingData setup_building_stairs_down() 
+{
+    BuildingData building;
+    building.buildingID = BUILDING_stairs_down;
+    building.spriteData = sprites[SPRITE_stairs_down];
+    building.is_valid = true;
+    strcpy(building.pretty_name, "Stairs"); 
+    strcpy(building.description, "Travel between floors"); 
+    return  building;
+}
+
 
 Entity* entity_create() 
 {
@@ -503,12 +523,36 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
-FloorData create_empty_floor()
+FloorData create_empty_floor(bool first_floor)
 {
 	FloorData floor;
 	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
+
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        TileData tile_data = floor.tiles[i];
+        
+        // Get the tile's x and y position
+        int x = tile_data.tile.x; 
+        int y = tile_data.tile.y;
+
+		// Place a staircase up at 5, 5
+		if(x == 5 && y == 5)
+		{
+			floor.tiles[i].building = setup_building_stairs_up();
+		}
+
+		if (first_floor != true)
+		{
+			// Place a staircase down at -5, -5
+			if(x == -5 && y == -5)
+			{
+				floor.tiles[i].building = setup_building_stairs_down();
+			}
+		}
+    }
 
 	return floor;
 }
@@ -562,7 +606,7 @@ void load_next_floor()
 		}
 		else
 		{
-			world -> floors[world -> current_floor + 1] = create_empty_floor();
+			world -> floors[world -> current_floor + 1] = create_empty_floor(false);
 			world -> floors[world -> current_floor + 1].is_valid = true;
 			world -> floors[world -> current_floor + 1].floorID = world -> current_floor + 1;
 			player_change_floor(world -> current_floor + 1);
@@ -586,7 +630,7 @@ void load_previous_floor()
 		}
 		else
 		{
-			world -> floors[world -> current_floor - 1] = create_empty_floor();
+			world -> floors[world -> current_floor - 1] = create_empty_floor(false);
 			world -> floors[world -> current_floor - 1].is_valid = true;
 			world -> floors[world -> current_floor - 1].floorID = world -> current_floor - 1;
 			player_change_floor(world -> current_floor - 1);
@@ -1343,25 +1387,9 @@ void world_setup()
 		world -> current_floor = 0;
 	}
 
-	world -> floors[world -> current_floor] = create_empty_floor();
+	world -> floors[world -> current_floor] = create_empty_floor(true);
 	world -> floors[world -> current_floor].is_valid = true;
 	world -> floors[world -> current_floor].floorID = world -> current_floor;
-
-	// setup testing building
-	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        TileData tile_data = world -> floors[world -> current_floor].tiles[i];
-        
-        // Get the tile's x and y position
-        int x = tile_data.tile.x; 
-        int y = tile_data.tile.y;
-
-		//Place a staircase building at 5, 5
-		if(x == 5 && y == 5)
-		{
-			world -> floors[world -> current_floor].tiles[i].building = setup_building_stairs();
-		}
-    }
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
