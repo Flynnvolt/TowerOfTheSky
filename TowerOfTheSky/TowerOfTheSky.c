@@ -442,6 +442,16 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
+FloorData create_empty_floor()
+{
+	FloorData floor;
+	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
+
+	create_circle_floor_data(& floor, tile_radius, tile_width);
+
+	return floor;
+}
+
 void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 {	
     float half_tile_width = tile_width * 0.5f;
@@ -1224,18 +1234,12 @@ void world_setup()
 		world -> current_floor = 0;
 	}
 
-	FloorData floor;
-	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
-
-	// Populate the floor with circular tile data
-	create_circle_floor_data(& floor, tile_radius, tile_width);
-
-	world -> floors[world -> current_floor] = floor;
+	world -> floors[world -> current_floor] = create_empty_floor();
 
 	// setup testing building
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
-        TileData tile_data = floor.tiles[i];
+        TileData tile_data = world -> floors[world -> current_floor].tiles[i];
         
         // Get the tile's x and y position
         int x = tile_data.tile.x; 
