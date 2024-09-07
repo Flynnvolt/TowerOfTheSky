@@ -330,10 +330,11 @@ Entity* get_player()
 		if (en -> is_valid && en -> entityID == ENTITY_player) 
 		{
 			world_frame.player = en;
-			//log("player found");
+			return world_frame.player;
 		}
 	}
-	return world_frame.player;
+	log("Player not found on current floor: %i", world -> current_floor);
+    return NULL;
 }
 
 int get_player_data_location() 
@@ -428,9 +429,8 @@ Entity* entity_create()
 
 void player_change_floor(int target_floor) 
 {
-    assert(target_floor < MAX_FLOOR_COUNT && target_floor >= 0, "Invalid target floor!");
-
-    Entity* current_entity = & world -> floors[world -> current_floor].entities[get_player_data_location()];
+    int player_index = get_player_data_location();
+    Entity* current_entity = & world -> floors[world -> current_floor].entities[player_index];
     Entity* target_entity = NULL;
 
     // Find an available spot in the target floor's entity list
@@ -448,11 +448,15 @@ void player_change_floor(int target_floor)
     // Copy entity data to the target
     *target_entity = *current_entity;
 
-	// change floor
+    // Ensure the player is marked as valid on the target floor
+    target_entity -> is_valid = true;
     target_entity -> current_floor = target_floor;
 
     // Invalidate the entity in the current floor
     current_entity -> is_valid = false;
+
+    // Log transfer success
+    log("Player transferred to floor %i", target_floor);
 }
 
 void entity_destroy(Entity* entity) 
@@ -549,35 +553,49 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 
 void load_next_floor()
 {
-	if(world -> floors[world -> current_floor + 1].is_valid == true)
+	if (world -> current_floor + 1 < MAX_FLOOR_COUNT)
 	{
-		world -> current_floor++;
-		player_change_floor(world -> current_floor);
+		if(world -> floors[world -> current_floor + 1].is_valid == true)
+		{
+			player_change_floor(world -> current_floor + 1);
+			world -> current_floor++;
+		}
+		else
+		{
+			world -> floors[world -> current_floor + 1] = create_empty_floor();
+			world -> floors[world -> current_floor + 1].is_valid = true;
+			world -> floors[world -> current_floor + 1].floorID = world -> current_floor + 1;
+			player_change_floor(world -> current_floor + 1);
+			world -> current_floor++;
+		}
 	}
 	else
 	{
-		world -> floors[world -> current_floor + 1] = create_empty_floor();
-		world -> floors[world -> current_floor + 1].is_valid = true;
-		world -> floors[world -> current_floor + 1].floorID = world -> current_floor + 1;
-		world -> current_floor++;
-		player_change_floor(world -> current_floor);
+		log("tried to exceed max floors");
 	}
 }
 
 void load_previous_floor()
 {
-	if(world -> floors[world -> current_floor - 1].is_valid == true)
+	if (world -> current_floor - 1 >= 0)
 	{
-		world -> current_floor--;
-		player_change_floor(world -> current_floor);
+		if(world -> floors[world -> current_floor - 1].is_valid == true)
+		{
+			player_change_floor(world -> current_floor - 1);
+			world -> current_floor--;
+		}
+		else
+		{
+			world -> floors[world -> current_floor - 1] = create_empty_floor();
+			world -> floors[world -> current_floor - 1].is_valid = true;
+			world -> floors[world -> current_floor - 1].floorID = world -> current_floor - 1;
+			player_change_floor(world -> current_floor - 1);
+			world -> current_floor--;
+		}
 	}
 	else
 	{
-		world -> floors[world -> current_floor - 1] = create_empty_floor();
-		world -> floors[world -> current_floor - 1].is_valid = true;
-		world -> floors[world -> current_floor - 1].floorID = world -> current_floor - 1;
-		world -> current_floor--;
-		player_change_floor(world -> current_floor);
+		log("tried to go to a negitive floor");
 	}
 }
 
