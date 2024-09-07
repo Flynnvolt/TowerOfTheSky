@@ -114,6 +114,7 @@ struct Entity
 	bool is_immortal;
 	float xRemainder;
 	float yRemainder;
+	int current_floor;
 };
 
 typedef enum BuildingID BuildingID;
@@ -390,11 +391,14 @@ Entity* entity_create()
 		if (!existing_entity -> is_valid) 
 		{
 			entity_found = existing_entity;
+			entity_foind
 			break;
 		}
 	}
 	assert(entity_found, "No more free entities!");
+
 	entity_found -> is_valid = true;
+	entity_found -> current_floor = world -> current_floor;
 
 	return entity_found;
 }
@@ -1737,7 +1741,7 @@ int entry(int argc, char **argv)
 		// find player
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
-			Entity* en = & world -> floors -> entities[i];
+			Entity* en = & world -> floors[world -> current_floor] -> entities[i];
 			if (en -> is_valid && en -> entityID == ENTITY_player) 
 			{
 				world_frame.player = en;
@@ -1888,6 +1892,9 @@ int entry(int argc, char **argv)
 
 			// World space current location debug for object pos
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+
+			// floor player currently resides in
+			draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), player -> current_floor), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
 			// Draw (REAL) Player pos as blue pixel
 			//draw_rect(v2(player -> pos.x, player -> pos.y), v2(1, 1), v4(0, 255, 255, 1));
