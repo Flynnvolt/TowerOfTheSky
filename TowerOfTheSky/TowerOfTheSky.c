@@ -391,7 +391,6 @@ Entity* entity_create()
 		if (!existing_entity -> is_valid) 
 		{
 			entity_found = existing_entity;
-			entity_foind
 			break;
 		}
 	}
@@ -500,6 +499,7 @@ void load_next_floor()
 	if(world -> floors[world -> current_floor + 1].is_valid == true)
 	{
 		world -> current_floor++;
+
 	}
 	else
 	{
@@ -1741,7 +1741,7 @@ int entry(int argc, char **argv)
 		// find player
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 		{
-			Entity* en = & world -> floors[world -> current_floor] -> entities[i];
+			Entity* en = & world -> floors[world -> current_floor].entities[i];
 			if (en -> is_valid && en -> entityID == ENTITY_player) 
 			{
 				world_frame.player = en;
