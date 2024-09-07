@@ -230,7 +230,6 @@ typedef struct WorldFrame WorldFrame;
 
 struct WorldFrame 
 {
-	Entity* selected_entity;
 	Matrix4 world_proj;
 	Matrix4 world_view;
 	bool hover_consumed;
@@ -326,11 +325,6 @@ Entity* get_player()
 	return world_frame.player;
 }
 
-int get_current_floor()
-{
-    return world -> current_floor;
-}
-
 void setup_player(Entity* player_en) 
 {
 	player_en -> entityID = ENTITY_player;
@@ -379,7 +373,7 @@ BuildingData setup_building_stairs()
     building.buildingID = BUILDING_stairs;
     building.spriteData = sprites[SPRITE_stairs];
     building.is_valid = true;
-    strcpy( building.pretty_name, "Stairs"); 
+    strcpy(building.pretty_name, "Stairs"); 
     strcpy(building.description, "Travel between floors"); 
     return  building;
 }
@@ -390,7 +384,7 @@ Entity* entity_create()
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity* existing_entity = & world -> floors[get_current_floor()].entities[i];
+		Entity* existing_entity = & world -> floors[world -> current_floor].entities[i];
 
 		if (!existing_entity -> is_valid) 
 		{
@@ -628,7 +622,7 @@ bool collideAt(Entity *current_entity, int x, int y)
 
     for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
     {
-        Entity *actor = & world -> floors -> entities[i];
+        Entity *actor = & world -> floors[world -> current_floor].entities[i];
 
         // Skip ourselves to avoid self-collision
         if (actor -> is_valid && actor != current_entity) 
@@ -658,7 +652,7 @@ void collide_visual_debug(Entity *current_entity)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *actor = & world -> floors -> entities[i];
+		Entity *actor = & world -> floors[world -> current_floor].entities[i];
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
@@ -1747,9 +1741,7 @@ int entry(int argc, char **argv)
 			world -> time_elapsed += delta_t;
 		}
 
-		int current_floor = get_current_floor();
-
-		FloorData* floor_data = & world -> floors[current_floor];
+		FloorData* floor_data = & world -> floors[world -> current_floor];
 
 		render_floor_tiles(floor_data, tile_width, color_0);
 		
@@ -1762,7 +1754,7 @@ int entry(int argc, char **argv)
 
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
-			Entity* en = & world -> floors -> entities[i];
+			Entity* en = & world -> floors[world -> current_floor].entities[i];
 
 			if (en -> is_valid)
 			{
@@ -1790,11 +1782,6 @@ int entry(int argc, char **argv)
 						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
 
 						Vector4 col = COLOR_WHITE;
-
-						if(world_frame.selected_entity == en)
-						{
-							col = COLOR_RED;
-						}
 
 						draw_image_xform(sprites[en -> spriteID].image, xform, sprite_size, col);
 
