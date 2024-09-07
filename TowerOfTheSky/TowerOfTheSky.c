@@ -194,6 +194,7 @@ typedef struct FloorData FloorData;
 struct FloorData
 {
 	int floorID;
+	bool is_valid;
 	TileData tiles[MAX_TILE_COUNT];
 	Entity entities[MAX_ENTITY_COUNT];
 	Projectile projectiles[MAX_PROJECTILES];
@@ -488,6 +489,36 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 	draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
 	draw_text(font, sprint(get_temporary_allocator(), STR("%.1f %.1f (%i, %i)"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_x)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
 	*/
+}
+
+void load_next_floor()
+{
+	if(world -> floors[world -> current_floor + 1].is_valid == true)
+	{
+		world -> current_floor++;
+	}
+	else
+	{
+		world -> floors[world -> current_floor + 1] = create_empty_floor();
+		world -> floors[world -> current_floor + 1].is_valid = true;
+		world -> floors[world -> current_floor + 1].floorID = world -> current_floor + 1;
+		world -> current_floor++;
+	}
+}
+
+void load_previous_floor()
+{
+	if(world -> floors[world -> current_floor - 1].is_valid == true)
+	{
+		world -> current_floor--;
+	}
+	else
+	{
+		world -> floors[world -> current_floor - 1] = create_empty_floor();
+		world -> floors[world -> current_floor - 1].is_valid = true;
+		world -> floors[world -> current_floor - 1].floorID = world -> current_floor - 1;
+		world -> current_floor--;
+	}
 }
 
 void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
@@ -1235,6 +1266,8 @@ void world_setup()
 	}
 
 	world -> floors[world -> current_floor] = create_empty_floor();
+	world -> floors[world -> current_floor].is_valid = true;
+	world -> floors[world -> current_floor].floorID = world -> current_floor;
 
 	// setup testing building
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
