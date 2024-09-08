@@ -620,7 +620,7 @@ void setup_crates(FloorData *floor, int tile_width, int num_crates, int floorID)
     {
         int i = rand() % MAX_TILE_COUNT;
         
-        TileData *tile_data = &floor -> tiles[i];
+        TileData *tile_data = & floor -> tiles[i];
 
         int x = tile_data -> tile.x;
         int y = tile_data -> tile.y;
@@ -985,11 +985,30 @@ void collide_visual_debug(Entity *current_entity)
 			SpriteData spritedata2 = sprites[current_entity -> spriteID];
 
 			// Visual Debug tools
-			//draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(spritedata2.image -> width, spritedata2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			//draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(spritedata2.image -> width, spritedata2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
 		}
 	}
+}
+
+void collide_visual_debug_buildings(Entity *current_entity)
+{
+    // Loop through the tiles, not entities
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
+
+        if (building -> is_valid) 
+        {
+            SpriteData spritedata = building -> spriteData;
+            int sprite_width = spritedata.image -> width;
+            int sprite_height = spritedata.image -> height;
+
+            // Visual Debug tools
+            draw_rect(v2(building -> pos.x, building -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+        }
+    }
 }
 
 void MoveEntityX(Entity *entity, float amount) 
@@ -1036,7 +1055,9 @@ void updateEntity(Entity *entity, Vector2 movement)
 
 	MoveEntityY(entity, movement.y);
 
-	collide_visual_debug(entity);
+	//collide_visual_debug(entity);
+
+	collide_visual_debug_buildings(entity);
 }
 
 typedef struct DebugCircleState DebugCircleState;
@@ -1959,7 +1980,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 3;
+	float zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
