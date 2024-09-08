@@ -404,28 +404,33 @@ ItemData setup_exp_item()
     return item;
 }
 
-BuildingData setup_building_stairs_up()
+BuildingData setup_building_stairs_up(int floorID)
 {
-    BuildingData building;
+	BuildingData building;
+	
     building.buildingID = BUILDING_stairs_up;
     building.spriteData = sprites[SPRITE_stairs_up];
-    building.is_valid = true;
-    strcpy(building.pretty_name, "Stairs"); 
-    strcpy(building.description, "Travel between floors"); 
-    return  building;
+    strcpy(building.pretty_name, "Stairs up"); 
+    strcpy(building.description, "Travel between floors");
+	building.buildingID = floorID;
+	building.is_valid = true;
+
+	return building;
 }
 
-BuildingData setup_building_stairs_down() 
+BuildingData setup_building_stairs_down(int floorID) 
 {
-    BuildingData building;
+	BuildingData building;
+
     building.buildingID = BUILDING_stairs_down;
     building.spriteData = sprites[SPRITE_stairs_down];
-    building.is_valid = true;
-    strcpy(building.pretty_name, "Stairs"); 
-    strcpy(building.description, "Travel between floors"); 
-    return  building;
-}
+    strcpy(building.pretty_name, "Stairs down"); 
+    strcpy(building .description, "Travel between floors"); 
+	building.buildingID = floorID;
+	building.is_valid = true;
 
+	return building;
+}
 
 Entity* entity_create() 
 {
@@ -525,26 +530,33 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
-FloorData create_empty_floor(bool first_floor, int floorID)
+FloorData create_empty_floor(int floorID)
 {
 	FloorData floor;
 	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
+	floor.is_valid = true;
+	floor.floorID = floorID;
+
+	return floor;
+}
+
+void setup_stairs(bool first_floor, int floorID)
+{
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        TileData tile_data = floor.tiles[i];
-        
+    {     
         // Get the tile's x and y position
-        int x = tile_data.tile.x; 
-        int y = tile_data.tile.y;
+        int x = world -> floors[floorID].tiles[i].tile.x; 
+        int y = world -> floors[floorID].tiles[i].tile.y;
 
 		// Place a staircase up at 5, 5
 		if(x == 5 && y == 5)
 		{
-			floor.tiles[i].building = setup_building_stairs_up();
-			floor.tiles[i].building.pos	= v2((x * tile_width), (y * tile_width));
+			BuildingData stairs_up = setup_building_stairs_up(floorID);
+			stairs_up.pos = v2((x * tile_width), (y * tile_width));
+			world -> floors[floorID].tiles[i].building = stairs_up;
 		}
 
 		if (first_floor != true)
@@ -552,16 +564,12 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 			// Place a staircase down at -5, -5
 			if(x == -5 && y == -5)
 			{
-				floor.tiles[i].building = setup_building_stairs_down();
-				floor.tiles[i].building.pos	= v2((x * tile_width), (y * tile_width));
+				BuildingData stairs_down = setup_building_stairs_down(floorID);
+				stairs_down.pos = v2((x * tile_width), (y * tile_width));
+				world -> floors[floorID].tiles[i].building = stairs_down;
 			}
 		}
     }
-
-	floor.is_valid = true;
-	floor.floorID = floorID;
-
-	return floor;
 }
 
 void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
@@ -615,8 +623,10 @@ void load_next_floor()
 		}
 		else
 		{
-			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			log("%i", next_floor_id);
+			world -> floors[next_floor_id] = create_empty_floor(next_floor_id);
 			player_change_floor(next_floor_id);
+			setup_stairs(false, next_floor_id);
 			world -> current_floor++;
 		}
 	}
@@ -639,8 +649,9 @@ void load_previous_floor()
 		}
 		else
 		{
-			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			world -> floors[next_floor_id] = create_empty_floor(next_floor_id);
 			player_change_floor(next_floor_id);
+			setup_stairs(false, next_floor_id);
 			world -> current_floor--;
 		}
 	}
@@ -656,7 +667,7 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
-        TileData* tile_data = & floor -> tiles[i];
+        TileData* tile_data = & floor[world -> current_floor].tiles[i];
         
         // Get the tile's x and y position
         int x = tile_data -> tile.x;
@@ -666,7 +677,7 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
         float x_pos = x * tile_width;
         float y_pos = y * tile_width;
 
-		if(tile_data -> building.buildingID != 0)
+		if(tile_data -> building.is_valid == true)
 		{
 			SpriteData spritedata = tile_data -> building.spriteData;
 
@@ -677,6 +688,10 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
 
 			draw_image_xform(sprites[tile_data -> building.spriteData.spriteID].image, xform, sprite_size, COLOR_WHITE);
+			// position debug
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+			// floor building currently resides in
+			draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
 		}
     }
 }
@@ -813,7 +828,7 @@ bool collideAt(Entity *current_entity, int x, int y)
             }
         }
     }
-	
+
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
         BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
@@ -1419,7 +1434,8 @@ void world_setup()
 		world -> current_floor = 0;
 	}
 
-	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
+	world -> floors[world -> current_floor] = create_empty_floor(world -> current_floor);
+	setup_stairs(true, world -> current_floor);
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
@@ -1832,7 +1848,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 3;
+	float zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
 	// world load / setup
