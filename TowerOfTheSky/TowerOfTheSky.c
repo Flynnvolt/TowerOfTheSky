@@ -927,38 +927,39 @@ bool collideAt(Entity *current_entity, int x, int y)
 	float half_tile_width = tile_width * 0.5f;
 
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
+	{
+		BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
 
 		if (building -> is_valid)
-        {
+		{
 			SpriteData spritedata3 = building -> spriteData;
 			int width3 = spritedata3.image -> width;
 			int height3 = spritedata3.image -> height;
 
-			int building_x_end = building -> pos.x + width3 - half_tile_width;
-			int building_y_end = building -> pos.y + height3 - half_tile_width;
+			// Apply half_tile_width offset to the building's position
+			int building_x_start = building -> pos.x - half_tile_width;
+			int building_y_start = building -> pos.y - half_tile_width;
+			int building_x_end = building_x_start + width3;
+			int building_y_end = building_y_start + height3;
 			
-			//log("%i, %i", width3, height3);
-
 			// Check for bounding box overlap
-			if (x < building_x_end && x_end1 > building -> pos.x &&
-				y < building_y_end && y_end1 > building -> pos.y) 
+			if (x < building_x_end && x_end1 > building_x_start &&
+				y < building_y_end && y_end1 > building_y_start) 
 			{
 				//log("Collision detected with building %d\n", i);
-				
+
 				if (building -> buildingID == BUILDING_stairs_up)
 				{
-					if (world -> floor_cooldown <=0)
+					if (world -> floor_cooldown <= 0)
 					{
 						load_next_floor();
 						world -> floor_cooldown = 1.0f;
 					}
 				}
-								
+
 				if (building -> buildingID == BUILDING_stairs_down)
 				{
-					if (world -> floor_cooldown <=0)
+					if (world -> floor_cooldown <= 0)
 					{
 						load_previous_floor();
 						world -> floor_cooldown = 1.0f;
@@ -968,7 +969,7 @@ bool collideAt(Entity *current_entity, int x, int y)
 				return true;
 			}
 		}
-    }
+	}
 
     // No collisions detected
     return false;
@@ -1063,7 +1064,7 @@ void updateEntity(Entity *entity, Vector2 movement)
 
 	//collide_visual_debug(entity);
 
-	collide_visual_debug_buildings(entity);
+	//collide_visual_debug_buildings(entity);
 }
 
 typedef struct DebugCircleState DebugCircleState;
@@ -2176,7 +2177,7 @@ int entry(int argc, char **argv)
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
 			// floor player currently resides in
-			draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), player -> current_floor), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), player -> current_floor), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
 			// Draw (REAL) Player pos as blue pixel
 			//draw_rect(v2(player -> pos.x, player -> pos.y), v2(1, 1), v4(0, 255, 255, 1));
