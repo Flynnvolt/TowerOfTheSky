@@ -538,8 +538,8 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
         // Place a staircase up at 5, 5
         if (x == 5 && y == 5)
         {
-            floor->tiles[i].building = setup_building_stairs_up();
-            floor->tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+            floor -> tiles[i].building = setup_building_stairs_up();
+            floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
         }
 
         if (!first_floor)
@@ -547,8 +547,8 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
             // Place a staircase down at -5, -5
             if (x == -5 && y == -5)
             {
-                floor->tiles[i].building = setup_building_stairs_down();
-                floor->tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+                floor -> tiles[i].building = setup_building_stairs_down();
+                floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
             }
         }
     }
