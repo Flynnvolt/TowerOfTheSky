@@ -525,6 +525,35 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
+void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
+{
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+        TileData tile_data = floor->tiles[i];
+        
+        // Get the tile's x and y position
+        int x = tile_data.tile.x; 
+        int y = tile_data.tile.y;
+
+        // Place a staircase up at 5, 5
+        if (x == 5 && y == 5)
+        {
+            floor->tiles[i].building = setup_building_stairs_up();
+            floor->tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+        }
+
+        if (!first_floor)
+        {
+            // Place a staircase down at -5, -5
+            if (x == -5 && y == -5)
+            {
+                floor->tiles[i].building = setup_building_stairs_down();
+                floor->tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+            }
+        }
+    }
+}
+
 FloorData create_empty_floor(bool first_floor, int floorID)
 {
 	FloorData floor;
@@ -532,31 +561,7 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
-	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        TileData tile_data = floor.tiles[i];
-        
-        // Get the tile's x and y position
-        int x = tile_data.tile.x; 
-        int y = tile_data.tile.y;
-
-		// Place a staircase up at 5, 5
-		if(x == 5 && y == 5)
-		{
-			floor.tiles[i].building = setup_building_stairs_up();
-			floor.tiles[i].building.pos	= v2((x * tile_width), (y * tile_width));
-		}
-
-		if (first_floor != true)
-		{
-			// Place a staircase down at -5, -5
-			if(x == -5 && y == -5)
-			{
-				floor.tiles[i].building = setup_building_stairs_down();
-				floor.tiles[i].building.pos	= v2((x * tile_width), (y * tile_width));
-			}
-		}
-    }
+    setup_stairs(& floor, tile_width, first_floor);
 
 	floor.is_valid = true;
 	floor.floorID = floorID;
