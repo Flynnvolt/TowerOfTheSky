@@ -191,6 +191,7 @@ typedef struct TileData TileData;
 struct TileData 
 {
 	Tile tile;
+	bool is_valid;
 	BuildingData building;
 };
 
@@ -521,6 +522,7 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
                 TileData* tile_data = & floor -> tiles[tile_count];
                 tile_data -> tile.x = x;
                 tile_data -> tile.y = y;
+				tile_data -> is_valid = true;
 
                 // zero building data for now
                 memset(& tile_data -> building, 0, sizeof(BuildingData));
@@ -612,25 +614,28 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
-        TileData* tile_data = & floor -> tiles[i];
-        
-        // Get the tile's x and y position
-        int x = tile_data -> tile.x;
-       	int y = tile_data -> tile.y;
+		TileData* tile_data = & floor -> tiles[i];
 
-        // Checkerboard pattern
-        Vector4 col = color_0;
-        if (((x + y) % 2) == 0) 
-        {
-            col.a = 0.75;
-        }
-        
-        // Calculate world position for the tile
-        float x_pos = x * tile_width;
-        float y_pos = y * tile_width;
-        
-        // Render tile
-        draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
+		if (tile_data -> is_valid == true)
+		{
+			// Get the tile's x and y position
+			int x = tile_data -> tile.x;
+			int y = tile_data -> tile.y;
+
+			// Checkerboard pattern
+			Vector4 col = color_0;
+			if (((x + y) % 2) == 0) 
+			{
+				col.a = 0.75;
+			}
+			
+			// Calculate world position for the tile
+			float x_pos = x * tile_width;
+			float y_pos = y * tile_width;
+			
+			// Render tile
+			draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
+		}
     }
 	// Debug:
 	/*
