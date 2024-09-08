@@ -217,17 +217,19 @@ struct World
 
 	UXState ux_state;
 
-	FloorData floors[MAX_FLOOR_COUNT];
+	int current_floor;
 
-	ItemData items[ITEM_MAX];
+	float floor_cooldown;
+
+	int active_floors;
+
+	FloorData floors[MAX_FLOOR_COUNT];
 
 	int active_projectiles;
 
 	Projectile projectiles[MAX_PROJECTILES];
 
-	int current_floor;
-
-	float floor_cooldown;
+	ItemData items[ITEM_MAX];
 
 	float inventory_alpha;
 
