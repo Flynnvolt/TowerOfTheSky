@@ -404,46 +404,32 @@ ItemData setup_exp_item()
     return item;
 }
 
-BuildingData setup_building_stairs_up(BuildingData* building)
+BuildingData setup_building_stairs_up(int floorID)
 {
-    building -> buildingID = BUILDING_stairs_up;
-    building -> spriteData = sprites[SPRITE_stairs_up];
-    strcpy(building -> pretty_name, "Stairs"); 
-    strcpy(building -> description, "Travel between floors"); 
+	BuildingData building;
+	
+    building.buildingID = BUILDING_stairs_up;
+    building.spriteData = sprites[SPRITE_stairs_up];
+    strcpy(building.pretty_name, "Stairs up"); 
+    strcpy(building.description, "Travel between floors");
+	building.buildingID = floorID;
+	building.is_valid = true;
 
-	return *building;
+	return building;
 }
 
-BuildingData setup_building_stairs_down(BuildingData* building) 
+BuildingData setup_building_stairs_down(int floorID) 
 {
-    building -> buildingID = BUILDING_stairs_down;
-    building -> spriteData = sprites[SPRITE_stairs_down];
-    strcpy(building -> pretty_name, "Stairs"); 
-    strcpy(building -> description, "Travel between floors"); 
+	BuildingData building;
 
-	return *building;
-}
+    building.buildingID = BUILDING_stairs_down;
+    building.spriteData = sprites[SPRITE_stairs_down];
+    strcpy(building.pretty_name, "Stairs down"); 
+    strcpy(building .description, "Travel between floors"); 
+	building.buildingID = floorID;
+	building.is_valid = true;
 
-BuildingData* building_create(int floorID)
-{
-	BuildingData* building_found = 0;
-
-	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-	{
-		BuildingData* existing_building = & world -> floors[floorID].tiles[i].building;
-
-		if (!existing_building -> is_valid) 
-		{
-			building_found = existing_building;
-			break;
-		}
-	}
-	assert(building_found, "No more free buildings!");
-
-	building_found -> is_valid = true;
-	building_found -> current_floor = floorID;
-
-	return building_found;
+	return building;
 }
 
 Entity* entity_create() 
@@ -560,17 +546,15 @@ FloorData create_empty_floor(int floorID)
 void setup_stairs(bool first_floor, int floorID)
 {
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        TileData tile_data = world -> floors[floorID].tiles[i];
-        
+    {     
         // Get the tile's x and y position
-        int x = tile_data.tile.x; 
-        int y = tile_data.tile.y;
+        int x = world -> floors[floorID].tiles[i].tile.x; 
+        int y = world -> floors[floorID].tiles[i].tile.y;
 
 		// Place a staircase up at 5, 5
 		if(x == 5 && y == 5)
 		{
-			BuildingData stairs_up = setup_building_stairs_up(building_create(floorID));
+			BuildingData stairs_up = setup_building_stairs_up(floorID);
 			stairs_up.pos = v2((x * tile_width), (y * tile_width));
 			world -> floors[floorID].tiles[i].building = stairs_up;
 		}
@@ -580,7 +564,7 @@ void setup_stairs(bool first_floor, int floorID)
 			// Place a staircase down at -5, -5
 			if(x == -5 && y == -5)
 			{
-				BuildingData stairs_down = setup_building_stairs_down(building_create(floorID));
+				BuildingData stairs_down = setup_building_stairs_down(floorID);
 				stairs_down.pos = v2((x * tile_width), (y * tile_width));
 				world -> floors[floorID].tiles[i].building = stairs_down;
 			}
@@ -639,10 +623,11 @@ void load_next_floor()
 		}
 		else
 		{
+			log("%i", next_floor_id);
 			world -> floors[next_floor_id] = create_empty_floor(next_floor_id);
 			player_change_floor(next_floor_id);
-			world -> current_floor++;
 			setup_stairs(false, next_floor_id);
+			world -> current_floor++;
 		}
 	}
 	else
@@ -666,8 +651,8 @@ void load_previous_floor()
 		{
 			world -> floors[next_floor_id] = create_empty_floor(next_floor_id);
 			player_change_floor(next_floor_id);
-			world -> current_floor--;
 			setup_stairs(false, next_floor_id);
+			world -> current_floor--;
 		}
 	}
 	else
@@ -704,9 +689,9 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 
 			draw_image_xform(sprites[tile_data -> building.spriteData.spriteID].image, xform, sprite_size, COLOR_WHITE);
 			// position debug
-			draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
 			// floor building currently resides in
-			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+			draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
 		}
     }
 }
