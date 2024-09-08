@@ -410,7 +410,7 @@ BuildingData setup_building_stairs_up()
     building.buildingID = BUILDING_stairs_up;
     building.spriteData = sprites[SPRITE_stairs_up];
     building.is_valid = true;
-    strcpy(building.pretty_name, "Stairs"); 
+    strcpy(building.pretty_name, "Stairs that go up"); 
     strcpy(building.description, "Travel between floors"); 
     return  building;
 }
@@ -421,7 +421,7 @@ BuildingData setup_building_stairs_down()
     building.buildingID = BUILDING_stairs_down;
     building.spriteData = sprites[SPRITE_stairs_down];
     building.is_valid = true;
-    strcpy(building.pretty_name, "Stairs"); 
+    strcpy(building.pretty_name, "Stairs that go down"); 
     strcpy(building.description, "Travel between floors"); 
     return  building;
 }
@@ -525,7 +525,7 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
-void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
+void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorID)
 {
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
@@ -540,6 +540,7 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
         {
             floor -> tiles[i].building = setup_building_stairs_up();
             floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+			floor -> tiles[i].building.current_floor = floorID;
         }
 
         if (!first_floor)
@@ -549,6 +550,7 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor)
             {
                 floor -> tiles[i].building = setup_building_stairs_down();
                 floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+				floor -> tiles[i].building.current_floor = floorID;
             }
         }
     }
@@ -561,7 +563,7 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
-    setup_stairs(& floor, tile_width, first_floor);
+    setup_stairs(& floor, tile_width, first_floor, floorID);
 
 	floor.is_valid = true;
 	floor.floorID = floorID;
@@ -682,6 +684,12 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
 
 			draw_image_xform(sprites[tile_data -> building.spriteData.spriteID].image, xform, sprite_size, COLOR_WHITE);
+
+			// pos debug
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+			
+			// floor debug
+			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
 		}
     }
 }
