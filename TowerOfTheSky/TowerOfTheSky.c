@@ -221,6 +221,8 @@ struct World
 
 	int current_floor;
 
+	float floor_cooldown;
+
 	float inventory_alpha;
 
 	float inventory_alpha_target;
@@ -245,6 +247,18 @@ struct WorldFrame
 WorldFrame world_frame;
 
 // :Setup
+
+void update_floor_cooldown(float delta_time) 
+{
+    if (world -> floor_cooldown > 0) 
+    {
+        world -> floor_cooldown -= delta_time;
+        if (world -> floor_cooldown < 0) 
+        {
+            world -> floor_cooldown = 0;
+        }
+    }
+}
 
 Vector2 get_sprite_size(SpriteData spritedata)
 {
@@ -525,6 +539,11 @@ void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_widt
 	//log("%i", tile_count);
 }
 
+bool is_even(int number) 
+{
+    return number % 2 == 0;
+}
+
 void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorID)
 {
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
@@ -538,7 +557,15 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorI
         // Place a staircase up at 5, 5
         if (x == 5 && y == 5)
         {
-            floor -> tiles[i].building = setup_building_stairs_up();
+			if (is_even(floorID))
+			{
+				floor -> tiles[i].building = setup_building_stairs_up();
+			}
+			else
+			{
+				floor -> tiles[i].building = setup_building_stairs_down();
+			}
+			
             floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
 			floor -> tiles[i].building.current_floor = floorID;
         }
@@ -547,9 +574,17 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorI
         {
             // Place a staircase down at -5, -5
             if (x == -5 && y == -5)
-            {
-                floor -> tiles[i].building = setup_building_stairs_down();
-                floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
+			{
+				if (is_even(floorID))
+				{
+					floor -> tiles[i].building = setup_building_stairs_down();
+				}
+				else
+				{
+					floor -> tiles[i].building = setup_building_stairs_up();
+				}
+
+				floor -> tiles[i].building.pos = v2((x * tile_width), (y * tile_width));
 				floor -> tiles[i].building.current_floor = floorID;
             }
         }
@@ -847,6 +882,25 @@ bool collideAt(Entity *current_entity, int x, int y)
 				y < building_y_end && y_end1 > building -> pos.y) 
 			{
 				//log("Collision detected with building %d\n", i);
+				
+				if (building -> buildingID == BUILDING_stairs_up)
+				{
+					if (world -> floor_cooldown <=0)
+					{
+						load_next_floor();
+						world -> floor_cooldown = 1.0f;
+					}
+				}
+								
+				if (building -> buildingID == BUILDING_stairs_down)
+				{
+					if (world -> floor_cooldown <=0)
+					{
+						load_previous_floor();
+						world -> floor_cooldown = 1.0f;
+					}
+				}
+				
 				return true;
 			}
 		}
@@ -1915,6 +1969,8 @@ int entry(int argc, char **argv)
 		{
 			world -> time_elapsed += delta_t;
 		}
+
+		update_floor_cooldown(delta_t);
 
 		FloorData* floor_data = & world -> floors[world -> current_floor];
 
