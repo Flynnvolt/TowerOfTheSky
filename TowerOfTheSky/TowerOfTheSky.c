@@ -922,6 +922,10 @@ bool collideAt(Entity *current_entity, int x, int y)
         }
     }
 	
+	// Building Collide
+
+	float half_tile_width = tile_width * 0.5f;
+
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
         BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
@@ -932,8 +936,8 @@ bool collideAt(Entity *current_entity, int x, int y)
 			int width3 = spritedata3.image -> width;
 			int height3 = spritedata3.image -> height;
 
-			int building_x_end = building -> pos.x + width3;
-			int building_y_end = building -> pos.y + height3;
+			int building_x_end = building -> pos.x + width3 - half_tile_width;
+			int building_y_end = building -> pos.y + height3 - half_tile_width;
 			
 			//log("%i, %i", width3, height3);
 
@@ -994,6 +998,8 @@ void collide_visual_debug(Entity *current_entity)
 
 void collide_visual_debug_buildings(Entity *current_entity)
 {
+	float half_tile_width = tile_width * 0.5f;
+
     // Loop through the tiles, not entities
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
@@ -1006,7 +1012,7 @@ void collide_visual_debug_buildings(Entity *current_entity)
             int sprite_height = spritedata.image -> height;
 
             // Visual Debug tools
-            draw_rect(v2(building -> pos.x, building -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+            draw_rect(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
         }
     }
 }
