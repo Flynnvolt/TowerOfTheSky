@@ -51,6 +51,7 @@ enum SpriteID
 	SPRITE_target = 6,
 	SPRITE_stairs_up = 7,
 	SPRITE_stairs_down = 8,
+	SPRITE_crate = 9,
 	SPRITE_MAX,
 };
 
@@ -126,6 +127,7 @@ enum BuildingID
 	BUILDING_stairs_up,
 	BUILDING_stairs_down,
 	BUILDING_research_station,
+	BUILDING_crate,
 	BUILDING_MAX,
 };
 
@@ -329,6 +331,12 @@ void LoadSpriteData()
 		.spriteID = SPRITE_stairs_down
 	};
 
+	sprites[SPRITE_crate] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/crate.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_crate
+	};
+
 	// Spells
 	sprites[SPRITE_fireball_sheet] = (SpriteData)
 	{ 
@@ -441,6 +449,16 @@ BuildingData setup_building_stairs_down()
     return  building;
 }
 
+BuildingData setup_building_crate() 
+{
+    BuildingData building;
+    building.buildingID = BUILDING_crate;
+    building.spriteData = sprites[SPRITE_crate];
+    building.is_valid = true;
+    strcpy(building.pretty_name, "crate"); 
+    strcpy(building.description, "maybe loot?"); 
+    return  building;
+}
 
 Entity* entity_create() 
 {
@@ -593,6 +611,41 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorI
     }
 }
 
+void setup_crates(FloorData *floor, int tile_width, int num_crates, int floorID)
+{
+    int placed_crates = 0;
+
+    // While we haven't placed the desired number of crates
+    while (placed_crates < num_crates)
+    {
+        int i = rand() % MAX_TILE_COUNT;
+        
+        TileData *tile_data = &floor -> tiles[i];
+
+        int x = tile_data -> tile.x;
+        int y = tile_data -> tile.y;
+
+        // Check if the tile already has a building
+        if (tile_data -> building.is_valid)
+        {
+            continue; // Skip to the next iteration if the tile is occupied
+        }
+
+        // Avoid placing crates in the central area
+        if (x >= -6 && x <= 6 && y >= -6 && y <= 6)
+        {
+            continue;
+        }
+
+        // Place a crate on this tile
+        tile_data -> building = setup_building_crate();
+        tile_data -> building.pos = v2((x * tile_width), (y * tile_width));
+        tile_data -> building.current_floor = floorID;
+
+        placed_crates++;
+    }
+}
+
 FloorData create_empty_floor(bool first_floor, int floorID)
 {
 	FloorData floor;
@@ -601,6 +654,8 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
     setup_stairs(& floor, tile_width, first_floor, floorID);
+
+	setup_crates(& floor, tile_width, 10, floorID);
 
 	floor.is_valid = true;
 	floor.floorID = floorID;
