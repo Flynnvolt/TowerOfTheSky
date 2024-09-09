@@ -1121,12 +1121,11 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 {
 	if(world -> active_projectiles < MAX_PROJECTILES)
 	{
-		world -> active_projectiles++;
-
-		for (int i = 0; i < world -> active_projectiles; i++) 
+		for (int i = 0; i < world -> active_projectiles + 1; i++) 
 		{
 			if (world -> projectiles[i].is_active == false) 
 			{
+				world -> active_projectiles++;
 				Projectile *projectile = & world -> projectiles[i];
 				projectile -> is_active = true;
 				projectile -> speed = speed;
@@ -1173,7 +1172,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 				// printf("Spawn Radius: %f\n", spawn_radius);
 
 				// Draw the debug circle around the player when projectile is cast
-				start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
+				//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
 
 				// Use the actual direction to the mouse (not the spawn position) for velocity calculation
 				if (length != 0.0f)
@@ -1264,6 +1263,7 @@ void update_projectile(Projectile *projectile, float delta_time)
 
         // Deactivate the projectile after it hits an entity
         projectile -> is_active = false;
+		world -> active_projectiles--;
         return;
     }
 
@@ -1271,6 +1271,7 @@ void update_projectile(Projectile *projectile, float delta_time)
     if (projectile -> distance_traveled >= projectile->max_distance || projectile -> time_alive >= projectile -> max_time_alive) 
     {
         projectile -> is_active = false;
+		world -> active_projectiles--;
         return;
     }
 
@@ -2129,10 +2130,8 @@ int entry(int argc, char **argv)
 		}
 		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
 
-		int count = 0;
-
 		// Remove inactive projectiles
-		/*
+		/* 
 		for (int i = MAX_PROJECTILES - 1; i >= 0; i--) 
 		{
 			if (!projectiles[i].is_active) 
@@ -2148,8 +2147,6 @@ int entry(int argc, char **argv)
 			if (world -> projectiles[i].is_active) 
 			{
 				update_projectile(& world -> projectiles[i], delta_t);
-
-				count++;
 			}
 		}
 
@@ -2201,7 +2198,7 @@ int entry(int argc, char **argv)
             	// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
 
 				// Ghetto Fireball Spawn Test
-				float fireball_cost = (mana.current - 5);
+				float fireball_cost = 5;
 
 				if(mana.current >= fireball_cost)
 				{
