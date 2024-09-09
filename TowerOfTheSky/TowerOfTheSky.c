@@ -1965,6 +1965,56 @@ void do_ui_stuff()
 	pop_z_layer();
 }
 
+void render_entities()
+{
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
+	{
+		Entity* en = & world -> floors[world -> current_floor].entities[i];
+
+		if (en -> is_valid)
+		{
+			switch (en -> entityID)
+			{	
+				case ENTITY_player:
+				{
+					break;
+				}
+
+				default:
+				{
+					// Get sprite dimensions
+					Vector2 sprite_size = get_sprite_size(sprites[en -> spriteID]);
+
+					Matrix4 xform = m4_scalar(1.0);
+
+					/*
+					if(en -> is_item == true)
+					{
+						xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
+					}
+					*/
+
+					xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
+
+					Vector4 col = COLOR_WHITE;
+
+					draw_image_xform(sprites[en -> spriteID].image, xform, sprite_size, col);
+
+					Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> spriteID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> spriteID].image -> height)));
+
+					// Temp healthbar for non-players
+					draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+
+					//world space current location debug for object pos
+					//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
+
+					break;
+				}
+			}
+		}
+	}
+}
+
 int entry(int argc, char **argv) 
 {
 	window.title = STR("Tower of the Sky");
@@ -2080,55 +2130,7 @@ int entry(int argc, char **argv)
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
 
-		// :Render Entities
-
-		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
-		{
-			Entity* en = & world -> floors[world -> current_floor].entities[i];
-
-			if (en -> is_valid)
-			{
-				switch (en -> entityID)
-				{	
-					case ENTITY_player:
-					{
-						break;
-					}
-
-					default:
-					{
-						// Get sprite dimensions
-						Vector2 sprite_size = get_sprite_size(sprites[en -> spriteID]);
-
-						Matrix4 xform = m4_scalar(1.0);
-
-						/*
-						if(en -> is_item == true)
-						{
-							xform = m4_translate(xform, v3(0, 2 * sin_breathe(os_get_elapsed_seconds(), 5.0), 0));
-						}
-						*/
-
-						xform = m4_translate(xform, v3(en -> pos.x, en -> pos.y, 0));
-
-						Vector4 col = COLOR_WHITE;
-
-						draw_image_xform(sprites[en -> spriteID].image, xform, sprite_size, col);
-
-						Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> spriteID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> spriteID].image -> height)));
-
-						// Temp healthbar for non-players
-						draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
-
-						//world space current location debug for object pos
-						//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
-
-						break;
-					}
-				}
-			}
-		}
-		//log("%f, %f,", get_player() -> pos.x, get_player() -> pos.y);
+		render_entities();
 
 		// Remove inactive projectiles
 		/* 
