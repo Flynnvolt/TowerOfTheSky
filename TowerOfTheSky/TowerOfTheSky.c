@@ -1278,8 +1278,6 @@ void update_projectile(Projectile *projectile, float delta_time)
     update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation);
 }
 
-Projectile fireball;
-
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
 	// Increment resource
