@@ -670,10 +670,10 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 
 void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 {	
-    float half_tile_width = tile_width * 0.5f;
+	float half_tile_width = tile_width * 0.5f;
 
-    for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+	{
 		TileData* tile_data = & floor -> tiles[i];
 
 		if (tile_data -> is_valid == true)
@@ -696,7 +696,8 @@ void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
 			// Render tile
 			draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
 		}
-    }
+	}
+
 	// Debug:
 	/*
 	Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
@@ -759,19 +760,19 @@ void load_previous_floor()
 
 void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 {
-    float half_tile_width = tile_width * 0.5f;
+	float half_tile_width = tile_width * 0.5f;
 
-    for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        TileData* tile_data = & floor -> tiles[i];
-        
-        // Get the tile's x and y position
-        int x = tile_data -> tile.x;
-        int y = tile_data -> tile.y;
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+	{
+		TileData* tile_data = & floor -> tiles[i];
+		
+		// Get the tile's x and y position
+		int x = tile_data -> tile.x;
+		int y = tile_data -> tile.y;
 
 		// Calculate world position for the tile
-        float x_pos = x * tile_width;
-        float y_pos = y * tile_width;
+		float x_pos = x * tile_width;
+		float y_pos = y * tile_width;
 
 		if(tile_data -> building.buildingID != 0)
 		{
@@ -791,7 +792,7 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 			// floor debug
 			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
 		}
-    }
+	}
 }
 
 inline float64 now() 
@@ -896,36 +897,36 @@ void DamageEntity(Entity *entity, float damage)
 
 bool collideAt(Entity *current_entity, int x, int y) 
 {
-    SpriteData spritedata = sprites[current_entity -> spriteID];
-    int width1 = spritedata.image -> width;
-    int height1 = spritedata.image -> height;
+	SpriteData spritedata = sprites[current_entity -> spriteID];
+	int width1 = spritedata.image -> width;
+	int height1 = spritedata.image -> height;
 
-    int x_end1 = x + width1;
-    int y_end1 = y + height1;
+	int x_end1 = x + width1;
+	int y_end1 = y + height1;
 
-    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-    {
-        Entity *actor = & world -> floors[world -> current_floor].entities[i];
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity *actor = & world -> floors[world -> current_floor].entities[i];
 
-        // Skip ourselves to avoid self-collision
-        if (actor -> is_valid && actor != current_entity) 
-        {
-            SpriteData spritedata2 = sprites[actor -> spriteID];
-            int width2 = spritedata2.image -> width;
-            int height2 = spritedata2.image -> height;
+		// Skip ourselves to avoid self-collision
+		if (actor -> is_valid && actor != current_entity) 
+		{
+			SpriteData spritedata2 = sprites[actor -> spriteID];
+			int width2 = spritedata2.image -> width;
+			int height2 = spritedata2.image -> height;
 
-            int actor_x_end = actor -> pos.x + width2;
-            int actor_y_end = actor-> pos.y + height2;
+			int actor_x_end = actor -> pos.x + width2;
+			int actor_y_end = actor-> pos.y + height2;
 
-            // Check for bounding box overlap
-            if (x < actor_x_end && x_end1 > actor -> pos.x &&
-                y < actor_y_end && y_end1 > actor -> pos.y) 
-            {
-                //log("Collision detected with entity %d\n", i);
-                return true;
-            }
-        }
-    }
+			// Check for bounding box overlap
+			if (x < actor_x_end && x_end1 > actor -> pos.x &&
+				y < actor_y_end && y_end1 > actor -> pos.y) 
+			{
+				//log("Collision detected with entity %d\n", i);
+				return true;
+			}
+		}
+	}
 	
 	// Building Collide
 
@@ -976,8 +977,8 @@ bool collideAt(Entity *current_entity, int x, int y)
 		}
 	}
 
-    // No collisions detected
-    return false;
+	// No collisions detected
+	return false;
 }
 
 void collide_visual_debug(Entity *current_entity)
@@ -1196,29 +1197,30 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 
 Entity* projectile_collides_with_entity(Projectile *projectile) 
 {
-    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-    {
-        Entity *entity = & world -> floors -> entities[i];
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity *entity = & world -> floors -> entities[i];
 
-        if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
-        {
-            SpriteData spritedata = sprites[entity -> spriteID];
-            int entity_width = spritedata.image -> width;
-            int entity_height = spritedata.image -> height;
+		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
+		{
+			SpriteData spritedata = sprites[entity -> spriteID];
+			int entity_width = spritedata.image -> width;
+			int entity_height = spritedata.image -> height;
 
-            int entity_x_end = entity -> pos.x + entity_width;
-            int entity_y_end = entity -> pos.y + entity_height;
+			int entity_x_end = entity -> pos.x + entity_width;
+			int entity_y_end = entity -> pos.y + entity_height;
 
-            int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
-            int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
+			int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
+			int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
 
-            if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x && projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
-            {
-                return entity;
-            }
-        }
-    }
-    return NULL;
+			if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x && projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
+			{
+				return entity;
+			}
+		}
+	}
+	
+	return NULL;
 }
 
 void update_projectile(Projectile *projectile, float delta_time) 
@@ -2092,10 +2094,6 @@ int entry(int argc, char **argv)
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
-		// :Do UI Rendering
-
-		do_ui_stuff();
-
 		// :World update
 		{
 			world -> time_elapsed += delta_t;
@@ -2105,14 +2103,29 @@ int entry(int argc, char **argv)
 
 		FloorData* floor_data = & world -> floors[world -> current_floor];
 
-		render_floor_tiles(floor_data, tile_width, color_0);
-		
-		render_buildings(floor_data, tile_width, color_0);
+		tm_scope("Render Floor Tiles")
+		{
+			render_floor_tiles(floor_data, tile_width, color_0);
+		}
+
+		tm_scope("Render Buildings")
+		{
+			render_buildings(floor_data, tile_width, color_0);
+		}
+
+		tm_scope("Render entities")
+		{
+			render_entities();
+		}
+
+		// :Do UI Rendering
+		tm_scope("Render UI")
+		{
+			do_ui_stuff();
+		}
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
-
-		render_entities();
 
 		// Remove inactive projectiles
 		/* 
@@ -2124,13 +2137,16 @@ int entry(int argc, char **argv)
 			}
 		}
 		*/
-
-		// Loop through all Projectiles and render / move them.
-		for (int i = 0; i < MAX_PROJECTILES; i++) 
-		{		
-			if (world -> projectiles[i].is_active) 
-			{
-				update_projectile(& world -> projectiles[i], delta_t);
+	
+		tm_scope("Update Projectiles")
+		{
+			// Loop through all Projectiles and render / move them.
+			for (int i = 0; i < MAX_PROJECTILES; i++) 
+			{		
+				if (world -> projectiles[i].is_active) 
+				{
+					update_projectile(& world -> projectiles[i], delta_t);
+				}
 			}
 		}
 
@@ -2181,13 +2197,16 @@ int entry(int argc, char **argv)
 				// Draw the debug circle around the player
             	// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
 
-				// Ghetto Fireball Spawn Test
-				float fireball_cost = 5;
-
-				if(mana.current >= fireball_cost)
+				tm_scope("Spawn Projectile")
 				{
-					spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 30.0, 1000, 5);
-					mana.current -= fireball_cost;
+					// Ghetto Fireball Spawn Test
+					float fireball_cost = 5;
+
+					if(mana.current >= fireball_cost)
+					{
+						spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 30.0, 1000, 5);
+						mana.current -= fireball_cost;
+					}
 				}
 			}
 		}
@@ -2226,29 +2245,32 @@ int entry(int argc, char **argv)
 		
 		Entity *player = get_player();
 
-		// Update player position based on input
-		updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
-
-		// Get player position with sprite size offset for X only
-		Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
-
-		// Lock player to a circle about the size of the play area.
-		float player_radius = (tile_radius * tile_width) - tile_width;
-
-		float dx = player_pos.x;
-		float dy = player_pos.y;
-		float distance_squared = dx * dx + dy * dy;
-
-		// Check if the player is outside the circle
-		if (distance_squared > player_radius * player_radius) 
+		tm_scope("Move player & Collision")
 		{
-			// Normalize the player's position
-			float distance = sqrtf(distance_squared);
-			float scale_factor = player_radius / distance;
+			// Update player position based on input
+			updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
 
-			// Adjust the player's position to the boundary of the circle
-			player -> pos.x *= scale_factor;
-			player -> pos.y *= scale_factor;
+			// Get player position with sprite size offset for X only
+			Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
+
+			// Lock player to a circle about the size of the play area.
+			float player_radius = (tile_radius * tile_width) - tile_width;
+
+			float dx = player_pos.x;
+			float dy = player_pos.y;
+			float distance_squared = dx * dx + dy * dy;
+
+			// Check if the player is outside the circle
+			if (distance_squared > player_radius * player_radius) 
+			{
+				// Normalize the player's position
+				float distance = sqrtf(distance_squared);
+				float scale_factor = player_radius / distance;
+
+				// Adjust the player's position to the boundary of the circle
+				player -> pos.x *= scale_factor;
+				player -> pos.y *= scale_factor;
+			}
 		}
 
 		// load/save commands
