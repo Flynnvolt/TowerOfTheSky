@@ -1678,6 +1678,51 @@ Draw_Quad* draw_sprite_in_rect(SpriteData spritedata, Range2f rect, Vector4 col,
 	return draw_image(spritedata.image, rect.min, range2f_size(rect), col);
 }
 
+void display_skill_level_up_button(AbilityList ability, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
+{
+	Vector2 button_size_v2 = v2(button_size, button_size);
+
+	if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+	{
+		world_frame.hover_consumed = true;
+
+		switch (ability) 
+		{
+			case Ability_channel_mana:
+			{
+				level_up_channel_mana_if_unlocked();
+				break;
+			}
+
+			case Ability_wisdom:
+			{
+				level_up_wisdom_if_unlocked();
+				break;
+			}
+
+			case Ability_focus:
+			{
+				level_up_focus_if_unlocked();
+				break;
+			}
+
+			default:
+			{
+				break;
+			}
+		}
+	}
+
+	Draw_Quad* quad = draw_level_up_button(button_text, button_size, button_pos, color);	
+
+	if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+	{
+		world_frame.hover_consumed = true;
+		color = COLOR_RED;
+		draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+	}
+}
+
 void do_ui_stuff()
 {
 	set_screen_space();
@@ -1826,10 +1871,8 @@ void do_ui_stuff()
 			// Mana bar
 			if (mana.unlocked == true)
 			{
-				float y_pos = 240;
-
 				string name = STR("Mana");
-				draw_resource_bar(y_pos, & mana.current, & mana.max, & mana.per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
+				draw_resource_bar(240, & mana.current, & mana.max, & mana.per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
 
 				if(channel_mana.level >= 5)
 				{
@@ -1847,10 +1890,8 @@ void do_ui_stuff()
 			// Intellect bar
 			if(intellect.unlocked == true)
 			{
-				float y_pos = 220;
-
 				string name = STR("Intellect");
-				draw_resource_bar(y_pos, & intellect.current, & intellect.max, & intellect.per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
+				draw_resource_bar(220, & intellect.current, & intellect.max, & intellect.per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
 
 				if(wisdom.level >= 5)
 				{
@@ -1858,94 +1899,37 @@ void do_ui_stuff()
 				}
 			}
 
-			// Setup for all buttons for now
-			float button_size = 16.0;
-
-			Vector2 button_size_v2 = v2(16.0, 16.0);
-
-			// Level Up Channel Mana Button
+			// Level up channel mana button
 			if(channel_mana.unlocked == true)
 			{
-				Vector2 button_pos = v2(175, y_pos);
-
-				Vector4 color = fill_col;
-
 				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana.level, channel_mana.current_costs[0]);
 
 				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana.level, channel_mana.current_costs[0], channel_mana.current_effect_value);
 
-				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
+				display_skill_level_up_button(Ability_channel_mana, 16, v2(175, y_pos), fill_col, channel_button_text, channel_mana_tooltip);
 
-					level_up_channel_mana_if_unlocked();
-				}
-
-				Draw_Quad* quad = draw_level_up_button(channel_button_text, button_size, button_pos, color);	
-
-				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-					draw_tooltip_box_string_to_side_larger(quad, icon_size, & channel_mana_tooltip);
-				}
 				//log("Level:%i, mana Regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier, channel_mana.current_costs[0], channel_mana.cost_multipliers[0], channel_mana.cost_multipliers[1]);
 			}
-
+			
 			// Level Up wisdom Button
 			if(wisdom.unlocked == true)
 			{
-				Vector2 button_pos = v2(175, y_pos - 30);
-
-				Vector4 color = fill_col;
-
 				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
 
 				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom.level, wisdom.current_costs[0], wisdom.current_effect_value);
 				
-				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
-
-					level_up_wisdom_if_unlocked();
-				}
-
-				Draw_Quad* quad = draw_level_up_button(wisdom_button_text, button_size, button_pos, color);	
-
-				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-					draw_tooltip_box_string_to_side_larger(quad, icon_size, & wisdom_tooltip);
-				}
+				display_skill_level_up_button(Ability_wisdom, 16, v2(175, y_pos - 30), fill_col, wisdom_button_text, wisdom_tooltip);
 			}
 			
 			// Level Up Focus Button
 			if(focus.unlocked == true)
 			{
-				Vector2 button_pos = v2(175, y_pos - 60);
-
-				Vector4 color = fill_col;
-
-				string focus_button_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
+				string focus_button_text = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
 
 				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1], focus.current_effect_value);
+
+				display_skill_level_up_button(Ability_focus, 16, v2(175, y_pos - 60), fill_col, focus_button_text, focus_tooltip);
 				
-				if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
-
-					level_up_focus_if_unlocked();
-				}
-			
-				Draw_Quad* quad = draw_level_up_button(focus_button_tooltip, button_size, button_pos, color);	
-
-				if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
-				{
-					world_frame.hover_consumed = true;
-					color = COLOR_RED;
-					draw_tooltip_box_string_to_side_larger(quad, icon_size, & focus_tooltip);
-				}
 				//log("Level:%i, intellect regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", focus.level, focus.current_effect_value, focus.current_power_multiplier, focus.current_costs[0], focus.cost_multipliers[0], focus.cost_multipliers[1]);
 			}
 		}

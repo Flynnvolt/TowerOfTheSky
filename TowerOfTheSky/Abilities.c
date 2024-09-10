@@ -163,6 +163,15 @@ Ability focus =
     .level_up = level_up_ability
 };
 
+typedef enum AbilityList AbilityList;
+
+enum AbilityList
+{
+    Ability_channel_mana,
+    Ability_wisdom,
+    Ability_focus,
+};
+
 // Leveling up abilities
 void level_up_channel_mana_if_unlocked() 
 {
