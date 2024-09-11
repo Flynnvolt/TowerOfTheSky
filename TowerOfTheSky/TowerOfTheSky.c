@@ -217,6 +217,16 @@ struct World
 
 	UXState ux_state;
 
+	float inventory_alpha;
+
+	float inventory_alpha_target;
+
+	int active_projectiles;
+
+	Projectile projectiles[MAX_PROJECTILES];
+
+	ItemData items[ITEM_MAX];
+	
 	int current_floor;
 
 	float floor_cooldown;
@@ -224,20 +234,6 @@ struct World
 	int active_floors;
 
 	FloorData floors[MAX_FLOOR_COUNT];
-
-	int active_projectiles;
-
-	Projectile projectiles[MAX_PROJECTILES];
-
-	ItemData items[ITEM_MAX];
-
-	float inventory_alpha;
-
-	float inventory_alpha_target;
-
-	float building_alpha;
-
-	float building_alpha_target;
 };
 
 World* world = 0;
@@ -724,6 +720,7 @@ void load_next_floor()
 		else
 		{
 			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			world -> current_floor++;
 		}
@@ -748,6 +745,7 @@ void load_previous_floor()
 		else
 		{
 			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			world -> current_floor--;
 		}
@@ -1586,6 +1584,7 @@ void world_setup()
 	}
 
 	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
+	world -> active_floors++;
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
@@ -1602,11 +1601,15 @@ void world_setup()
 	#endif
 }
 
-// :SerialIzation
-
 bool world_save_to_disk() 
 {
-	return os_write_entire_file_s(STR("world"), (string){sizeof(World), (u8*)world});
+	u64 everything_but_floors = offsetof(World, floors);
+
+	u64 active_floors = world -> active_floors * sizeof(FloorData);
+
+	u64 all_save_data = everything_but_floors + active_floors;
+
+	return os_write_entire_file_s(STR("world"), (string){all_save_data, (u8*)world});
 }
 
 bool world_attempt_load_from_disk() 
@@ -1626,11 +1629,13 @@ bool world_attempt_load_from_disk()
     // That's why this function returns a bool. We handle that at the callsite.
     // Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
 
+	/*
     if (result.count != sizeof(World)) 
     {
         log_error("world size different to one on disk.");
         return false;
     }
+	*/
 
     memcpy(world, result.data, result.count);
 
