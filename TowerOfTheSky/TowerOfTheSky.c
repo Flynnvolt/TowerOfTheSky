@@ -715,12 +715,14 @@ void load_next_floor()
 		if(world -> floors[next_floor_id].is_valid == true)
 		{
 			player_change_floor(next_floor_id);
+			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor++;
 		}
 		else
 		{
 			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
 			player_change_floor(next_floor_id);
+			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor++;
 		}
 	}
@@ -739,12 +741,14 @@ void load_previous_floor()
 		if(world -> floors[next_floor_id].is_valid == true)
 		{
 			player_change_floor(next_floor_id);
+			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor--;
 		}
 		else
 		{
 			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
 			player_change_floor(next_floor_id);
+			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor--;
 		}
 	}
