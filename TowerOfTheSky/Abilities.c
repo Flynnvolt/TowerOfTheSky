@@ -18,7 +18,7 @@ struct Resource
 };
 
 // Resources
-Resource mana = {true, 0.0, 100.0, 10.0};
+Resource mana = {true, 100.0, 100.0, 10.0};
 Resource intellect = {false, 0.0, 50.0, 0.5};
 
 // Define the function pointer type for ability effects
