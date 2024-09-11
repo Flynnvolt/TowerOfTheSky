@@ -234,6 +234,10 @@ struct World
 	float inventory_alpha;
 
 	float inventory_alpha_target;
+
+	float building_alpha;
+
+	float building_alpha_target;
 };
 
 World* world = 0;
@@ -1602,118 +1606,35 @@ void world_setup()
 
 bool world_save_to_disk() 
 {
-    // Calculate size for the world header (everything before floors)
-    size_t world_header_size = offsetof(World, floors);
-
-    // Count how many floors are valid
-    int valid_floor_count = 0;
-    for (int i = 0; i < MAX_FLOOR_COUNT; ++i) 
-    {
-        if (world->floors[i].is_valid) 
-        {
-            valid_floor_count++;
-        }
-    }
-
-    if (valid_floor_count == 0) 
-    {
-        log_info("No valid floors to save.");
-        return false;
-    }
-
-    size_t valid_floors_size = sizeof(FloorData) * valid_floor_count;
-    size_t total_size = world_header_size + valid_floors_size; 
-    u8* buffer = (u8*)alloc(get_heap_allocator(), total_size);
-    if (!buffer) 
-    {
-        log_error("Failed to allocate memory for saving the world.");
-        return false;
-    }
-
-    // Copy the world header (everything before floors) to the buffer
-    memcpy(buffer, world, world_header_size);
-
-    // Copy valid floors into the buffer
-    u8* buffer_ptr = buffer + world_header_size;
-    for (int i = 0; i < MAX_FLOOR_COUNT; ++i) 
-    {
-        if (world->floors[i].is_valid) 
-        {
-            memcpy(buffer_ptr, & world -> floors[i], sizeof(FloorData));
-            buffer_ptr += sizeof(FloorData);
-        }
-    }
-
-    // Write the buffer (world header + valid floors) to disk
-    bool success = os_write_entire_file_s(STR("world"), (string){total_size, buffer});
-
-    // Deallocate the buffer using dealloc
-    dealloc(get_heap_allocator(), buffer);
-
-    return success;
+	return os_write_entire_file_s(STR("world"), (string){sizeof(World), (u8*)world});
 }
 
 bool world_attempt_load_from_disk() 
 {
     string result = {0};
-    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator());
-
+    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator()); // <--------------- Allocate on heap instead (temp is killed every frame)
     if (!succ) 
     {
         log_error("Failed to load world.");
         return false;
     }
 
-    // Calculate size for the world header (everything before floors)
-    size_t world_header_size = offsetof(World, floors);
+    // NOTE, for errors I used to do stuff like this assert:
+    // assert(result.count == sizeof(World), "world size has changed!");
+    //
+    // But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
+    // That's why this function returns a bool. We handle that at the callsite.
+    // Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
 
-    // Verify that the result is large enough to contain the world header
-    if (result.count < world_header_size) 
+    if (result.count != sizeof(World)) 
     {
         log_error("world size different to one on disk.");
-        dealloc(get_heap_allocator(), result.data);
         return false;
     }
 
-    // Copy the World header (everything before floors)
-    memcpy(world, result.data, world_header_size);
+    memcpy(world, result.data, result.count);
 
-    // Check the size of valid floors in the file
-    size_t valid_floors_size = result.count - world_header_size;
-
-    // Calculate and ensure we have space for the valid floors based on current_floor
-    if (valid_floors_size % sizeof(FloorData) != 0) 
-    {
-        log_error("Invalid floor data size in file.");
-        dealloc(get_heap_allocator(), result.data);
-        return false;
-    }
-
-    // Calculate number of valid floors
-    int valid_floor_count = valid_floors_size / sizeof(FloorData);
-
-    // Ensure current_floor is valid
-    int current_floor = world -> current_floor; 
-    if (current_floor < 0 || current_floor >= valid_floor_count) 
-    {
-        log_error("Invalid current floor.");
-        dealloc(get_heap_allocator(), result.data);
-        return false;
-    }
-
-    // Calculate offset for the current floor and copy only that floor's data
-    size_t floor_offset = world_header_size + sizeof(FloorData) * current_floor;
-    if (floor_offset + sizeof(FloorData) > result.count) 
-    {
-        log_error("File is corrupted or incomplete.");
-        dealloc(get_heap_allocator(), result.data);
-        return false;
-    }
-
-    memcpy(& world -> floors[current_floor], result.data + floor_offset, sizeof(FloorData));
-
-    // Deallocate the loaded data after copying
-    dealloc(get_heap_allocator(), result.data);
+    dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
 
     return true;
 }
