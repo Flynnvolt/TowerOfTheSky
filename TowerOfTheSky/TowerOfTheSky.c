@@ -1611,29 +1611,32 @@ bool world_save_to_disk()
 
 bool world_attempt_load_from_disk() 
 {
-	string result = {0};
-	bool succ = os_read_entire_file_s(STR("world"), & result, temp_allocator);
-	if (!succ) 
-	{
-		log_error("Failed to load world.");
-		return false;
-	}
+    string result = {0};
+    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator()); // <--------------- Allocate on heap instead (temp is killed every frame)
+    if (!succ) 
+    {
+        log_error("Failed to load world.");
+        return false;
+    }
 
-	// NOTE, for errors I used to do stuff like this assert:
-	// assert(result.count == sizeof(World), "world size has changed!");
-	//
-	// But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
-	// That's why this function returns a bool. We handle that at the callsite.
-	// Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
+    // NOTE, for errors I used to do stuff like this assert:
+    // assert(result.count == sizeof(World), "world size has changed!");
+    //
+    // But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
+    // That's why this function returns a bool. We handle that at the callsite.
+    // Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
 
-	if (result.count != sizeof(World)) 
-	{
-		log_error("world size different to one on disk.");
-		return false;
-	}
+    if (result.count != sizeof(World)) 
+    {
+        log_error("world size different to one on disk.");
+        return false;
+    }
 
-	memcpy(world, result.data, result.count);
-	return true;
+    memcpy(world, result.data, result.count);
+
+    dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
+
+    return true;
 }
 
 // pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
