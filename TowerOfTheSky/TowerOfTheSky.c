@@ -1410,15 +1410,15 @@ void update_enemy_states(Entity *enemy, int enemyMemoryID)
 	}
 }
 
-void update_projectile(Projectile *projectile, float delta_time) 
+void update_projectile(Projectile *projectile) 
 {
     if (!projectile -> is_active) return;
 
     // Update the time alive
-    projectile -> time_alive += delta_time;
+    projectile -> time_alive += delta_t;
 
     // Update position based on velocity scaled by delta time
-    Vector2 movement = v2_scale(projectile -> velocity, delta_time);
+    Vector2 movement = v2_scale(projectile -> velocity, delta_t);
 
     // Accumulate the movement in the remainder variables
     projectile -> xRemainder += movement.x;
@@ -2346,7 +2346,7 @@ int entry(int argc, char **argv)
 			{		
 				if (world -> projectiles[i].is_active) 
 				{
-					update_projectile(& world -> projectiles[i], delta_t);
+					update_projectile(& world -> projectiles[i]);
 				}
 			}
 		}
