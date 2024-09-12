@@ -1035,19 +1035,25 @@ bool collideAt(Entity *current_entity, int x, int y)
 
 				if (building -> buildingID == BUILDING_stairs_up)
 				{
-					if (world -> floor_cooldown <= 0)
+					if (current_entity -> entityID == ENTITY_player)
 					{
-						load_next_floor();
-						world -> floor_cooldown = 1.0f;
+						if (world -> floor_cooldown <= 0)
+						{
+							load_next_floor();
+							world -> floor_cooldown = 1.0f;
+						}
 					}
 				}
 
 				if (building -> buildingID == BUILDING_stairs_down)
 				{
-					if (world -> floor_cooldown <= 0)
+					if (current_entity -> entityID == ENTITY_player)
 					{
-						load_previous_floor();
-						world -> floor_cooldown = 1.0f;
+						if (world -> floor_cooldown <= 0)
+						{
+							load_previous_floor();
+							world -> floor_cooldown = 1.0f;
+						}
 					}
 				}
 				
