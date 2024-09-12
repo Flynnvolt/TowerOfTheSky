@@ -12,7 +12,7 @@
 
 #define MAX_TILE_COUNT 4096
 
-#define MAX_FLOOR_COUNT 128
+#define MAX_FLOOR_COUNT 10
 
 // :Global APP
 
