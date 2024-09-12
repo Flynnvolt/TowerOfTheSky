@@ -52,6 +52,7 @@ enum SpriteID
 	SPRITE_stairs_up = 7,
 	SPRITE_stairs_down = 8,
 	SPRITE_crate = 9,
+	SPRITE_slime = 10,
 	SPRITE_MAX,
 };
 
@@ -113,6 +114,7 @@ struct Entity
 	float health;
 	float max_health;
 	float health_regen;
+	float speed;
 	bool is_immortal;
 	float xRemainder;
 	float yRemainder;
@@ -300,6 +302,12 @@ void LoadSpriteData()
 		.spriteID = SPRITE_target
 	};
 
+	sprites[SPRITE_slime] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/slime.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_slime
+	};
+
 	// Items
 	sprites[SPRITE_exp] = (SpriteData)
 	{ 
@@ -402,6 +410,16 @@ void setup_player(Entity* player_en)
 	//player_en -> pos = v2((player_en -> pos.x - sprites[player_en -> spriteID].image -> width * 0.5),(player_en -> pos.y - sprites[player_en -> spriteID].image -> height * 0.5));
 }
 
+void setup_slime(Entity* en) 
+{
+	en -> entityID = ENTITY_enemy;
+    en -> spriteID = SPRITE_slime;
+	en -> health = 20;
+	en -> max_health = 20;
+	en -> health_regen = 0;
+	en -> speed = 5;
+}
+
 void setup_target(Entity* en) 
 {
 	en -> entityID = ENTITY_enemy;
@@ -475,6 +493,7 @@ Entity* entity_create()
 			break;
 		}
 	}
+	//log("%i", world -> current_floor);
 	assert(entity_found, "No more free entities!");
 
 	entity_found -> is_valid = true;
@@ -647,6 +666,48 @@ void setup_crates(FloorData *floor, int tile_width, int num_crates, int floorID)
     }
 }
 
+void spawn_enemies(SpriteID enemyID, FloorData *floor, int tile_width, float spawn_chance)
+{
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
+    {
+		if (floor -> tiles[i].is_valid == true)
+		{
+			TileData *tile_data = & floor -> tiles[i];
+
+			// 0 or 1
+			float random_value = (float)rand() / RAND_MAX;
+
+			if (random_value < spawn_chance) 
+			{
+				Entity* enemy = entity_create();
+
+				switch (enemyID) 
+				{
+					case SPRITE_slime:
+					{
+						setup_slime(enemy);
+						break;
+					}
+
+					default: 
+					{
+						log_error("no enemy of type"); 
+						break;
+					}
+				}
+
+				int x = tile_data -> tile.x;
+				int y = tile_data -> tile.y;
+
+				enemy -> pos = v2((x * tile_width), (y * tile_width));
+			}
+		}
+		else
+		{
+			continue;
+		}
+    }
+}
 FloorData create_empty_floor(bool first_floor, int floorID)
 {
 	FloorData floor;
@@ -725,6 +786,7 @@ void load_next_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor++;
+			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], tile_width, 0.005);
 		}
 	}
 	else
@@ -752,6 +814,7 @@ void load_previous_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor--;
+			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], tile_width, 0.005);
 		}
 	}
 	else
@@ -1201,7 +1264,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *entity = & world -> floors -> entities[i];
+		Entity *entity = & world -> floors[world -> current_floor].entities[i];
 
 		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
 		{
@@ -1586,7 +1649,7 @@ void world_setup()
 	{
 		world -> current_floor = 0;
 	}
-
+	log("%i current floor", world -> current_floor);
 	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
 	world -> active_floors++;
 
@@ -1966,6 +2029,7 @@ void render_entities()
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 	{
 		Entity* en = & world -> floors[world -> current_floor].entities[i];
+		//log("%i floor in rendering",  world -> current_floor);
 
 		if (en -> is_valid)
 		{
@@ -2003,7 +2067,10 @@ void render_entities()
 
 					//world space current location debug for object pos
 					//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
-
+								
+					// floor debug
+					//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), en -> current_floor), font_height, en -> pos, v2(0.2, 0.2), COLOR_WHITE);
+					
 					break;
 				}
 			}
