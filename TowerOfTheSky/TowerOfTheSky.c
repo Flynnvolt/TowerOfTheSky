@@ -49,10 +49,11 @@ enum SpriteID
 	SPRITE_exp_vein = 4,
 	SPRITE_fireball_sheet = 5,
 	SPRITE_target = 6,
-	SPRITE_stairs_up = 7,
-	SPRITE_stairs_down = 8,
-	SPRITE_crate = 9,
-	SPRITE_slime = 10,
+	SPRITE_wall = 7,
+	SPRITE_stairs_up = 8,
+	SPRITE_stairs_down = 9,
+	SPRITE_crate = 10,
+	SPRITE_slime = 11,
 	SPRITE_MAX,
 };
 
@@ -130,6 +131,7 @@ enum BuildingID
 	BUILDING_stairs_down,
 	BUILDING_research_station,
 	BUILDING_crate,
+	BUILDING_wall,
 	BUILDING_MAX,
 };
 
@@ -341,6 +343,12 @@ void LoadSpriteData()
 	};
 
 	// Buildings
+	sprites[SPRITE_wall] = (SpriteData)
+	{ 
+		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/wall.png"), get_heap_allocator()), 
+		.spriteID = SPRITE_wall
+	};
+
 	sprites[SPRITE_research_station] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
@@ -505,6 +513,17 @@ BuildingData setup_building_crate()
     return  building;
 }
 
+BuildingData setup_building_wall() 
+{
+    BuildingData building;
+    building.buildingID = BUILDING_wall;
+    building.spriteData = sprites[SPRITE_wall];
+    building.is_valid = true;
+    strcpy(building.pretty_name, "wall"); 
+    strcpy(building.description, "a sturdy wall"); 
+    return  building;
+}
+
 Entity* entity_create() 
 {
 	Entity* entity_found = 0;
@@ -610,7 +629,7 @@ bool is_even(int number)
     return number % 2 == 0;
 }
 
-void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorID)
+void setup_stairs(FloorData *floor, bool first_floor, int floorID)
 {
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
@@ -657,7 +676,7 @@ void setup_stairs(FloorData *floor, int tile_width, bool first_floor, int floorI
     }
 }
 
-void setup_crates(FloorData *floor, int tile_width, int num_crates, int floorID)
+void setup_crates(FloorData *floor, int num_crates, int floorID)
 {
     int placed_crates = 0;
 
@@ -689,6 +708,28 @@ void setup_crates(FloorData *floor, int tile_width, int num_crates, int floorID)
         tile_data -> building.current_floor = floorID;
 
         placed_crates++;
+    }
+}
+
+void setup_walls(FloorData *floor, int floorID)
+{
+    for (int i = 0; i < MAX_TILE_COUNT; i++)
+    {
+        TileData *tile_data = & floor -> tiles[i];
+
+        int x = tile_data->tile.x;
+        int y = tile_data->tile.y;
+
+        float dx = (float)x;
+        float dy = (float)y;
+        float distance = sqrtf(dx * dx + dy * dy); 
+
+        if (distance >= (tile_radius - 1.0f) && distance <= tile_radius && !tile_data->building.is_valid)
+        {
+            tile_data->building = setup_building_wall();
+            tile_data->building.pos = v2((x * tile_width), (y * tile_width));
+            tile_data->building.current_floor = floorID;
+        }
     }
 }
 
@@ -741,9 +782,11 @@ FloorData create_empty_floor(bool first_floor, int floorID)
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
-    setup_stairs(& floor, tile_width, first_floor, floorID);
+	setup_walls(& floor, floorID);
 
-	setup_crates(& floor, tile_width, 10, floorID);
+    setup_stairs(& floor, first_floor, floorID);
+
+	setup_crates(& floor, 10, floorID);
 
 	floor.is_valid = true;
 	floor.floorID = floorID;
