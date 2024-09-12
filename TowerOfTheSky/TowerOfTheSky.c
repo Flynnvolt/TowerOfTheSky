@@ -179,6 +179,17 @@ struct Projectile
 
 // :UX
 
+typedef enum EnemyState EnemyState;
+
+enum EnemyState
+{
+	ENEMYSTATE_idle,
+	ENEMYSTATE_sleep,
+	ENEMYSTATE_patrol,
+	ENEMYSTATE_combat,
+	ENEMYSTATE_flee,
+};
+
 typedef enum UXState UXState;
 
 enum UXState
@@ -228,6 +239,8 @@ struct World
 	Projectile projectiles[MAX_PROJECTILES];
 
 	ItemData items[ITEM_MAX];
+
+	EnemyState enemy_states[MAX_ENTITY_COUNT];
 	
 	int current_floor;
 
@@ -401,6 +414,7 @@ void setup_player(Entity* player_en)
 	player_en -> health = 100;
 	player_en -> max_health = 100;
 	player_en -> health_regen = 4;
+	player_en -> speed = 75;
 	player_en -> pos = v2(0, 0);
 	player_en -> pos = round_v2_to_tile(player_en -> pos);
 	player_en -> pos.y -= tile_width * 0.5;
@@ -417,7 +431,7 @@ void setup_slime(Entity* en)
 	en -> health = 20;
 	en -> max_health = 20;
 	en -> health_regen = 0;
-	en -> speed = 5;
+	en -> speed = 20;
 }
 
 void setup_target(Entity* en) 
@@ -1286,6 +1300,37 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 	}
 	
 	return NULL;
+}
+
+void update_enemy_states(Entity *enemy, float delta_time)
+{
+    if (!enemy -> is_valid) return;
+
+	Entity *player = get_player();
+
+	Vector2 player_center = v2((player -> pos.x + (sprites[player -> spriteID].image -> width * 0.5f)), 
+							(player -> pos.y + (sprites[player -> spriteID].image -> height * 0.5f)));
+
+	float distance_to_player = v2_distance(enemy -> pos, player_center);
+
+	// Only move enemy if close to player
+	if (distance_to_player <= 150)
+	{
+		Vector2 direction = v2_sub(player_center, enemy -> pos);
+		float length = v2_length(direction);
+
+		if (length != 0.0f)
+		{
+			direction = v2_scale(direction, 1.0f / length);
+		}
+
+		// Calculate velocity based on the direction and enemy speed
+		Vector2 velocity = v2_scale(direction, enemy -> speed);
+
+		Vector2 movement = v2_scale(velocity, delta_time);
+
+		updateEntity(enemy, movement);
+	}
 }
 
 void update_projectile(Projectile *projectile, float delta_time) 
@@ -2229,6 +2274,25 @@ int entry(int argc, char **argv)
 			}
 		}
 
+		tm_scope("Update enemies")
+		{
+			// Loop through all enemies and update enemy state
+			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+			{	
+				if (world -> floors[world -> current_floor].entities[i].is_valid == true) 
+				{
+					if (world -> floors[world -> current_floor].entities[i].entityID == ENTITY_player)
+					{
+						continue;
+					}
+					else
+					{
+						update_enemy_states(& world -> floors[world -> current_floor].entities[i], delta_t);
+					}
+				}
+			}
+		}
+
 		if(is_key_just_pressed(KEY_F7))
 		{
 			load_previous_floor();
@@ -2283,7 +2347,7 @@ int entry(int argc, char **argv)
 
 					if(mana.current >= fireball_cost)
 					{
-						spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 30.0, 1000, 5);
+						spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
 						mana.current -= fireball_cost;
 					}
 				}
@@ -2327,7 +2391,11 @@ int entry(int argc, char **argv)
 		tm_scope("Move player & Collision")
 		{
 			// Update player position based on input
-			updateEntity(player, v2_mulf(input_axis, 100.0 * delta_t));
+			Vector2 velocity = v2_scale(input_axis, player -> speed);
+
+			Vector2 movement = v2_scale(velocity, delta_t);
+
+			updateEntity(player, movement);
 
 			// Get player position with sprite size offset for X only
 			Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
