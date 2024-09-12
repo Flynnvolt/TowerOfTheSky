@@ -190,6 +190,18 @@ enum EnemyState
 	ENEMYSTATE_flee,
 };
 
+typedef struct EnemyLogic EnemyLogic;
+
+struct EnemyLogic
+{
+	EnemyState enemy_state;
+	bool state_setup;
+	float roam_time;
+	Vector2 roam_direction;
+	float idle_time;
+	float flee_time;
+};
+
 typedef enum UXState UXState;
 
 enum UXState
@@ -240,7 +252,7 @@ struct World
 
 	ItemData items[ITEM_MAX];
 
-	EnemyState enemy_states[MAX_ENTITY_COUNT];
+	EnemyLogic enemy_logic[MAX_ENTITY_COUNT];
 	
 	int current_floor;
 
@@ -267,14 +279,14 @@ WorldFrame world_frame;
 
 // :Setup
 
-void update_floor_cooldown(float delta_time) 
+void update_cooldown(float *cooldown) 
 {
-    if (world -> floor_cooldown > 0) 
+    if (*cooldown > 0) 
     {
-        world -> floor_cooldown -= delta_time;
-        if (world -> floor_cooldown < 0) 
+        *cooldown -= delta_t;
+        if (*cooldown < 0) 
         {
-            world -> floor_cooldown = 0;
+            *cooldown = 0;
         }
     }
 }
@@ -284,7 +296,7 @@ Vector2 get_sprite_size(SpriteData spritedata)
     if (spritedata.image == NULL) 
     {
         log("Error: spritedata or image is NULL.\n");
-        return (Vector2) {0, 0}; // Return a default value or handle the error as needed
+        return (Vector2) {0, 0};
     }
 
     return (Vector2) {spritedata.image -> width, spritedata.image -> height};
@@ -428,9 +440,9 @@ void setup_slime(Entity* en)
 {
 	en -> entityID = ENTITY_enemy;
     en -> spriteID = SPRITE_slime;
-	en -> health = 20;
-	en -> max_health = 20;
-	en -> health_regen = 0;
+	en -> health = 50;
+	en -> max_health = 50;
+	en -> health_regen = 0.1;
 	en -> speed = 20;
 }
 
@@ -725,7 +737,7 @@ void spawn_enemies(SpriteID enemyID, FloorData *floor, int tile_width, float spa
 FloorData create_empty_floor(bool first_floor, int floorID)
 {
 	FloorData floor;
-	memset(& floor, 0, sizeof(FloorData)); // Initialize the FloorData structure
+	memset(& floor, 0, sizeof(FloorData));
 
 	create_circle_floor_data(& floor, tile_radius, tile_width);
 
@@ -1092,7 +1104,6 @@ void collide_visual_debug_buildings(Entity *current_entity)
 {
 	float half_tile_width = tile_width * 0.5f;
 
-    // Loop through the tiles, not entities
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
         BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
@@ -1286,7 +1297,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 	{
 		Entity *entity = & world -> floors[world -> current_floor].entities[i];
 
-		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the source entity
+		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the caster
 		{
 			SpriteData spritedata = sprites[entity -> spriteID];
 			int entity_width = spritedata.image -> width;
@@ -1308,9 +1319,14 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 	return NULL;
 }
 
-void update_enemy_states(Entity *enemy, float delta_time)
+void update_enemy_states(Entity *enemy, int enemyMemoryID)
 {
     if (!enemy -> is_valid) return;
+
+	if (world -> enemy_logic[enemyMemoryID].state_setup == false)
+	{
+		world -> enemy_logic[enemyMemoryID].state_setup = true;
+	}
 
 	Entity *player = get_player();
 
@@ -1318,10 +1334,64 @@ void update_enemy_states(Entity *enemy, float delta_time)
 							(player -> pos.y + (sprites[player -> spriteID].image -> height * 0.5f)));
 
 	float distance_to_player = v2_distance(enemy -> pos, player_center);
+	
+	// wander
+	if (distance_to_player >= 150)
+	{
+		world -> enemy_logic[enemyMemoryID].enemy_state = ENEMYSTATE_patrol;
+
+		if (world -> enemy_logic[enemyMemoryID].roam_time <= 0)
+		{
+			world -> enemy_logic[enemyMemoryID].roam_time = 3;
+
+			// random direction for wandering
+			float random_angle = (float)(rand() % 360) * (PI32/ 180.0f);
+			world -> enemy_logic[enemyMemoryID].roam_direction.x = cosf(random_angle);
+			world -> enemy_logic[enemyMemoryID].roam_direction.y = sinf(random_angle);
+		}
+		else
+		{
+			update_cooldown(& world -> enemy_logic[enemyMemoryID].roam_time);
+		}
+	
+		Vector2 direction = world -> enemy_logic[enemyMemoryID].roam_direction;
+
+		Vector2 velocity = v2_scale(direction, enemy -> speed);
+
+		Vector2 movement = v2_scale(velocity, delta_t);
+
+		updateEntity(enemy, movement);
+
+		return;
+	}
+
+	// flee if low hp
+	if (distance_to_player <= 150 && enemy -> health < (enemy -> max_health / 4))
+	{
+		world -> enemy_logic[enemyMemoryID].enemy_state = ENEMYSTATE_flee;
+
+		Vector2 direction = v2_add(player_center, enemy -> pos);
+		float length = v2_length(direction);
+
+		if (length != 0.0f)
+		{
+			direction = v2_scale(direction, 1.0f / length);
+		}
+
+		Vector2 velocity = v2_scale(direction, enemy -> speed);
+
+		Vector2 movement = v2_scale(velocity, delta_t);
+
+		updateEntity(enemy, movement);
+
+		return;
+	}
 
 	// Only move enemy if close to player
 	if (distance_to_player <= 150)
 	{
+		world -> enemy_logic[enemyMemoryID].enemy_state = ENEMYSTATE_combat;
+
 		Vector2 direction = v2_sub(player_center, enemy -> pos);
 		float length = v2_length(direction);
 
@@ -1330,12 +1400,13 @@ void update_enemy_states(Entity *enemy, float delta_time)
 			direction = v2_scale(direction, 1.0f / length);
 		}
 
-		// Calculate velocity based on the direction and enemy speed
 		Vector2 velocity = v2_scale(direction, enemy -> speed);
 
-		Vector2 movement = v2_scale(velocity, delta_time);
+		Vector2 movement = v2_scale(velocity, delta_t);
 
 		updateEntity(enemy, movement);
+
+		return;
 	}
 }
 
@@ -2229,7 +2300,7 @@ int entry(int argc, char **argv)
 			world -> time_elapsed += delta_t;
 		}
 
-		update_floor_cooldown(delta_t);
+		update_cooldown(& world -> floor_cooldown);
 
 		FloorData* floor_data = & world -> floors[world -> current_floor];
 
@@ -2293,7 +2364,7 @@ int entry(int argc, char **argv)
 					}
 					else
 					{
-						update_enemy_states(& world -> floors[world -> current_floor].entities[i], delta_t);
+						update_enemy_states(& world -> floors[world -> current_floor].entities[i], i);
 					}
 				}
 			}
