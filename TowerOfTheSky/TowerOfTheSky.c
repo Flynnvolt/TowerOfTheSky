@@ -586,7 +586,7 @@ void entity_destroy(Entity* entity)
 
 // :Functions
 
-void create_circle_floor_data(FloorData* floor, float tile_radius, int tile_width)
+void create_circle_floor_data(FloorData* floor)
 {
     float tile_radius_squared = tile_radius * tile_radius;
     
@@ -691,9 +691,9 @@ void setup_crates(FloorData *floor, int num_crates, int floorID)
         int y = tile_data -> tile.y;
 
         // Check if the tile already has a building
-        if (tile_data -> building.is_valid)
+        if (tile_data -> building.is_valid == true)
         {
-            continue; // Skip to the next iteration if the tile is occupied
+            continue;
         }
 
         // Avoid placing crates in the central area
@@ -701,6 +701,18 @@ void setup_crates(FloorData *floor, int num_crates, int floorID)
         {
             continue;
         }
+
+		float floor_radius = 30;  
+		float edge_thickness = 5;  
+
+		float distance_from_center = sqrtf(x * x + y * y);
+
+		// Avoid placing crates on the edges
+		if (distance_from_center >= (floor_radius - edge_thickness) && 
+			distance_from_center <= floor_radius)
+		{
+			continue;
+		}
 
         // Place a crate on this tile
         tile_data -> building = setup_building_crate();
@@ -724,11 +736,11 @@ void setup_walls(FloorData *floor, int floorID)
         float dy = (float)y;
         float distance = sqrtf(dx * dx + dy * dy); 
 
-        if (distance >= (tile_radius - 1.0f) && distance <= tile_radius && !tile_data->building.is_valid)
+        if (distance >= (tile_radius - 1.0f) && distance <= tile_radius && !tile_data -> building.is_valid)
         {
-            tile_data->building = setup_building_wall();
-            tile_data->building.pos = v2((x * tile_width), (y * tile_width));
-            tile_data->building.current_floor = floorID;
+            tile_data -> building = setup_building_wall();
+            tile_data -> building.pos = v2((x * tile_width), (y * tile_width));
+            tile_data -> building.current_floor = floorID;
         }
     }
 }
@@ -740,6 +752,27 @@ void spawn_enemies(SpriteID enemyID, FloorData *floor, int tile_width, float spa
 		if (floor -> tiles[i].is_valid == true)
 		{
 			TileData *tile_data = & floor -> tiles[i];
+
+			int x = tile_data -> tile.x;
+			int y = tile_data -> tile.y;
+
+			// skip if building is on tile
+			if (tile_data -> building.is_valid == true)
+			{
+				continue;
+			}
+
+			float floor_radius = 30;  
+			float edge_thickness = 5;  
+
+			float distance_from_center = sqrtf(x * x + y * y);
+
+			// Avoid placing enemies on the edges
+			if (distance_from_center >= (floor_radius - edge_thickness) && 
+				distance_from_center <= floor_radius)
+			{
+				continue;
+			}
 
 			// 0 or 1
 			float random_value = (float)rand() / RAND_MAX;
@@ -763,9 +796,6 @@ void spawn_enemies(SpriteID enemyID, FloorData *floor, int tile_width, float spa
 					}
 				}
 
-				int x = tile_data -> tile.x;
-				int y = tile_data -> tile.y;
-
 				enemy -> pos = v2((x * tile_width), (y * tile_width));
 			}
 		}
@@ -775,18 +805,22 @@ void spawn_enemies(SpriteID enemyID, FloorData *floor, int tile_width, float spa
 		}
     }
 }
+
 FloorData create_empty_floor(bool first_floor, int floorID)
 {
 	FloorData floor;
 	memset(& floor, 0, sizeof(FloorData));
 
-	create_circle_floor_data(& floor, tile_radius, tile_width);
+	create_circle_floor_data(& floor);
 
 	setup_walls(& floor, floorID);
 
     setup_stairs(& floor, first_floor, floorID);
 
-	setup_crates(& floor, 10, floorID);
+	if(first_floor == false)
+	{
+		setup_crates(& floor, 10, floorID);
+	}
 
 	floor.is_valid = true;
 	floor.floorID = floorID;
@@ -2508,7 +2542,7 @@ int entry(int argc, char **argv)
 		
 		Entity *player = get_player();
 
-		tm_scope("Move player & Collision")
+		tm_scope("Move player")
 		{
 			// Update player position based on input
 			Vector2 velocity = v2_scale(input_axis, player -> speed);
@@ -2516,28 +2550,6 @@ int entry(int argc, char **argv)
 			Vector2 movement = v2_scale(velocity, delta_t);
 
 			updateEntity(player, movement);
-
-			// Get player position with sprite size offset for X only
-			Vector2 player_pos = v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y));
-
-			// Lock player to a circle about the size of the play area.
-			float player_radius = (tile_radius * tile_width) - tile_width;
-
-			float dx = player_pos.x;
-			float dy = player_pos.y;
-			float distance_squared = dx * dx + dy * dy;
-
-			// Check if the player is outside the circle
-			if (distance_squared > player_radius * player_radius) 
-			{
-				// Normalize the player's position
-				float distance = sqrtf(distance_squared);
-				float scale_factor = player_radius / distance;
-
-				// Adjust the player's position to the boundary of the circle
-				player -> pos.x *= scale_factor;
-				player -> pos.y *= scale_factor;
-			}
 		}
 
 		// load/save commands
