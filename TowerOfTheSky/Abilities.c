@@ -167,9 +167,9 @@ typedef enum AbilityList AbilityList;
 
 enum AbilityList
 {
-    Ability_channel_mana,
-    Ability_wisdom,
-    Ability_focus,
+    ABILITY_channel_mana,
+    ABILITY_wisdom,
+    ABILITY_focus,
 };
 
 // Leveling up abilities
