@@ -117,8 +117,8 @@ struct Entity
 	float health_regen;
 	float speed;
 	bool is_immortal;
-	float xRemainder;
-	float yRemainder;
+	float x_remainder;
+	float y_remainder;
 	int current_floor;
 };
 
@@ -742,7 +742,7 @@ void setup_walls(FloorData *floor, int floor_ID)
     }
 }
 
-void spawn_enemies(SpriteID enemy_ID, FloorData *floor, int tile_width, float spawn_chance)
+void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 {
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
@@ -825,7 +825,7 @@ FloorData create_empty_floor(bool first_floor, int floor_ID)
 	return floor;
 }
 
-void render_floor_tiles(FloorData* floor, float tile_width, Vector4 color_0)
+void render_floor_tiles(FloorData* floor, Vector4 color_0)
 {	
 	float half_tile_width = tile_width * 0.5f;
 
@@ -883,7 +883,7 @@ void load_next_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor++;
-			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], tile_width, 0.005);
+			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], 0.005);
 		}
 	}
 	else
@@ -911,7 +911,7 @@ void load_previous_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor--;
-			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], tile_width, 0.005);
+			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], 0.005);
 		}
 	}
 	else
@@ -920,7 +920,7 @@ void load_previous_floor()
 	}
 }
 
-void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
+void render_buildings(FloorData* floor, Vector4 color_0)
 {
 	float half_tile_width = tile_width * 0.5f;
 
@@ -936,9 +936,9 @@ void render_buildings(FloorData* floor, float tile_width, Vector4 color_0)
 
 		if(tile_data -> building.building_ID != 0)
 		{
-			SpriteData spritedata = tile_data -> building.sprite_data;
+			SpriteData sprite_data = tile_data -> building.sprite_data;
 
-			Vector2 sprite_size = get_sprite_size(spritedata);
+			Vector2 sprite_size = get_sprite_size(sprite_data);
 
 			Matrix4 xform = m4_scalar(1.0);
 
@@ -1151,15 +1151,15 @@ void collide_visual_debug(Entity *current_entity)
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
-			SpriteData spritedata = sprites[actor -> sprite_ID];
-			int sprite_width = spritedata.image -> width;
-			int sprite_height = spritedata.image -> height;
+			SpriteData sprite_data = sprites[actor -> sprite_ID];
+			int sprite_width = sprite_data.image -> width;
+			int sprite_height = sprite_data.image -> height;
 
-			SpriteData spritedata2 = sprites[current_entity -> sprite_ID];
+			SpriteData sprite_data_2 = sprites[current_entity -> sprite_ID];
 
 			// Visual Debug tools
 			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(spritedata2.image -> width, spritedata2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite_data_2.image -> width, sprite_data_2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
 			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
 		}
 	}
@@ -1175,9 +1175,9 @@ void collide_visual_debug_buildings(Entity *current_entity)
 
         if (building -> is_valid) 
         {
-            SpriteData spritedata = building -> sprite_data;
-            int sprite_width = spritedata.image -> width;
-            int sprite_height = spritedata.image -> height;
+            SpriteData sprite_data = building -> sprite_data;
+            int sprite_width = sprite_data.image -> width;
+            int sprite_height = sprite_data.image -> height;
 
             // Visual Debug tools
             draw_rect(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
@@ -1187,12 +1187,12 @@ void collide_visual_debug_buildings(Entity *current_entity)
 
 void MoveEntityX(Entity *entity, float amount) 
 {
-    entity -> xRemainder += amount;
-    int move = roundf(entity -> xRemainder);
+    entity -> x_remainder += amount;
+    int move = roundf(entity -> x_remainder);
 
     if (move != 0) 
     {
-        entity -> xRemainder -= move;
+        entity -> x_remainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
         if (!collideAt(entity, entity -> pos.x + movement_direction, entity -> pos.y)) 
@@ -1205,12 +1205,12 @@ void MoveEntityX(Entity *entity, float amount)
 
 void MoveEntityY(Entity *entity, float amount) 
 {
-    entity -> yRemainder += amount;
-    int move = roundf(entity -> yRemainder);
+    entity -> y_remainder += amount;
+    int move = roundf(entity -> y_remainder);
 
     if (move != 0) 
     {
-        entity -> yRemainder -= move;
+        entity -> y_remainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
         if (!collideAt(entity, entity -> pos.x, entity -> pos.y + movement_direction)) 
@@ -1359,9 +1359,9 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 
 		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the caster
 		{
-			SpriteData spritedata = sprites[entity -> sprite_ID];
-			int entity_width = spritedata.image -> width;
-			int entity_height = spritedata.image -> height;
+			SpriteData sprite_data = sprites[entity -> sprite_ID];
+			int entity_width = sprite_data.image -> width;
+			int entity_height = sprite_data.image -> height;
 
 			int entity_x_end = entity -> pos.x + entity_width;
 			int entity_y_end = entity -> pos.y + entity_height;
@@ -1656,7 +1656,7 @@ Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector
 	Draw_Quad* quad = draw_rect_xform(xform, v2(button_size, button_size), color);
 
 	// Setup box for mouse collision
-	Range2f btn_range = range2f_make_bottom_left(button_position, button_size_v2);
+	Range2f button_range = range2f_make_bottom_left(button_position, button_size_v2);
 
 	// Draw Button Text
 	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
@@ -2051,7 +2051,7 @@ void do_ui_stuff()
 					Matrix4 xform = m4_scalar(1.0);
 
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-					SpriteData spritedata = item -> sprite_data;
+					SpriteData sprite_data = item -> sprite_data;
 					Vector2 icon_positon = v2(x_start_pos + slot_index_offset, y_pos);
 					
 					// White transparent box to show item slot is filled.
@@ -2106,7 +2106,7 @@ void do_ui_stuff()
 
 					//draw_image_xform(sprite -> image, xform, v2(icon_size, icon_size), COLOR_WHITE); // old
 
-					draw_sprite_in_rect(spritedata, box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
+					draw_sprite_in_rect(sprite_data, box, COLOR_WHITE, 0.2); // New sprite rendering from randy day 11
 				
 					// Tooltip
 					if (is_selected_alpha == 1.0)
@@ -2362,12 +2362,12 @@ int entry(int argc, char **argv)
 
 		tm_scope("Render Floor Tiles")
 		{
-			render_floor_tiles(floor_data, tile_width, color_0);
+			render_floor_tiles(floor_data, color_0);
 		}
 
 		tm_scope("Render Buildings")
 		{
-			render_buildings(floor_data, tile_width, color_0);
+			render_buildings(floor_data, color_0);
 		}
 
 		tm_scope("Render entities")
@@ -2439,19 +2439,19 @@ int entry(int argc, char **argv)
 		//Render player
 		{
 			Entity *player = get_player();
-			SpriteData spritedata = sprites[player -> sprite_ID];
+			SpriteData sprite_data = sprites[player -> sprite_ID];
 
-			Vector2 sprite_size = get_sprite_size(spritedata);
+			Vector2 sprite_size = get_sprite_size(sprite_data);
 
 			Matrix4 xform = m4_scalar(1.0);
 
 			xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
 
 			Vector4 col = COLOR_WHITE;
-			draw_image_xform(spritedata.image, xform, sprite_size, col);
+			draw_image_xform(sprite_data.image, xform, sprite_size, col);
 
 			// Healthbar test values
-			Vector2 health_bar_pos = v2((player -> pos.x + (spritedata.image -> width * 0.5)), (player -> pos.y + (spritedata.image -> height)));
+			Vector2 health_bar_pos = v2((player -> pos.x + (sprite_data.image -> width * 0.5)), (player -> pos.y + (sprite_data.image -> height)));
 
 			// Temperary render player healthbar test
 			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
