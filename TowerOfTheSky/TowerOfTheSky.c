@@ -2269,6 +2269,7 @@ int entry(int argc, char **argv)
 	window.y = 0;
 
 	window.clear_color = COLOR_BLACK;
+	window.force_topmost = false;
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 
