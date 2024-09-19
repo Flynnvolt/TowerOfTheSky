@@ -1,4 +1,8 @@
-#include "TowerOfTheSky.h"
+#include "Range.c"
+#include "AnimationData.c"
+#include "TutorialMath.c"
+#include "Projectile.c"
+#include "Abilities.c"
 
 // Defines
 
@@ -42,18 +46,18 @@ typedef enum SpriteID SpriteID;
 
 enum SpriteID
 {
-	SPRITE_nil = 0,
-	SPRITE_player = 1,
-	SPRITE_research_station = 2,
-	SPRITE_exp = 3,
-	SPRITE_exp_vein = 4,
-	SPRITE_fireball_sheet = 5,
-	SPRITE_target = 6,
-	SPRITE_wall = 7,
-	SPRITE_stairs_up = 8,
-	SPRITE_stairs_down = 9,
-	SPRITE_crate = 10,
-	SPRITE_slime = 11,
+	SPRITE_Nil = 0,
+	SPRITE_Player = 1,
+	SPRITE_Research_Station = 2,
+	SPRITE_Exp = 3,
+	SPRITE_Exp_Vein = 4,
+	SPRITE_Fireball_Sheet = 5,
+	SPRITE_Target = 6,
+	SPRITE_Wall = 7,
+	SPRITE_Stairs_Up = 8,
+	SPRITE_Stairs_Down = 9,
+	SPRITE_Crate = 10,
+	SPRITE_Slime = 11,
 	SPRITE_MAX,
 };
 
@@ -73,10 +77,10 @@ typedef enum ItemID ItemID;
 
 enum ItemID
 {
-	ITEM_nil,
-	ITEM_rock,
-	ITEM_pine_wood,
-	ITEM_exp,
+	ITEM_Nil,
+	ITEM_Rock,
+	ITEM_Pine_Wood,
+	ITEM_Exp,
 	ITEM_MAX,
 };
 
@@ -98,9 +102,9 @@ typedef enum EntityID EntityID;
 
 enum EntityID
 {
-	ENTITY_nil,
-	ENTITY_player,
-	ENTITY_enemy,
+	ENTITY_Nil,
+	ENTITY_Player,
+	ENTITY_Enemy,
 	ENTITY_MAX,
 };
 
@@ -126,12 +130,12 @@ typedef enum BuildingID BuildingID;
 
 enum BuildingID 
 {
-	BUILDING_nil,
-	BUILDING_stairs_up,
-	BUILDING_stairs_down,
-	BUILDING_research_station,
-	BUILDING_crate,
-	BUILDING_wall,
+	BUILDING_Nil,
+	BUILDING_Stairs_Up,
+	BUILDING_stairs_Down,
+	BUILDING_Research_Station,
+	BUILDING_Crate,
+	BUILDING_Wall,
 	BUILDING_MAX,
 };
 
@@ -304,7 +308,7 @@ Vector2 get_sprite_size(SpriteData sprite_data)
     return (Vector2) {sprite_data.image -> width, sprite_data.image -> height};
 }
 
-void LoadSpriteData()
+void load_sprite_data()
 {
 	// :Load Sprites
 
@@ -312,78 +316,78 @@ void LoadSpriteData()
 	sprites[0] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_nil
+		.sprite_ID = SPRITE_Nil
 	};
 
 	// Player
-	sprites[SPRITE_player] = (SpriteData)
+	sprites[SPRITE_Player] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_player
+		.sprite_ID = SPRITE_Player
 	};
 
 	// Entities
-	sprites[SPRITE_target] = (SpriteData)
+	sprites[SPRITE_Target] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_target
+		.sprite_ID = SPRITE_Target
 	};
 
-	sprites[SPRITE_slime] = (SpriteData)
+	sprites[SPRITE_Slime] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/slime.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_slime
+		.sprite_ID = SPRITE_Slime
 	};
 
 	// Items
-	sprites[SPRITE_exp] = (SpriteData)
+	sprites[SPRITE_Exp] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_exp
+		.sprite_ID = SPRITE_Exp
 	};
 
 	// Buildings
-	sprites[SPRITE_wall] = (SpriteData)
+	sprites[SPRITE_Wall] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/wall.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_wall
+		.sprite_ID = SPRITE_Wall
 	};
 
-	sprites[SPRITE_research_station] = (SpriteData)
+	sprites[SPRITE_Research_Station] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_research_station
+		.sprite_ID = SPRITE_Research_Station
 	};
 
-	sprites[SPRITE_exp_vein] = (SpriteData)
+	sprites[SPRITE_Exp_Vein] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_exp_vein
+		.sprite_ID = SPRITE_Exp_Vein
 	};
 
-	sprites[SPRITE_stairs_up] = (SpriteData)
+	sprites[SPRITE_Stairs_Up] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_stairs_up
+		.sprite_ID = SPRITE_Stairs_Up
 	};
 
-	sprites[SPRITE_stairs_down] = (SpriteData)
+	sprites[SPRITE_Stairs_Down] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_stairs_down
+		.sprite_ID = SPRITE_Stairs_Down
 	};
 
-	sprites[SPRITE_crate] = (SpriteData)
+	sprites[SPRITE_Crate] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/crate.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_crate
+		.sprite_ID = SPRITE_Crate
 	};
 
 	// Spells
-	sprites[SPRITE_fireball_sheet] = (SpriteData)
+	sprites[SPRITE_Fireball_Sheet] = (SpriteData)
 	{ 
 		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_fireball_sheet
+		.sprite_ID = SPRITE_Fireball_Sheet
 	};
 
 	#if CONFIGURATION == DEBUG
@@ -402,7 +406,7 @@ Entity* get_player()
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
 		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_player) 
+		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
 		{
 			world_frame.player = en;
 			return world_frame.player;
@@ -419,7 +423,7 @@ int get_player_data_location()
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
 		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_player) 
+		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
 		{
 			data_location = i;
 		}
@@ -429,8 +433,8 @@ int get_player_data_location()
 
 void setup_player(Entity* player_en) 
 {
-	player_en -> entity_ID = ENTITY_player;
-    player_en -> sprite_ID = SPRITE_player;
+	player_en -> entity_ID = ENTITY_Player;
+    player_en -> sprite_ID = SPRITE_Player;
 	player_en -> health = 100;
 	player_en -> max_health = 100;
 	player_en -> health_regen = 4;
@@ -446,8 +450,8 @@ void setup_player(Entity* player_en)
 
 void setup_slime(Entity* en) 
 {
-	en -> entity_ID = ENTITY_enemy;
-    en -> sprite_ID = SPRITE_slime;
+	en -> entity_ID = ENTITY_Enemy;
+    en -> sprite_ID = SPRITE_Slime;
 	en -> health = 50;
 	en -> max_health = 50;
 	en -> health_regen = 0.1;
@@ -456,8 +460,8 @@ void setup_slime(Entity* en)
 
 void setup_target(Entity* en) 
 {
-	en -> entity_ID = ENTITY_enemy;
-    en -> sprite_ID = SPRITE_target;
+	en -> entity_ID = ENTITY_Enemy;
+    en -> sprite_ID = SPRITE_Target;
 	en -> health = 100;
 	en -> max_health = 100;
 	en -> health_regen = 25;
@@ -471,8 +475,8 @@ void setup_target(Entity* en)
 ItemData setup_exp_item() 
 {
     ItemData item;
-    item.item_ID = ITEM_exp;
-    item.sprite_data = sprites[SPRITE_exp];
+    item.item_ID = ITEM_Exp;
+    item.sprite_data = sprites[SPRITE_Exp];
     item.amount = 50;
     item.is_valid = true;
     strcpy(item.pretty_name, "EXP"); 
@@ -483,8 +487,8 @@ ItemData setup_exp_item()
 BuildingData setup_building_stairs_up()
 {
     BuildingData building;
-    building.building_ID = BUILDING_stairs_up;
-    building.sprite_data = sprites[SPRITE_stairs_up];
+    building.building_ID = BUILDING_Stairs_Up;
+    building.sprite_data = sprites[SPRITE_Stairs_Up];
     building.is_valid = true;
     strcpy(building.pretty_name, "Stairs that go up"); 
     strcpy(building.description, "Travel between floors"); 
@@ -494,8 +498,8 @@ BuildingData setup_building_stairs_up()
 BuildingData setup_building_stairs_down() 
 {
     BuildingData building;
-    building.building_ID = BUILDING_stairs_down;
-    building.sprite_data = sprites[SPRITE_stairs_down];
+    building.building_ID = BUILDING_stairs_Down;
+    building.sprite_data = sprites[SPRITE_Stairs_Down];
     building.is_valid = true;
     strcpy(building.pretty_name, "Stairs that go down"); 
     strcpy(building.description, "Travel between floors"); 
@@ -505,8 +509,8 @@ BuildingData setup_building_stairs_down()
 BuildingData setup_building_crate() 
 {
     BuildingData building;
-    building.building_ID = BUILDING_crate;
-    building.sprite_data = sprites[SPRITE_crate];
+    building.building_ID = BUILDING_Crate;
+    building.sprite_data = sprites[SPRITE_Crate];
     building.is_valid = true;
     strcpy(building.pretty_name, "crate"); 
     strcpy(building.description, "maybe loot?"); 
@@ -516,8 +520,8 @@ BuildingData setup_building_crate()
 BuildingData setup_building_wall() 
 {
     BuildingData building;
-    building.building_ID = BUILDING_wall;
-    building.sprite_data = sprites[SPRITE_wall];
+    building.building_ID = BUILDING_Wall;
+    building.sprite_data = sprites[SPRITE_Wall];
     building.is_valid = true;
     strcpy(building.pretty_name, "wall"); 
     strcpy(building.description, "a sturdy wall"); 
@@ -780,7 +784,7 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 
 				switch (enemy_ID) 
 				{
-					case SPRITE_slime:
+					case SPRITE_Slime:
 					{
 						setup_slime(enemy);
 						break;
@@ -883,7 +887,7 @@ void load_next_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor++;
-			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], 0.005);
+			spawn_enemies(SPRITE_Slime, & world -> floors[world -> current_floor], 0.005);
 		}
 	}
 	else
@@ -911,7 +915,7 @@ void load_previous_floor()
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
 			world -> current_floor--;
-			spawn_enemies(SPRITE_slime, & world -> floors[world -> current_floor], 0.005);
+			spawn_enemies(SPRITE_Slime, & world -> floors[world -> current_floor], 0.005);
 		}
 	}
 	else
@@ -993,22 +997,22 @@ SpriteData* get_sprite(SpriteID id)
 	return & sprites[0];
 }
 
-void PlayerDeath() 
+void player_death() 
 {
 
 }
 
-void DamagePlayer(Entity *entity, float damage)
+void damage_player(Entity *entity, float damage)
 {
 	entity -> health -= damage;
 
 	if (entity -> health <= 0)
 	{
-		PlayerDeath();
+		player_death();
 	}
 }
 
-void DamageEnemy(Entity *entity, float damage)
+void damage_enemy(Entity *entity, float damage)
 {	
 
 	entity -> health -= damage;
@@ -1026,21 +1030,21 @@ void DamageEnemy(Entity *entity, float damage)
 	}
 }
 
-void DamageEntity(Entity *entity, float damage)
+void damage_entity(Entity *entity, float damage)
 {
 	EntityID entity_ID = entity -> entity_ID;
 
 	switch (entity_ID) 
 	{
-		case ENTITY_player:
+		case ENTITY_Player:
 		{
-			DamagePlayer(entity, damage);
+			damage_player(entity, damage);
 			break;
 		}
 
-		case ENTITY_enemy:
+		case ENTITY_Enemy:
 		{
-			DamageEnemy(entity, damage);
+			damage_enemy(entity, damage);
 			break;
 		}
 		
@@ -1052,7 +1056,7 @@ void DamageEntity(Entity *entity, float damage)
 	}
 }
 
-bool collideAt(Entity *current_entity, int x, int y) 
+bool collide_at(Entity *current_entity, int x, int y) 
 {
 	SpriteData sprite_data = sprites[current_entity -> sprite_ID];
 	int width1 = sprite_data.image -> width;
@@ -1110,9 +1114,9 @@ bool collideAt(Entity *current_entity, int x, int y)
 			{
 				//log("Collision detected with building %d\n", i);
 
-				if (building -> building_ID == BUILDING_stairs_up)
+				if (building -> building_ID == BUILDING_Stairs_Up)
 				{
-					if (current_entity -> entity_ID == ENTITY_player)
+					if (current_entity -> entity_ID == ENTITY_Player)
 					{
 						if (world -> floor_cooldown <= 0)
 						{
@@ -1122,9 +1126,9 @@ bool collideAt(Entity *current_entity, int x, int y)
 					}
 				}
 
-				if (building -> building_ID == BUILDING_stairs_down)
+				if (building -> building_ID == BUILDING_stairs_Down)
 				{
-					if (current_entity -> entity_ID == ENTITY_player)
+					if (current_entity -> entity_ID == ENTITY_Player)
 					{
 						if (world -> floor_cooldown <= 0)
 						{
@@ -1185,7 +1189,7 @@ void collide_visual_debug_buildings(Entity *current_entity)
     }
 }
 
-void MoveEntityX(Entity *entity, float amount) 
+void move_entity_x(Entity *entity, float amount) 
 {
     entity -> x_remainder += amount;
     int move = roundf(entity -> x_remainder);
@@ -1195,7 +1199,7 @@ void MoveEntityX(Entity *entity, float amount)
         entity -> x_remainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
-        if (!collideAt(entity, entity -> pos.x + movement_direction, entity -> pos.y)) 
+        if (!collide_at(entity, entity -> pos.x + movement_direction, entity -> pos.y)) 
         {
             entity -> pos.x += movement_direction;
             move -= movement_direction;
@@ -1203,7 +1207,7 @@ void MoveEntityX(Entity *entity, float amount)
     }
 }
 
-void MoveEntityY(Entity *entity, float amount) 
+void move_entity_y(Entity *entity, float amount) 
 {
     entity -> y_remainder += amount;
     int move = roundf(entity -> y_remainder);
@@ -1213,7 +1217,7 @@ void MoveEntityY(Entity *entity, float amount)
         entity -> y_remainder -= move;
         int movement_direction = (move > 0) - (move < 0);
 
-        if (!collideAt(entity, entity -> pos.x, entity -> pos.y + movement_direction)) 
+        if (!collide_at(entity, entity -> pos.x, entity -> pos.y + movement_direction)) 
         {
             entity -> pos.y += movement_direction;
             move -= movement_direction;
@@ -1221,11 +1225,11 @@ void MoveEntityY(Entity *entity, float amount)
     }
 }
 
-void updateEntity(Entity *entity, Vector2 movement) 
+void update_entity(Entity *entity, Vector2 movement) 
 {
-	MoveEntityX(entity, movement.x);
+	move_entity_x(entity, movement.x);
 
-	MoveEntityY(entity, movement.y);
+	move_entity_y(entity, movement.y);
 
 	//collide_visual_debug(entity);
 
@@ -1420,7 +1424,7 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		updateEntity(enemy, movement);
+		update_entity(enemy, movement);
 
 		return;
 	}
@@ -1442,7 +1446,7 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		updateEntity(enemy, movement);
+		update_entity(enemy, movement);
 
 		return;
 	}
@@ -1464,7 +1468,7 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		updateEntity(enemy, movement);
+		update_entity(enemy, movement);
 
 		return;
 	}
@@ -1504,7 +1508,7 @@ void update_projectile(Projectile *projectile)
     Entity *hit_entity = projectile_collides_with_entity(projectile);
     if (hit_entity) 
     {
-        DamageEntity(hit_entity, projectile -> damage);
+        damage_entity(hit_entity, projectile -> damage);
 
         // Deactivate the projectile after it hits an entity
         projectile -> is_active = false;
@@ -1837,7 +1841,7 @@ void world_setup()
 	// :test stuff
 	#if defined(DEV_TESTING)
 	{
-		world -> items[ITEM_exp] = setup_exp_item();
+		world -> items[ITEM_Exp] = setup_exp_item();
 
 		// Spawn one Target
 		Entity* en = entity_create();
@@ -1933,7 +1937,7 @@ Draw_Quad* draw_sprite_in_rect(SpriteData sprite_data, Range2f rect, Vector4 col
 	return draw_image(sprite_data.image, rect.min, range2f_size(rect), col);
 }
 
-void display_skill_level_up_button(AbilityList ability, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
+void display_skill_level_up_button(SkillID ability, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
 
@@ -1943,19 +1947,19 @@ void display_skill_level_up_button(AbilityList ability, float button_size, Vecto
 
 		switch (ability) 
 		{
-			case ABILITY_channel_mana:
+			case SKILL_Channel_Mana:
 			{
 				level_up_channel_mana_if_unlocked();
 				break;
 			}
 
-			case ABILITY_wisdom:
+			case SKILL_wisdom:
 			{
 				level_up_wisdom_if_unlocked();
 				break;
 			}
 
-			case ABILITY_focus:
+			case SKILL_focus:
 			{
 				level_up_focus_if_unlocked();
 				break;
@@ -2161,7 +2165,7 @@ void do_ui_stuff()
 
 				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana.level, channel_mana.current_costs[0], channel_mana.current_effect_value);
 
-				display_skill_level_up_button(ABILITY_channel_mana, 16, v2(175, y_pos), fill_col, channel_button_text, channel_mana_tooltip);
+				display_skill_level_up_button(channel_mana.skill_ID, 16, v2(175, y_pos), fill_col, channel_button_text, channel_mana_tooltip);
 
 				//log("Level:%i, mana Regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier, channel_mana.current_costs[0], channel_mana.cost_multipliers[0], channel_mana.cost_multipliers[1]);
 			}
@@ -2173,7 +2177,7 @@ void do_ui_stuff()
 
 				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom.level, wisdom.current_costs[0], wisdom.current_effect_value);
 				
-				display_skill_level_up_button(ABILITY_wisdom, 16, v2(175, y_pos - 30), fill_col, wisdom_button_text, wisdom_tooltip);
+				display_skill_level_up_button(wisdom.skill_ID, 16, v2(175, y_pos - 30), fill_col, wisdom_button_text, wisdom_tooltip);
 			}
 			
 			// Level Up Focus Button
@@ -2183,7 +2187,7 @@ void do_ui_stuff()
 
 				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1], focus.current_effect_value);
 
-				display_skill_level_up_button(ABILITY_focus, 16, v2(175, y_pos - 60), fill_col, focus_button_text, focus_tooltip);
+				display_skill_level_up_button(focus.skill_ID, 16, v2(175, y_pos - 60), fill_col, focus_button_text, focus_tooltip);
 				
 				//log("Level:%i, intellect regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", focus.level, focus.current_effect_value, focus.current_power_multiplier, focus.current_costs[0], focus.cost_multipliers[0], focus.cost_multipliers[1]);
 			}
@@ -2213,7 +2217,7 @@ void render_entities()
 		{
 			switch (en -> entity_ID)
 			{	
-				case ENTITY_player:
+				case ENTITY_Player:
 				{
 					break;
 				}
@@ -2279,7 +2283,7 @@ int entry(int argc, char **argv)
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
-	LoadSpriteData();
+	load_sprite_data();
 
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
@@ -2415,7 +2419,7 @@ int entry(int argc, char **argv)
 			{	
 				if (world -> floors[world -> current_floor].entities[i].is_valid == true) 
 				{
-					if (world -> floors[world -> current_floor].entities[i].entity_ID == ENTITY_player)
+					if (world -> floors[world -> current_floor].entities[i].entity_ID == ENTITY_Player)
 					{
 						continue;
 					}
@@ -2529,7 +2533,7 @@ int entry(int argc, char **argv)
 
 			Vector2 movement = v2_scale(velocity, delta_t);
 
-			updateEntity(player, movement);
+			update_entity(player, movement);
 		}
 
 		// load/save commands
