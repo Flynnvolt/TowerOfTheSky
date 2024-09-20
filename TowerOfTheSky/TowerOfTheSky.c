@@ -1,22 +1,24 @@
+#pragma once
+#include "World.c"
 #include "Range.c"
 #include "AnimationData.c"
 #include "TutorialMath.c"
 #include "Projectile.c"
 #include "Abilities.c"
+#include "Limits.c"
+#include "Entities.c"
+#include "Sprites.c"
+#include "UXState.c"
+#include "Item.c"
+#include "Floor.c"
+#include "Enemy.c"
+#include "Building.c"
 
 // Defines
 
 #define DEV_TESTING
 
 #define m4_identity m4_make_scale(v3(1, 1, 1))
-
-#define MAX_PROJECTILES 100 
-
-#define MAX_ENTITY_COUNT 256
-
-#define MAX_TILE_COUNT 4096
-
-#define MAX_FLOOR_COUNT 10
 
 // :Global APP
 
@@ -39,237 +41,6 @@ const s32 Layer_WORLD = 10;
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 Vector4 color_0;
-
-// :Sprites
-
-typedef enum SpriteID SpriteID;
-
-enum SpriteID
-{
-	SPRITE_Nil = 0,
-	SPRITE_Player = 1,
-	SPRITE_Research_Station = 2,
-	SPRITE_Exp = 3,
-	SPRITE_Exp_Vein = 4,
-	SPRITE_Fireball_Sheet = 5,
-	SPRITE_Target = 6,
-	SPRITE_Wall = 7,
-	SPRITE_Stairs_Up = 8,
-	SPRITE_Stairs_Down = 9,
-	SPRITE_Crate = 10,
-	SPRITE_Slime = 11,
-	SPRITE_MAX,
-};
-
-typedef struct SpriteData SpriteData;
-
-struct SpriteData
-{
-	Gfx_Image* image;
-	SpriteID sprite_ID;
-};
-
-SpriteData sprites[SPRITE_MAX];
-
-// :Items
-
-typedef enum ItemID ItemID;
-
-enum ItemID
-{
-	ITEM_Nil,
-	ITEM_Rock,
-	ITEM_Pine_Wood,
-	ITEM_Exp,
-	ITEM_MAX,
-};
-
-typedef struct ItemData ItemData;
-
-struct ItemData
-{
-	SpriteData sprite_data;
-	bool is_valid;
-	ItemID item_ID;
-    char pretty_name[32];
-    char description[128];
-	int amount;
-};
-
-// :Entities
-
-typedef enum EntityID EntityID;
-
-enum EntityID
-{
-	ENTITY_Nil,
-	ENTITY_Player,
-	ENTITY_Enemy,
-	ENTITY_MAX,
-};
-
-typedef struct Entity Entity;
-
-struct Entity
-{
-	EntityID entity_ID;
-	bool is_valid;
-	SpriteID sprite_ID;
-	Vector2 pos;
-	float health;
-	float max_health;
-	float health_regen;
-	float speed;
-	bool is_immortal;
-	float x_remainder;
-	float y_remainder;
-	int current_floor;
-};
-
-typedef enum BuildingID BuildingID;
-
-enum BuildingID 
-{
-	BUILDING_Nil,
-	BUILDING_Stairs_Up,
-	BUILDING_stairs_Down,
-	BUILDING_Research_Station,
-	BUILDING_Crate,
-	BUILDING_Wall,
-	BUILDING_MAX,
-};
-
-typedef struct BuildingData BuildingData;
-
-struct BuildingData 
-{
-	BuildingID building_ID;
-	SpriteData sprite_data;
-	bool is_valid;
-	Vector2 pos;
-    char pretty_name[32];
-    char description[128];
-	int current_floor;
-};
-
-// :Projectiles
-
-typedef struct Projectile Projectile;
-
-struct Projectile 
-{
-    bool is_active;
-
-    AnimationInfo animation;  
-
-    Vector2 position;
-    Vector2 velocity;
-
-    Vector2 target_position; 
-
-    float distance_traveled;
-    float max_distance;
-	float time_alive;
-	float max_time_alive;
-
-    float speed;              
-    float rotation;
-    float damage;
-    float scale;
-    float radius;
-	float x_remainder;
-	float y_remainder;
-
-	Entity *source_entity; // Caster of the Projectile
-};
-
-// :UX
-
-typedef enum EnemyState EnemyState;
-
-enum EnemyState
-{
-	ENEMYSTATE_idle,
-	ENEMYSTATE_sleep,
-	ENEMYSTATE_patrol,
-	ENEMYSTATE_combat,
-	ENEMYSTATE_flee,
-};
-
-typedef struct EnemyLogic EnemyLogic;
-
-struct EnemyLogic
-{
-	EnemyState enemy_state;
-	bool state_setup;
-	float roam_time;
-	Vector2 roam_direction;
-	float idle_time;
-	float flee_time;
-};
-
-typedef enum UXState UXState;
-
-enum UXState
-{
-	UX_nil,
-	UX_inventory,
-	UX_research,
-};
-
-typedef Vector2i Tile;
- 
-typedef struct TileData TileData;
-
-struct TileData 
-{
-	Tile tile;
-	bool is_valid;
-	BuildingData building;
-};
-
-typedef struct FloorData FloorData;
-
-struct FloorData
-{
-	int floor_ID;
-	bool is_valid;
-	TileData tiles[MAX_TILE_COUNT];
-	Entity entities[MAX_ENTITY_COUNT];
-};
-
-// :World
-
-typedef struct World World;
-
-struct World
-{
-	float64 time_elapsed;
-
-	UXState ux_state;
-
-	float inventory_alpha;
-
-	float inventory_alpha_target;
-
-	int active_projectiles;
-
-	Projectile projectiles[MAX_PROJECTILES];
-
-	ItemData items[ITEM_MAX];
-
-	EnemyLogic enemy_logic[MAX_ENTITY_COUNT];
-	
-	int current_floor;
-
-	float floor_cooldown;
-
-	int active_floors;
-
-	FloorData floors[MAX_FLOOR_COUNT];
-};
-
-World* world = 0;
 
 typedef struct WorldFrame WorldFrame;
 
@@ -818,7 +589,7 @@ FloorData create_empty_floor(bool first_floor, int floor_ID)
 
     setup_stairs(& floor, first_floor, floor_ID);
 
-	if(first_floor == false)
+	if (first_floor == false)
 	{
 		setup_crates(& floor, 10, floor_ID);
 	}
@@ -874,7 +645,7 @@ void load_next_floor()
 
 	if (next_floor_id < MAX_FLOOR_COUNT)
 	{
-		if(world -> floors[next_floor_id].is_valid == true)
+		if (world -> floors[next_floor_id].is_valid == true)
 		{
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
@@ -902,7 +673,7 @@ void load_previous_floor()
 
 	if (next_floor_id >= 0)
 	{
-		if(world -> floors[next_floor_id].is_valid == true)
+		if (world -> floors[next_floor_id].is_valid == true)
 		{
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
@@ -938,7 +709,7 @@ void render_buildings(FloorData* floor, Vector4 color_0)
 		float x_pos = x * tile_width;
 		float y_pos = y * tile_width;
 
-		if(tile_data -> building.building_ID != 0)
+		if (tile_data -> building.building_ID != 0)
 		{
 			SpriteData sprite_data = tile_data -> building.sprite_data;
 
@@ -1283,7 +1054,7 @@ void update_debug_circle(DebugCircleState *state)
 
 void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
 {
-	if(world -> active_projectiles < MAX_PROJECTILES)
+	if (world -> active_projectiles < MAX_PROJECTILES)
 	{
 		for (int i = 0; i < world -> active_projectiles + 1; i++) 
 		{
@@ -1305,7 +1076,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 				// Calculate the player's center position
 				SpriteData sprite_data = sprites[source_entity -> sprite_ID];
 				Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), 
-										(source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
+										   (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
 
 				Vector2 mouse_pos = get_mouse_pos_in_world_space();
 
@@ -1328,6 +1099,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 				projectile -> position = spawn_position;
 
 				// Debug logging
+
 				// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
 				// printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
 				// printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
@@ -1336,6 +1108,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 
 				// Draw the debug circle around the player when projectile is cast
 				//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
+
 
 				if (length != 0.0f)
 				{
@@ -1530,19 +1303,19 @@ void update_projectile(Projectile *projectile)
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
 	// Increment resource
-	if(*current_resource < *max_resource)
+	if (*current_resource < *max_resource)
 	{
 		*current_resource += *resource_per_second * delta_t;
 	}
 
 	// Resource Overflow Check
-	if(*current_resource >= *max_resource)
+	if (*current_resource >= *max_resource)
 	{
 		*current_resource = *max_resource;
 	}
 
 	// Resource underflow check
-	if(*current_resource <= 0)
+	if (*current_resource <= 0)
 	{
 		*current_resource = 0;
 	}
@@ -1600,19 +1373,19 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 void draw_unit_bar(Vector2 position, float *current_value, float *max_value, float *recovery_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color)
 {
 	// Update bar
-	if(*current_value < *max_value)
+	if (*current_value < *max_value)
 	{
 		*current_value += *recovery_per_second * delta_t;
 	}
 
 	// Value overflow check
-	if(*current_value >= *max_value)
+	if (*current_value >= *max_value)
 	{
 		*current_value = *max_value;
 	}
 
 	// Value underflow check
-	if(*current_value <= 0)
+	if (*current_value <= 0)
 	{
 		*current_value = 0;
 	}
@@ -1827,7 +1600,7 @@ void world_setup()
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
-	if(world -> current_floor == null)
+	if (world -> current_floor == null)
 	{
 		world -> current_floor = 0;
 	}
@@ -1941,7 +1714,7 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
 
-	if(check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+	if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 	{
 		world_frame.hover_consumed = true;
 
@@ -1974,7 +1747,7 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 
 	Draw_Quad* quad = draw_level_up_button(button_text, button_size, button_pos, color);	
 
-	if(check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+	if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 	{
 		world_frame.hover_consumed = true;
 		color = COLOR_RED;
@@ -1996,7 +1769,7 @@ void do_ui_stuff()
 
 	// :Inventory UI
 	{
-		if(is_key_just_pressed(KEY_TAB))
+		if (is_key_just_pressed(KEY_TAB))
 		{
 			consume_key_just_pressed(KEY_TAB);
 
@@ -2008,7 +1781,7 @@ void do_ui_stuff()
 		animate_f32_to_target(& world -> inventory_alpha, world -> inventory_alpha_target, delta_t, 200.0); //speed inventory closes / fades
 		bool is_inventory_enabled = world -> inventory_alpha_target == 1;
 
-		if(world -> inventory_alpha != 0.0)
+		if (world -> inventory_alpha != 0.0)
 		{
 			// TODO make inventory fade in out when key pressed.
 
@@ -2133,7 +1906,7 @@ void do_ui_stuff()
 				string name = STR("Mana");
 				draw_resource_bar(240, & mana.current, & mana.max, & mana.per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
 
-				if(channel_mana.level >= 5)
+				if (channel_mana.level >= 5)
 				{
 					wisdom.unlocked = true;
 
@@ -2147,12 +1920,12 @@ void do_ui_stuff()
 			}
 
 			// Intellect bar
-			if(intellect.unlocked == true)
+			if (intellect.unlocked == true)
 			{
 				string name = STR("Intellect");
 				draw_resource_bar(220, & intellect.current, & intellect.max, & intellect.per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
 
-				if(wisdom.level >= 5)
+				if (wisdom.level >= 5)
 				{
 					focus.unlocked = true;
 				}
@@ -2171,7 +1944,7 @@ void do_ui_stuff()
 			}
 			
 			// Level Up wisdom Button
-			if(wisdom.unlocked == true)
+			if (wisdom.unlocked == true)
 			{
 				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
 
@@ -2181,7 +1954,7 @@ void do_ui_stuff()
 			}
 			
 			// Level Up Focus Button
-			if(focus.unlocked == true)
+			if (focus.unlocked == true)
 			{
 				string focus_button_text = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
 
@@ -2431,12 +2204,12 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		if(is_key_just_pressed(KEY_F7))
+		if (is_key_just_pressed(KEY_F7))
 		{
 			load_previous_floor();
 		}
 		
-		if(is_key_just_pressed(KEY_F8))
+		if (is_key_just_pressed(KEY_F8))
 		{
 			load_next_floor();
 		}
@@ -2473,7 +2246,7 @@ int entry(int argc, char **argv)
 			// Draw player pos offset to be centered on the center of the sprite (NOT REAL POS)
 			//draw_rect(v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y + sprites[player -> spriteID].image -> height * 0.5)), v2(1, 1), v4(0, 255, 0, 1));
 
-			if(is_key_just_pressed(KEY_F3))
+			if (is_key_just_pressed(KEY_F3))
 			{
 				// Draw the debug circle around the player
             	// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
@@ -2493,7 +2266,7 @@ int entry(int argc, char **argv)
 		}
 
 		// Press F1 to Close Game
-		if(is_key_just_pressed(KEY_F1))
+		if (is_key_just_pressed(KEY_F1))
 		{
 			window.should_close = true;
 		}

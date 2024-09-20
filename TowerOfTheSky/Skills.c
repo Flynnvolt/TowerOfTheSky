@@ -1,3 +1,4 @@
+#pragma once
 #include "Resources.c"
 
 #define MAX_COSTS 2    // Maximum number of costs for any skill

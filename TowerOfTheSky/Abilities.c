@@ -1,3 +1,4 @@
+#pragma once
 #include "Skills.c"
 #include "Upgrades.c"
 

@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct AnimationInfo AnimationInfo;
 
 struct AnimationInfo

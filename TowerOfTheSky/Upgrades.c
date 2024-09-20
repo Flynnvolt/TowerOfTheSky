@@ -1,3 +1,5 @@
+#pragma once
+
 typedef enum UpgradeID UpgradeID;
 
 enum UpgradeID

@@ -1,0 +1,9 @@
+#pragma once
+
+#define MAX_ENTITY_COUNT 256
+
+#define MAX_PROJECTILES 100 
+
+#define MAX_TILE_COUNT 4096
+
+#define MAX_FLOOR_COUNT 10
