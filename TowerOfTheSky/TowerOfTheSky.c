@@ -13,6 +13,7 @@
 #include "Floor.c"
 #include "Enemy.c"
 #include "Building.c"
+#include "WorldFrame.c"
 
 // Defines
 
@@ -21,8 +22,6 @@
 #define m4_identity m4_make_scale(v3(1, 1, 1))
 
 // :Global APP
-
-float64 delta_t;
 
 Gfx_Font* font;
 
@@ -36,25 +35,28 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
-// :Variables
-
 Vector4 bg_box_color = {0, 0, 0, 0.5};
 
 Vector4 color_0;
 
-typedef struct WorldFrame WorldFrame;
+// :Timing
 
-struct WorldFrame 
+float64 delta_t;
+
+inline float64 now() 
 {
-	Matrix4 world_proj;
-	Matrix4 world_view;
-	bool hover_consumed;
-	Entity* player;
-};
+	return world -> time_elapsed;
+}
 
-WorldFrame world_frame;
+float alpha_from_end_time(float64 end_time, float length) 
+{
+	return float_alpha(now(), end_time-length, end_time);
+}
 
-// :Setup
+bool has_reached_end_time(float64 end_time) 
+{
+	return now() > end_time;
+}
 
 void update_cooldown(float *cooldown) 
 {
@@ -68,156 +70,166 @@ void update_cooldown(float *cooldown)
     }
 }
 
-Vector2 get_sprite_size(SpriteData sprite_data)
+// :Debugging Tools
+
+void collide_visual_debug(Entity *current_entity)
 {
-    if (sprite_data.image == NULL) 
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity *actor = & world -> floors[world -> current_floor].entities[i];
+
+		if (actor -> is_valid && actor != current_entity) 
+		{
+			SpriteData sprite_data = sprites[actor -> sprite_ID];
+			int sprite_width = sprite_data.image -> width;
+			int sprite_height = sprite_data.image -> height;
+
+			SpriteData sprite_data_2 = sprites[current_entity -> sprite_ID];
+
+			// Visual Debug tools
+			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite_data_2.image -> width, sprite_data_2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
+			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+		}
+	}
+}
+
+void collide_visual_debug_buildings(Entity *current_entity)
+{
+	float half_tile_width = tile_width * 0.5f;
+
+    for (int i = 0; i < MAX_TILE_COUNT; i++) 
     {
-        log("Error: spritedata or image is NULL.\n");
-        return (Vector2) {0, 0};
+        BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
+
+        if (building -> is_valid) 
+        {
+            SpriteData sprite_data = building -> sprite_data;
+            int sprite_width = sprite_data.image -> width;
+            int sprite_height = sprite_data.image -> height;
+
+            // Visual Debug tools
+            draw_rect(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+        }
     }
-
-    return (Vector2) {sprite_data.image -> width, sprite_data.image -> height};
 }
 
-void load_sprite_data()
+typedef struct DebugCircleState DebugCircleState;
+
+struct DebugCircleState
 {
-	// :Load Sprites
+    bool active;
+    Vector2 center;
+    float radius;
+    float time_remaining;
+};
 
-	// Missing Texture Sprite
-	sprites[0] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Nil
-	};
+DebugCircleState circle_state = {0};
 
-	// Player
-	sprites[SPRITE_Player] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Player
-	};
-
-	// Entities
-	sprites[SPRITE_Target] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Target
-	};
-
-	sprites[SPRITE_Slime] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/slime.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Slime
-	};
-
-	// Items
-	sprites[SPRITE_Exp] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Exp
-	};
-
-	// Buildings
-	sprites[SPRITE_Wall] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/wall.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Wall
-	};
-
-	sprites[SPRITE_Research_Station] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Research_Station
-	};
-
-	sprites[SPRITE_Exp_Vein] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Exp_Vein
-	};
-
-	sprites[SPRITE_Stairs_Up] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Stairs_Up
-	};
-
-	sprites[SPRITE_Stairs_Down] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Stairs_Down
-	};
-
-	sprites[SPRITE_Crate] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/crate.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Crate
-	};
-
-	// Spells
-	sprites[SPRITE_Fireball_Sheet] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Fireball_Sheet
-	};
-
-	#if CONFIGURATION == DEBUG
-		{
-			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
-			{
-				SpriteData* sprite = & sprites[i];
-				assert(sprite -> image, "Sprite was not setup properly");
-			}
-		}
-	#endif
+void start_debug_circle(DebugCircleState *state, Vector2 center, float radius, float duration) 
+{
+    state -> active = true;
+    state -> center = center;
+    state -> radius = radius;
+    state -> time_remaining = duration;
 }
 
-Entity* get_player() 
+void update_debug_circle(DebugCircleState *state) 
 {
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-	{
-		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
-		{
-			world_frame.player = en;
-			return world_frame.player;
-		}
-	}
-	log("Player not found on current floor: %i", world -> current_floor);
-    return NULL;
+    if (state -> active) 
+    {
+        if (state -> time_remaining > 0.0f) 
+        {
+            Vector2 circle_size = v2(state -> radius * 2.0f, state -> radius * 2.0f);
+            Vector4 circle_color = v4(255, 0, 0, 1);
+
+			// Center it on the position
+            draw_circle(v2(state -> center.x - state -> radius, state -> center.y - state -> radius), circle_size, circle_color);
+
+            // Draw the current position of the circle for debugging
+            draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), state -> center.x, state -> center.y), font_height, state -> center, v2(0.2, 0.2), COLOR_WHITE);
+
+            state -> time_remaining -= delta_t;
+
+            if (state -> time_remaining <= 0.0f) 
+            {
+                state -> active = false;
+            }
+        }
+    }
 }
 
-int get_player_data_location() 
+// :Entity
+
+Entity* entity_create() 
 {
-	int data_location;
+	Entity* entity_found = 0;
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
+		Entity* existing_entity = & world -> floors[world -> current_floor].entities[i];
+
+		if (!existing_entity -> is_valid) 
 		{
-			data_location = i;
+			entity_found = existing_entity;
+			break;
 		}
 	}
-	return data_location;
+	//log("%i", world -> current_floor);
+	assert(entity_found, "No more free entities!");
+
+	entity_found -> is_valid = true;
+	entity_found -> current_floor = world -> current_floor;
+
+	return entity_found;
 }
 
-void setup_player(Entity* player_en) 
+void entity_destroy(Entity* entity) 
 {
-	player_en -> entity_ID = ENTITY_Player;
-    player_en -> sprite_ID = SPRITE_Player;
-	player_en -> health = 100;
-	player_en -> max_health = 100;
-	player_en -> health_regen = 4;
-	player_en -> speed = 75;
-	player_en -> pos = v2(0, 0);
-	player_en -> pos = round_v2_to_tile(player_en -> pos);
-	player_en -> pos.y -= tile_width * 0.5;
-	player_en -> pos.x -= sprites[player_en -> sprite_ID].image -> width * 0.5;
-
-	// Center X and Y
-	//player_en -> pos = v2((player_en -> pos.x - sprites[player_en -> spriteID].image -> width * 0.5),(player_en -> pos.y - sprites[player_en -> spriteID].image -> height * 0.5));
+	memset(entity, 0, sizeof(Entity));
 }
+
+// :Floor System
+
+void create_circle_floor_data(FloorData* floor)
+{
+    float tile_radius_squared = tile_radius * tile_radius;
+    
+    int tile_count = 0;
+    for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
+    {
+        for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
+        {
+            float dx = (float)x;
+            float dy = (float)y;
+            float distance_squared = dx * dx + dy * dy;
+
+            if (distance_squared < tile_radius_squared && tile_count < MAX_TILE_COUNT) 
+            {
+
+                TileData* tile_data = & floor -> tiles[tile_count];
+                tile_data -> tile.x = x;
+                tile_data -> tile.y = y;
+				tile_data -> is_valid = true;
+
+                // zero building data for now
+                memset(& tile_data -> building, 0, sizeof(BuildingData));
+
+                tile_count++;
+            }
+        }
+    }
+    /*
+    // initialize remaining unused tiles
+    for (int i = tile_count; i < MAX_TILE_COUNT; i++) 
+    {
+        memset(& floor -> tiles[i], 0, sizeof(TileData));
+    }
+	*/
+	//log("%i", tile_count);
+}
+
+// :Setup
 
 void setup_slime(Entity* en) 
 {
@@ -297,111 +309,6 @@ BuildingData setup_building_wall()
     strcpy(building.pretty_name, "wall"); 
     strcpy(building.description, "a sturdy wall"); 
     return  building;
-}
-
-Entity* entity_create() 
-{
-	Entity* entity_found = 0;
-
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-	{
-		Entity* existing_entity = & world -> floors[world -> current_floor].entities[i];
-
-		if (!existing_entity -> is_valid) 
-		{
-			entity_found = existing_entity;
-			break;
-		}
-	}
-	//log("%i", world -> current_floor);
-	assert(entity_found, "No more free entities!");
-
-	entity_found -> is_valid = true;
-	entity_found -> current_floor = world -> current_floor;
-
-	return entity_found;
-}
-
-void player_change_floor(int target_floor) 
-{
-    int player_index = get_player_data_location();
-    Entity* current_entity = & world -> floors[world -> current_floor].entities[player_index];
-    Entity* target_entity = NULL;
-
-    // Find an available spot in the target floor's entity list
-    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-    {
-        Entity* existing_entity = & world -> floors[target_floor].entities[i];
-        if (!existing_entity -> is_valid) 
-        {
-            target_entity = existing_entity;
-            break;
-        }
-    }
-    assert(target_entity, "No more free entity slots on the target floor!");
-
-    // Copy entity data to the target
-    *target_entity = *current_entity;
-
-    // Ensure the player is marked as valid on the target floor
-    target_entity -> is_valid = true;
-    target_entity -> current_floor = target_floor;
-
-    // Invalidate the entity in the current floor
-    current_entity -> is_valid = false;
-
-    // Log transfer success
-    log("Player transferred to floor %i", target_floor);
-}
-
-void entity_destroy(Entity* entity) 
-{
-	memset(entity, 0, sizeof(Entity));
-}
-
-// :Functions
-
-void create_circle_floor_data(FloorData* floor)
-{
-    float tile_radius_squared = tile_radius * tile_radius;
-    
-    int tile_count = 0;
-    for (int x = -(int)tile_radius; x <= (int)tile_radius; x++) 
-    {
-        for (int y = -(int)tile_radius; y <= (int)tile_radius; y++) 
-        {
-            float dx = (float)x;
-            float dy = (float)y;
-            float distance_squared = dx * dx + dy * dy;
-
-            if (distance_squared < tile_radius_squared && tile_count < MAX_TILE_COUNT) 
-            {
-
-                TileData* tile_data = & floor -> tiles[tile_count];
-                tile_data -> tile.x = x;
-                tile_data -> tile.y = y;
-				tile_data -> is_valid = true;
-
-                // zero building data for now
-                memset(& tile_data -> building, 0, sizeof(BuildingData));
-
-                tile_count++;
-            }
-        }
-    }
-    /*
-    // initialize remaining unused tiles
-    for (int i = tile_count; i < MAX_TILE_COUNT; i++) 
-    {
-        memset(& floor -> tiles[i], 0, sizeof(TileData));
-    }
-	*/
-	//log("%i", tile_count);
-}
-
-bool is_even(int number) 
-{
-    return number % 2 == 0;
 }
 
 void setup_stairs(FloorData *floor, bool first_floor, int floor_ID)
@@ -517,6 +424,89 @@ void setup_walls(FloorData *floor, int floor_ID)
     }
 }
 
+// :Player
+
+Entity* get_player() 
+{
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity* en = & world -> floors[world -> current_floor].entities[i];
+		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
+		{
+			world_frame.player = en;
+			return world_frame.player;
+		}
+	}
+	log("Player not found on current floor: %i", world -> current_floor);
+    return NULL;
+}
+
+int get_player_data_location() 
+{
+	int data_location;
+
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Entity* en = & world -> floors[world -> current_floor].entities[i];
+		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
+		{
+			data_location = i;
+		}
+	}
+	return data_location;
+}
+
+void setup_player(Entity* player_en) 
+{
+	player_en -> entity_ID = ENTITY_Player;
+    player_en -> sprite_ID = SPRITE_Player;
+	player_en -> health = 100;
+	player_en -> max_health = 100;
+	player_en -> health_regen = 4;
+	player_en -> speed = 75;
+	player_en -> pos = v2(0, 0);
+	player_en -> pos = round_v2_to_tile(player_en -> pos);
+	player_en -> pos.y -= tile_width * 0.5;
+	player_en -> pos.x -= sprites[player_en -> sprite_ID].image -> width * 0.5;
+
+	// Center X and Y
+	//player_en -> pos = v2((player_en -> pos.x - sprites[player_en -> spriteID].image -> width * 0.5),(player_en -> pos.y - sprites[player_en -> spriteID].image -> height * 0.5));
+}
+
+void player_change_floor(int target_floor) 
+{
+    int player_index = get_player_data_location();
+    Entity* current_entity = & world -> floors[world -> current_floor].entities[player_index];
+    Entity* target_entity = NULL;
+
+    // Find an available spot in the target floor's entity list
+    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+    {
+        Entity* existing_entity = & world -> floors[target_floor].entities[i];
+        if (!existing_entity -> is_valid) 
+        {
+            target_entity = existing_entity;
+            break;
+        }
+    }
+    assert(target_entity, "No more free entity slots on the target floor!");
+
+    // Copy entity data to the target
+    *target_entity = *current_entity;
+
+    // Ensure the player is marked as valid on the target floor
+    target_entity -> is_valid = true;
+    target_entity -> current_floor = target_floor;
+
+    // Invalidate the entity in the current floor
+    current_entity -> is_valid = false;
+
+    // Log transfer success
+    log("Player transferred to floor %i", target_floor);
+}
+
+// :Enemy
+
 void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 {
     for (int i = 0; i < MAX_TILE_COUNT; i++) 
@@ -578,6 +568,8 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
     }
 }
 
+// Floor System
+
 FloorData create_empty_floor(bool first_floor, int floor_ID)
 {
 	FloorData floor;
@@ -598,45 +590,6 @@ FloorData create_empty_floor(bool first_floor, int floor_ID)
 	floor.floor_ID = floor_ID;
 
 	return floor;
-}
-
-void render_floor_tiles(FloorData* floor, Vector4 color_0)
-{	
-	float half_tile_width = tile_width * 0.5f;
-
-	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-	{
-		TileData* tile_data = & floor -> tiles[i];
-
-		if (tile_data -> is_valid == true)
-		{
-			int x = tile_data -> tile.x;
-			int y = tile_data -> tile.y;
-
-			// Checkerboard color pattern
-			Vector4 col = color_0;
-			if (((x + y) % 2) == 0) 
-			{
-				col.a = 0.75;
-			}
-			
-			float x_pos = x * tile_width;
-			float y_pos = y * tile_width;
-			
-			draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
-		}
-	}
-
-	// Debug:
-	/*
-	Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
-	int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
-	int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
-	
-	// Display world space position of tile and tile X, Y
-	draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
-	draw_text(font, sprint(get_temporary_allocator(), STR("%.1f %.1f (%i, %i)"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_x)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
-	*/
 }
 
 void load_next_floor()
@@ -695,137 +648,7 @@ void load_previous_floor()
 	}
 }
 
-void render_buildings(FloorData* floor, Vector4 color_0)
-{
-	float half_tile_width = tile_width * 0.5f;
-
-	for (int i = 0; i < MAX_TILE_COUNT; i++) 
-	{
-		TileData* tile_data = & floor -> tiles[i];
-		
-		int x = tile_data -> tile.x;
-		int y = tile_data -> tile.y;
-
-		float x_pos = x * tile_width;
-		float y_pos = y * tile_width;
-
-		if (tile_data -> building.building_ID != 0)
-		{
-			SpriteData sprite_data = tile_data -> building.sprite_data;
-
-			Vector2 sprite_size = get_sprite_size(sprite_data);
-
-			Matrix4 xform = m4_scalar(1.0);
-
-			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
-
-			draw_image_xform(sprites[tile_data -> building.sprite_data.sprite_ID].image, xform, sprite_size, COLOR_WHITE);
-
-			// pos debug
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
-			
-			// floor debug
-			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
-		}
-	}
-}
-
-inline float64 now() 
-{
-	return world -> time_elapsed;
-}
-
-float alpha_from_end_time(float64 end_time, float length) 
-{
-	return float_alpha(now(), end_time-length, end_time);
-}
-
-bool has_reached_end_time(float64 end_time) 
-{
-	return now() > end_time;
-}
-
-Gfx_Image* get_image_by_id(SpriteID sprite_ID) 
-{
-    return sprites[sprite_ID].image;
-}
-
-SpriteData* get_sprite(SpriteID id)
-{
-	if (id >= 0 && id < SPRITE_MAX)
-	{
-		SpriteData* sprite = & sprites[id];
-
-		if (sprite -> image)
-		{
-			return sprite;
-		}
-		else
-		{
-			return & sprites[0];
-		}
-	}
-	return & sprites[0];
-}
-
-void player_death() 
-{
-
-}
-
-void damage_player(Entity *entity, float damage)
-{
-	entity -> health -= damage;
-
-	if (entity -> health <= 0)
-	{
-		player_death();
-	}
-}
-
-void damage_enemy(Entity *entity, float damage)
-{	
-
-	entity -> health -= damage;
-
-	if (entity -> health <= 0)
-	{
-		if (entity -> is_immortal == true)
-		{
-			entity -> health = entity -> max_health;
-		}
-		else
-		{
-			entity -> is_valid = false;
-		}
-	}
-}
-
-void damage_entity(Entity *entity, float damage)
-{
-	EntityID entity_ID = entity -> entity_ID;
-
-	switch (entity_ID) 
-	{
-		case ENTITY_Player:
-		{
-			damage_player(entity, damage);
-			break;
-		}
-
-		case ENTITY_Enemy:
-		{
-			damage_enemy(entity, damage);
-			break;
-		}
-		
-		default: 
-		{
-			log_error("misconfigured arch in Damage Entity"); 
-			break;
-		}
-	}
-}
+// Collision
 
 bool collide_at(Entity *current_entity, int x, int y) 
 {
@@ -918,47 +741,35 @@ bool collide_at(Entity *current_entity, int x, int y)
 	return false;
 }
 
-void collide_visual_debug(Entity *current_entity)
+Entity* projectile_collides_with_entity(Projectile *projectile) 
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *actor = & world -> floors[world -> current_floor].entities[i];
+		Entity *entity = & world -> floors[world -> current_floor].entities[i];
 
-		if (actor -> is_valid && actor != current_entity) 
+		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the caster
 		{
-			SpriteData sprite_data = sprites[actor -> sprite_ID];
-			int sprite_width = sprite_data.image -> width;
-			int sprite_height = sprite_data.image -> height;
+			SpriteData sprite_data = sprites[entity -> sprite_ID];
+			int entity_width = sprite_data.image -> width;
+			int entity_height = sprite_data.image -> height;
 
-			SpriteData sprite_data_2 = sprites[current_entity -> sprite_ID];
+			int entity_x_end = entity -> pos.x + entity_width;
+			int entity_y_end = entity -> pos.y + entity_height;
 
-			// Visual Debug tools
-			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite_data_2.image -> width, sprite_data_2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+			int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
+			int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
+
+			if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x && projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
+			{
+				return entity;
+			}
 		}
 	}
+	
+	return NULL;
 }
 
-void collide_visual_debug_buildings(Entity *current_entity)
-{
-	float half_tile_width = tile_width * 0.5f;
-
-    for (int i = 0; i < MAX_TILE_COUNT; i++) 
-    {
-        BuildingData *building = & world -> floors[world -> current_floor].tiles[i].building;
-
-        if (building -> is_valid) 
-        {
-            SpriteData sprite_data = building -> sprite_data;
-            int sprite_width = sprite_data.image -> width;
-            int sprite_height = sprite_data.image -> height;
-
-            // Visual Debug tools
-            draw_rect(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-        }
-    }
-}
+// :Movement Calc
 
 void move_entity_x(Entity *entity, float amount) 
 {
@@ -1007,154 +818,7 @@ void update_entity(Entity *entity, Vector2 movement)
 	//collide_visual_debug_buildings(entity);
 }
 
-typedef struct DebugCircleState DebugCircleState;
-
-struct DebugCircleState
-{
-    bool active;
-    Vector2 center;
-    float radius;
-    float time_remaining;
-};
-
-DebugCircleState circle_state = {0};
-
-void start_debug_circle(DebugCircleState *state, Vector2 center, float radius, float duration) 
-{
-    state -> active = true;
-    state -> center = center;
-    state -> radius = radius;
-    state -> time_remaining = duration;
-}
-
-void update_debug_circle(DebugCircleState *state) 
-{
-    if (state -> active) 
-    {
-        if (state -> time_remaining > 0.0f) 
-        {
-            Vector2 circle_size = v2(state -> radius * 2.0f, state -> radius * 2.0f);
-            Vector4 circle_color = v4(255, 0, 0, 1);
-
-			// Center it on the position
-            draw_circle(v2(state -> center.x - state -> radius, state -> center.y - state -> radius), circle_size, circle_color);
-
-            // Draw the current position of the circle for debugging
-            draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), state -> center.x, state -> center.y), font_height, state -> center, v2(0.2, 0.2), COLOR_WHITE);
-
-            state -> time_remaining -= delta_t;
-
-            if (state -> time_remaining <= 0.0f) 
-            {
-                state -> active = false;
-            }
-        }
-    }
-}
-
-void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
-{
-	if (world -> active_projectiles < MAX_PROJECTILES)
-	{
-		for (int i = 0; i < world -> active_projectiles + 1; i++) 
-		{
-			if (world -> projectiles[i].is_active == false) 
-			{
-				world -> active_projectiles++;
-				Projectile *projectile = & world -> projectiles[i];
-				projectile -> is_active = true;
-				projectile -> speed = speed;
-				projectile -> damage = damage;
-				projectile -> animation = *animation;
-				projectile -> scale = scale;
-				projectile -> source_entity = source_entity;
-				projectile -> distance_traveled = 0.0f;
-				projectile -> max_distance = max_distance;
-				projectile -> time_alive = 0.0f;
-				projectile -> max_time_alive = max_time_alive;
-
-				// Calculate the player's center position
-				SpriteData sprite_data = sprites[source_entity -> sprite_ID];
-				Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), 
-										   (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
-
-				Vector2 mouse_pos = get_mouse_pos_in_world_space();
-
-				// Calculate direction from player to mouse
-				Vector2 direction = v2_sub(mouse_pos, player_center);
-				float32 length = v2_length(direction);
-
-				Vector2 normalized_direction = direction;
-				if (length != 0.0f)
-				{
-					normalized_direction = v2_scale(direction, 1.0f / length);
-				}
-
-				// Calculate angle 
-				float angle = atan2f(normalized_direction.y, normalized_direction.x);
-
-				// Spawn the projectile at the edge of the spawn_radius circle
-				Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
-
-				projectile -> position = spawn_position;
-
-				// Debug logging
-
-				// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
-				// printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
-				// printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
-				// printf("Projectile Direction Angle: %f\n", angle);
-				// printf("Spawn Radius: %f\n", spawn_radius);
-
-				// Draw the debug circle around the player when projectile is cast
-				//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
-
-
-				if (length != 0.0f)
-				{
-					Vector2 velocity_direction = normalized_direction; 
-					projectile -> velocity = v2_scale(velocity_direction, speed);
-
-					projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
-
-					if (projectile -> rotation < 0.0f)
-					{
-						projectile -> rotation += 360.0f;
-					}
-				}
-				break;
-			}
-		}
-	}
-}
-
-Entity* projectile_collides_with_entity(Projectile *projectile) 
-{
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-	{
-		Entity *entity = & world -> floors[world -> current_floor].entities[i];
-
-		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the caster
-		{
-			SpriteData sprite_data = sprites[entity -> sprite_ID];
-			int entity_width = sprite_data.image -> width;
-			int entity_height = sprite_data.image -> height;
-
-			int entity_x_end = entity -> pos.x + entity_width;
-			int entity_y_end = entity -> pos.y + entity_height;
-
-			int projectile_x_end = projectile -> position.x + projectile -> radius * 2;
-			int projectile_y_end = projectile -> position.y + projectile -> radius * 2;
-
-			if (projectile -> position.x < entity_x_end && projectile_x_end > entity -> pos.x && projectile -> position.y < entity_y_end && projectile_y_end > entity -> pos.y) 
-			{
-				return entity;
-			}
-		}
-	}
-	
-	return NULL;
-}
+// :Enemy AI
 
 void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 {
@@ -1247,6 +911,149 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 	}
 }
 
+// :Damage Calcs
+
+void player_death() 
+{
+	// Player can't die right now until we add a respawn system or else it crashes.
+}
+
+void enemy_death(Entity *entity)
+{
+	entity -> is_valid = false;
+}
+
+void damage_enemy(Entity *entity, float damage)
+{	
+	entity -> health -= damage;
+
+	if (entity -> health <= 0)
+	{
+		if (entity -> is_immortal == true)
+		{
+			entity -> health = entity -> max_health;
+		}
+		else
+		{
+			enemy_death(entity);
+		}
+	}
+}
+
+void damage_player(Entity *entity, float damage)
+{
+	entity -> health -= damage;
+
+	if (entity -> health <= 0)
+	{
+		player_death();
+	}
+}
+
+void damage_entity(Entity *entity, float damage)
+{
+	EntityID entity_ID = entity -> entity_ID;
+
+	switch (entity_ID) 
+	{
+		case ENTITY_Player:
+		{
+			damage_player(entity, damage);
+			break;
+		}
+
+		case ENTITY_Enemy:
+		{
+			damage_enemy(entity, damage);
+			break;
+		}
+		
+		default: 
+		{
+			log_error("misconfigured arch in Damage Entity"); 
+			break;
+		}
+	}
+}
+
+// :Projectiles
+
+void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
+{
+	if (world -> active_projectiles < MAX_PROJECTILES)
+	{
+		for (int i = 0; i < world -> active_projectiles + 1; i++) 
+		{
+			if (world -> projectiles[i].is_active == false) 
+			{
+				world -> active_projectiles++;
+				Projectile *projectile = & world -> projectiles[i];
+				projectile -> is_active = true;
+				projectile -> speed = speed;
+				projectile -> damage = damage;
+				projectile -> animation = *animation;
+				projectile -> scale = scale;
+				projectile -> source_entity = source_entity;
+				projectile -> distance_traveled = 0.0f;
+				projectile -> max_distance = max_distance;
+				projectile -> time_alive = 0.0f;
+				projectile -> max_time_alive = max_time_alive;
+
+				// Calculate the player's center position
+				SpriteData sprite_data = sprites[source_entity -> sprite_ID];
+				Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), 
+										   (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
+
+				Vector2 mouse_pos = get_mouse_pos_in_world_space();
+
+				// Calculate direction from player to mouse
+				Vector2 direction = v2_sub(mouse_pos, player_center);
+				float32 length = v2_length(direction);
+
+				Vector2 normalized_direction = direction;
+				if (length != 0.0f)
+				{
+					normalized_direction = v2_scale(direction, 1.0f / length);
+				}
+
+				// Calculate angle 
+				float angle = atan2f(normalized_direction.y, normalized_direction.x);
+
+				// Spawn the projectile at the edge of the spawn_radius circle
+				Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
+
+				projectile -> position = spawn_position;
+
+				// Debug logging
+
+				// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
+				// printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
+				// printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
+				// printf("Projectile Direction Angle: %f\n", angle);
+				// printf("Spawn Radius: %f\n", spawn_radius);
+
+				// Draw the debug circle around the player when projectile is cast
+				//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
+
+
+				if (length != 0.0f)
+				{
+					Vector2 velocity_direction = normalized_direction; 
+					projectile -> velocity = v2_scale(velocity_direction, speed);
+
+					projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
+
+					if (projectile -> rotation < 0.0f)
+					{
+						projectile -> rotation += 360.0f;
+					}
+				}
+				break;
+			}
+		}
+	}
+}
+
 void update_projectile(Projectile *projectile) 
 {
     if (!projectile -> is_active) return;
@@ -1299,6 +1106,24 @@ void update_projectile(Projectile *projectile)
 
     update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation);
 }
+
+// :Rendering
+
+// :UI Rendering
+
+void set_screen_space()
+{
+	draw_frame.camera_xform = m4_scalar(1.0);
+	draw_frame.projection = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
+}
+
+void set_world_space() 
+{
+	draw_frame.projection = world_frame.world_proj;
+	draw_frame.camera_xform = world_frame.world_view;
+}
+
+// :UI
 
 void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
 {
@@ -1580,136 +1405,6 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size,
 	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
 
-// :UI Rendering
-
-void set_screen_space()
-{
-	draw_frame.camera_xform = m4_scalar(1.0);
-	draw_frame.projection = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
-}
-
-void set_world_space() 
-{
-	draw_frame.projection = world_frame.world_proj;
-	draw_frame.camera_xform = world_frame.world_view;
-}
-
-// :World init
-void world_setup()
-{
-	//start inventory open
-	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
-
-	if (world -> current_floor == null)
-	{
-		world -> current_floor = 0;
-	}
-	log("%i current floor", world -> current_floor);
-	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
-	world -> active_floors++;
-
-	Entity* player_en = entity_create();
-	setup_player(player_en);
-
-	// :test stuff
-	#if defined(DEV_TESTING)
-	{
-		world -> items[ITEM_Exp] = setup_exp_item();
-
-		// Spawn one Target
-		Entity* en = entity_create();
-		setup_target(en);
-	}
-	#endif
-}
-
-bool world_save_to_disk() 
-{
-	u64 everything_but_floors = offsetof(World, floors);
-
-	u64 active_floors = world -> active_floors * sizeof(FloorData);
-
-	u64 all_save_data = everything_but_floors + active_floors;
-
-	return os_write_entire_file_s(STR("world"), (string){all_save_data, (u8*)world});
-}
-
-bool world_attempt_load_from_disk() 
-{
-    string result = {0};
-    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator()); // <--------------- Allocate on heap instead (temp is killed every frame)
-    if (!succ) 
-    {
-        log_error("Failed to load world.");
-        return false;
-    }
-
-    // NOTE, for errors I used to do stuff like this assert:
-    // assert(result.count == sizeof(World), "world size has changed!");
-    //
-    // But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
-    // That's why this function returns a bool. We handle that at the callsite.
-    // Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
-
-	/*
-    if (result.count != sizeof(World)) 
-    {
-        log_error("world size different to one on disk.");
-        return false;
-    }
-	*/
-
-    memcpy(world, result.data, result.count);
-
-    dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
-
-    return true;
-}
-
-// pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
-
-Draw_Quad* draw_sprite_in_rect(SpriteData sprite_data, Range2f rect, Vector4 col, float pad_pct) 
-{
-	Vector2 sprite_size = get_sprite_size(sprite_data);
-
-	// make it smoller (padding)
-	{
-		Vector2 size = range2f_size(rect);
-		Vector2 offset = rect.min;
-		rect = range2f_shift(rect, v2_mulf(rect.min, -1));
-		rect.min.x += size.x * pad_pct * 0.5;
-		rect.min.y += size.y * pad_pct * 0.5;
-		rect.max.x -= size.x * pad_pct * 0.5;
-		rect.max.y -= size.y * pad_pct * 0.5;
-		rect = range2f_shift(rect, offset);
-	}
-
-	// ratio render lock
-	if (sprite_size.x > sprite_size.y) 
-	{ 
-
-		// height is a ratio of width
-		Vector2 range_size = range2f_size(rect);
-		rect.max.y = rect.min.y + (range_size.x * (sprite_size.y / sprite_size.x));
-		// center along the Y
-		float new_height = rect.max.y - rect.min.y;
-		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
-
-	} 
-	else if (sprite_size.y > sprite_size.x) 
-	{ 
-		
-		// width is a ratio of height
-		Vector2 range_size = range2f_size(rect);
-		rect.max.x = rect.min.x + (range_size.y * (sprite_size.x/sprite_size.y));
-		// center along the X
-		float new_width = rect.max.x - rect.min.x;
-		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
-	}
-
-	return draw_image(sprite_data.image, rect.min, range2f_size(rect), col);
-}
-
 void display_skill_level_up_button(SkillID ability, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
@@ -1755,7 +1450,7 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 	}
 }
 
-void do_ui_stuff()
+void render_ui()
 {
 	set_screen_space();
 
@@ -1979,6 +1674,121 @@ void do_ui_stuff()
 	pop_z_layer();
 }
 
+// :Floor Rendering
+
+void render_floor_tiles(FloorData* floor, Vector4 color_0)
+{	
+	float half_tile_width = tile_width * 0.5f;
+
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+	{
+		TileData* tile_data = & floor -> tiles[i];
+
+		if (tile_data -> is_valid == true)
+		{
+			int x = tile_data -> tile.x;
+			int y = tile_data -> tile.y;
+
+			// Checkerboard color pattern
+			Vector4 col = color_0;
+			if (((x + y) % 2) == 0) 
+			{
+				col.a = 0.75;
+			}
+			
+			float x_pos = x * tile_width;
+			float y_pos = y * tile_width;
+			
+			draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
+		}
+	}
+
+	// Debug:
+	/*
+	Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
+	int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
+	int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
+	
+	// Display world space position of tile and tile X, Y
+	draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) - half_tile_width, tile_pos_to_world_pos(mouse_tile_y) - half_tile_width), v2(tile_width, tile_width), v4(0.5, 0.0, 0.0, 1.0));
+	draw_text(font, sprint(get_temporary_allocator(), STR("%.1f %.1f (%i, %i)"), (tile_pos_to_world_pos(mouse_tile_x)), (tile_pos_to_world_pos(mouse_tile_y)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_x)), world_pos_to_tile_pos(tile_pos_to_world_pos(mouse_tile_y))), font_height, v2((tile_pos_to_world_pos(mouse_tile_x) - half_tile_width), (tile_pos_to_world_pos(mouse_tile_y) - half_tile_width)), v2(0.2, 0.2), COLOR_WHITE);
+	*/
+}
+
+// :Building Rendering
+
+void render_buildings(FloorData* floor, Vector4 color_0)
+{
+	float half_tile_width = tile_width * 0.5f;
+
+	for (int i = 0; i < MAX_TILE_COUNT; i++) 
+	{
+		TileData* tile_data = & floor -> tiles[i];
+		
+		int x = tile_data -> tile.x;
+		int y = tile_data -> tile.y;
+
+		float x_pos = x * tile_width;
+		float y_pos = y * tile_width;
+
+		if (tile_data -> building.building_ID != 0)
+		{
+			SpriteData sprite_data = tile_data -> building.sprite_data;
+
+			Vector2 sprite_size = get_sprite_size(sprite_data);
+
+			Matrix4 xform = m4_scalar(1.0);
+
+			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
+
+			draw_image_xform(sprites[tile_data -> building.sprite_data.sprite_ID].image, xform, sprite_size, COLOR_WHITE);
+
+			// pos debug
+			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+			
+			// floor debug
+			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), tile_data -> building.current_floor), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
+		}
+	}
+}
+
+// :Player Rendering
+
+void render_player()
+{
+	Entity *player = get_player();
+	SpriteData sprite_data = sprites[player -> sprite_ID];
+
+	Vector2 sprite_size = get_sprite_size(sprite_data);
+
+	Matrix4 xform = m4_scalar(1.0);
+
+	xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
+
+	Vector4 col = COLOR_WHITE;
+	draw_image_xform(sprite_data.image, xform, sprite_size, col);
+
+	// Healthbar test values
+	Vector2 health_bar_pos = v2((player -> pos.x + (sprite_data.image -> width * 0.5)), (player -> pos.y + (sprite_data.image -> height)));
+
+	// Temperary render player healthbar test
+	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+
+	// World space current location debug for object pos
+	//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+
+	// floor player currently resides in
+	//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), player -> current_floor), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
+
+	// Draw (REAL) Player pos as blue pixel
+	//draw_rect(v2(player -> pos.x, player -> pos.y), v2(1, 1), v4(0, 255, 255, 1));
+
+	// Draw player pos offset to be centered on the center of the sprite (NOT REAL POS)
+	//draw_rect(v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y + sprites[player -> spriteID].image -> height * 0.5)), v2(1, 1), v4(0, 255, 0, 1));
+}
+
+// Entities Rendering
+
 void render_entities()
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
@@ -2032,6 +1842,83 @@ void render_entities()
 		}
 	}
 }
+
+// :World setup
+
+void world_setup()
+{
+	//start inventory open
+	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
+
+	if (world -> current_floor == null)
+	{
+		world -> current_floor = 0;
+	}
+	log("%i current floor", world -> current_floor);
+	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
+	world -> active_floors++;
+
+	Entity* player_en = entity_create();
+	setup_player(player_en);
+
+	// :test stuff
+	#if defined(DEV_TESTING)
+	{
+		world -> items[ITEM_Exp] = setup_exp_item();
+
+		// Spawn one Target
+		Entity* en = entity_create();
+		setup_target(en);
+	}
+	#endif
+}
+
+// :Save / Load System
+
+bool world_save_to_disk() 
+{
+	u64 everything_but_floors = offsetof(World, floors);
+
+	u64 active_floors = world -> active_floors * sizeof(FloorData);
+
+	u64 all_save_data = everything_but_floors + active_floors;
+
+	return os_write_entire_file_s(STR("world"), (string){all_save_data, (u8*)world});
+}
+
+bool world_attempt_load_from_disk() 
+{
+    string result = {0};
+    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator()); // <--------------- Allocate on heap instead (temp is killed every frame)
+    if (!succ) 
+    {
+        log_error("Failed to load world.");
+        return false;
+    }
+
+    // NOTE, for errors I used to do stuff like this assert:
+    // assert(result.count == sizeof(World), "world size has changed!");
+    //
+    // But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
+    // That's why this function returns a bool. We handle that at the callsite.
+    // Maybe we want to just start up a new world, throw a user friendly error, or whatever as a fallback. Not just crash the game lol.
+
+	/*
+    if (result.count != sizeof(World)) 
+    {
+        log_error("world size different to one on disk.");
+        return false;
+    }
+	*/
+
+    memcpy(world, result.data, result.count);
+
+    dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
+
+    return true;
+}
+
+// :Game Program Setup
 
 int entry(int argc, char **argv) 
 {
@@ -2153,25 +2040,18 @@ int entry(int argc, char **argv)
 			render_entities();
 		}
 
-		// :Do UI Rendering
+		tm_scope("Render Player")
+		{
+			render_player();
+		}
+
 		tm_scope("Render UI")
 		{
-			do_ui_stuff();
+			render_ui();
 		}
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
-
-		// Remove inactive projectiles
-		/* 
-		for (int i = MAX_PROJECTILES - 1; i >= 0; i--) 
-		{
-			if (!projectiles[i].is_active) 
-			{
-				projectiles[i] = false;
-			}
-		}
-		*/
 	
 		tm_scope("Update Projectiles")
 		{
@@ -2214,53 +2094,20 @@ int entry(int argc, char **argv)
 			load_next_floor();
 		}
 
-		//Render player
+		if (is_key_just_pressed(KEY_F3))
 		{
-			Entity *player = get_player();
-			SpriteData sprite_data = sprites[player -> sprite_ID];
+			// Draw the debug circle around the player
+			// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
 
-			Vector2 sprite_size = get_sprite_size(sprite_data);
-
-			Matrix4 xform = m4_scalar(1.0);
-
-			xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
-
-			Vector4 col = COLOR_WHITE;
-			draw_image_xform(sprite_data.image, xform, sprite_size, col);
-
-			// Healthbar test values
-			Vector2 health_bar_pos = v2((player -> pos.x + (sprite_data.image -> width * 0.5)), (player -> pos.y + (sprite_data.image -> height)));
-
-			// Temperary render player healthbar test
-			draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
-
-			// World space current location debug for object pos
-			//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
-
-			// floor player currently resides in
-			//draw_text(font, sprint(get_temporary_allocator(), STR("Current Floor:%i"), player -> current_floor), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
-
-			// Draw (REAL) Player pos as blue pixel
-			//draw_rect(v2(player -> pos.x, player -> pos.y), v2(1, 1), v4(0, 255, 255, 1));
-
-			// Draw player pos offset to be centered on the center of the sprite (NOT REAL POS)
-			//draw_rect(v2((player -> pos.x + sprites[player -> spriteID].image -> width * 0.5), (player -> pos.y + sprites[player -> spriteID].image -> height * 0.5)), v2(1, 1), v4(0, 255, 0, 1));
-
-			if (is_key_just_pressed(KEY_F3))
+			tm_scope("Spawn Projectile")
 			{
-				// Draw the debug circle around the player
-            	// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
+				// Ghetto Fireball Spawn Test
+				float fireball_cost = 5;
 
-				tm_scope("Spawn Projectile")
+				if(mana.current >= fireball_cost)
 				{
-					// Ghetto Fireball Spawn Test
-					float fireball_cost = 5;
-
-					if(mana.current >= fireball_cost)
-					{
-						spawn_projectile(player, 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
-						mana.current -= fireball_cost;
-					}
+					spawn_projectile(get_player(), 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
+					mana.current -= fireball_cost;
 				}
 			}
 		}

@@ -77,8 +77,8 @@ struct Ability
     int allocate_cost;
  };
 
- void skill_requirement_check(SkillRequirement *skill_requirement, AbilityID ability_ID, int required_level) 
- {
+void skill_requirement_check(SkillRequirement *skill_requirement, AbilityID ability_ID, int required_level) 
+{
     skill_requirement -> ability_ID = ability_ID;
     skill_requirement -> required_level = required_level;
 }

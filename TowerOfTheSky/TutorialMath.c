@@ -152,3 +152,52 @@ Vector2 v2_scale(Vector2 v, float32 scale)
 {
     return (Vector2){v.x * scale, v.y * scale};
 }
+
+bool is_even(int number) 
+{
+    return number % 2 == 0;
+}
+
+// pad_pct just shrinks the rect by a % of itself ... 0.2 is a nice default
+
+Draw_Quad* draw_sprite_in_rect(SpriteData sprite_data, Range2f rect, Vector4 col, float pad_pct) 
+{
+	Vector2 sprite_size = get_sprite_size(sprite_data);
+
+	// make it smoller (padding)
+	{
+		Vector2 size = range2f_size(rect);
+		Vector2 offset = rect.min;
+		rect = range2f_shift(rect, v2_mulf(rect.min, -1));
+		rect.min.x += size.x * pad_pct * 0.5;
+		rect.min.y += size.y * pad_pct * 0.5;
+		rect.max.x -= size.x * pad_pct * 0.5;
+		rect.max.y -= size.y * pad_pct * 0.5;
+		rect = range2f_shift(rect, offset);
+	}
+
+	// ratio render lock
+	if (sprite_size.x > sprite_size.y) 
+	{ 
+
+		// height is a ratio of width
+		Vector2 range_size = range2f_size(rect);
+		rect.max.y = rect.min.y + (range_size.x * (sprite_size.y / sprite_size.x));
+		// center along the Y
+		float new_height = rect.max.y - rect.min.y;
+		rect = range2f_shift(rect, v2(0, (range_size.y - new_height) * 0.5));
+
+	} 
+	else if (sprite_size.y > sprite_size.x) 
+	{ 
+		
+		// width is a ratio of height
+		Vector2 range_size = range2f_size(rect);
+		rect.max.x = rect.min.x + (range_size.y * (sprite_size.x/sprite_size.y));
+		// center along the X
+		float new_width = rect.max.x - rect.min.x;
+		rect = range2f_shift(rect, v2((range_size.x - new_width) * 0.5, 0));
+	}
+
+	return draw_image(sprite_data.image, rect.min, range2f_size(rect), col);
+}
