@@ -487,6 +487,78 @@ Resource* get_player_resource(ResourceID resource_ID)
 	return 0;
 }
 
+Skill* get_player_skill(SkillID skill_ID)
+{
+	for (int i = 0; i < SKILLID_MAX; i++)
+	{
+		if (world -> player.skill_list[i].skill_ID == skill_ID)
+		{
+			return & world -> player.skill_list[i];
+		}
+	}
+	return 0;
+}
+
+Ability* get_player_ability(AbilityID ability_ID)
+{
+	for (int i = 0; i < ABILITYID_MAX; i++)
+	{
+		if (world -> player.ability_list[i].ability_ID == ability_ID)
+		{
+			return & world -> player.ability_list[i];
+		}
+	}
+	return 0;
+}
+
+Upgrade* get_player_upgrade(UpgradeID upgrade_ID)
+{
+	for (int i = 0; i < UPGRADEID_MAX; i++)
+	{
+		if (world -> player.upgrade_list[i].upgrade_ID == upgrade_ID)
+		{
+			return & world -> player.upgrade_list[i];
+		}
+	}
+	return NULL;
+}
+
+bool is_upgrade_in_player_list(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.upgrade_list[i].upgrade_ID == upgrade_ID)
+        {
+            return true; // Upgrade already exists in player's list
+        }
+    }
+    return false; // Upgrade not found in player's list
+}
+
+void add_upgrade_to_player(UpgradeID upgrade_ID)
+{
+    if (is_upgrade_in_player_list(upgrade_ID))
+    {
+        log("Upgrade '%i' is already in the player's upgrade list.\n", upgrade_ID);
+        return;
+    }
+
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.upgrade_list[i].upgrade_ID == UPGRADEID_nil)
+        {
+            world -> player.upgrade_list[i] = upgrades[upgrade_ID];
+			world -> player.upgrade_list[i].unlocked = true;
+
+            //log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
+
+            return;
+        }
+    }
+
+    log("Player's upgrade list is full, cannot add upgrade '%s'.\n", upgrades[upgrade_ID].name);
+}
+
 void player_change_floor(int target_floor) 
 {
     int player_index = get_player_data_location();
@@ -1459,8 +1531,18 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 	if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 	{
 		world_frame.hover_consumed = true;
-		color = COLOR_RED;
+		quad -> color = COLOR_RED;
 		draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+	}
+}
+
+void unlock_upgrade(UpgradeID upgrade_ID)
+{
+	if (get_player_upgrade(upgrade_ID) == NULL)
+	{
+		mark_upgrade_unlocked(upgrade_ID);
+		update_known_upgrades();
+		add_upgrade_to_player(upgrade_ID);
 	}
 }
 
@@ -1476,61 +1558,33 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 
 	for (int i = 0; i < UPGRADEID_MAX; i++)
 	{
-		if (upgrades[i].known == true)
+		if (is_upgrade_in_known(upgrades[i].upgrade_ID) == true)
 		{
-			current_buttons++;
-
-			Vector2 button_pos = v2(400, (y_pos - (current_buttons * 30)));
-
-			string button_text = sprint(get_temporary_allocator(), STR(upgrades[i].name));
-
-			string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
-
-			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
-
-			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			if (get_player_upgrade(upgrades[i].upgrade_ID) == NULL)
 			{
-				world_frame.hover_consumed = true;
+				current_buttons++;
 
-				switch (upgrades[i].upgrade_ID) 
+				Vector2 button_pos = v2(400, (y_pos - (current_buttons * 30)));
+
+				string button_text = sprint(get_temporary_allocator(), STR(upgrades[i].name));
+
+				string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
+
+				Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+
+				if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 				{
-					case UPGRADEID_Unlock_Mana:
-					{
-						break;
-					}
+					world_frame.hover_consumed = true;
 
-					case UPGRADEID_Unlock_Magic:
-					{
-						break;
-					}
-
-					case UPGRADEID_Unlock_Arcana:
-					{
-						break;
-					}
-
-					case UPGRADEID_Unlock_Fire_Bolt:
-					{
-						break;
-					}
-
-					case UPGRADEID_Multishot:
-					{
-						break;
-					}
-
-					default:
-					{
-						break;
-					}
+					unlock_upgrade(upgrades[i].upgrade_ID);
 				}
-			}
 
-			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
-			{
-				world_frame.hover_consumed = true;
-				color = COLOR_RED;
-				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+				if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				{
+					world_frame.hover_consumed = true;
+					quad -> color = COLOR_RED;
+					draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+				}					
 			}
 		}
 	}

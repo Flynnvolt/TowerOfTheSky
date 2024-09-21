@@ -111,9 +111,9 @@ Upgrade upgrades[UPGRADEID_MAX] =
 
 Upgrade known_upgrades[UPGRADEID_MAX];
 
-bool is_upgrade_in_known(UpgradeID upgrade_ID, int known_count)
+bool is_upgrade_in_known(UpgradeID upgrade_ID)
 {
-    for (int i = 0; i < known_count; i++)
+    for (int i = 0; i < UPGRADEID_MAX; i++)
     {
         if (known_upgrades[i].upgrade_ID == upgrade_ID)
         {
@@ -141,11 +141,25 @@ void update_known_upgrades()
         if (upgrades[i].known && !upgrades[i].unlocked)
         {
             // Check if upgrade is already in known
-            if (!is_upgrade_in_known(upgrades[i].upgrade_ID, known_count))
+            if (!is_upgrade_in_known(upgrades[i].upgrade_ID))
             {
                 known_upgrades[known_count] = upgrades[i];
                 known_count++;
             }
         }
     }
+}
+
+void mark_upgrade_unlocked(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (upgrades[i].upgrade_ID == upgrade_ID)
+        {
+            upgrades[i].unlocked = true;
+            //log("Upgrade '%s' unlocked!\n", upgrades[i].name);
+            return;
+        }
+    }
+    log("Upgrade with ID %i not found.\n", upgrade_ID);
 }
