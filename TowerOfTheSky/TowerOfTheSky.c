@@ -487,6 +487,43 @@ Resource* get_player_resource(ResourceID resource_ID)
 	return 0;
 }
 
+bool is_resource_in_player_list(ResourceID resource_ID)
+{
+    for (int i = 0; i < RESOURCEID_MAX; i++)
+    {
+        if (world -> player.resource_list[i].resource_ID == resource_ID)
+        {
+            return true; 
+        }
+    }
+    return false; 
+}
+
+void add_player_resource(ResourceID resource_ID)
+{
+    if (is_resource_in_player_list(resource_ID))
+    {
+        log("Resource '%s' is already in the player's resource list.\n", resources[resource_ID].name);
+        return;
+    }
+
+    for (int i = 0; i < RESOURCEID_MAX; i++)
+    {
+        if (get_player_resource(resource_ID) == NULL)
+        {
+            world -> player.resource_list[i] = resources[resource_ID];
+            world -> player.resource_list[i].unlocked = true;
+
+            log("Resource '%s' added to player's resource list.\n", resources[resource_ID].name);
+
+            return;
+        }
+    }
+
+    log("Player's skill list is full, cannot add skill '%s'.\n", resources[resource_ID].name);
+}
+
+
 Skill* get_player_skill(SkillID skill_ID)
 {
 	for (int i = 0; i < SKILLID_MAX; i++)
@@ -515,7 +552,7 @@ void add_player_skill(SkillID skill_ID)
 {
     if (is_skill_in_player_list(skill_ID))
     {
-        log("Skill '%s' is already in the player's skill list.\n", get_skill_by_id(skill_ID) -> name);
+        log("Skill '%s' is already in the player's skill list.\n", skills[skill_ID].name);
         return;
     }
 
@@ -1557,6 +1594,7 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 		add_upgrade_to_player(upgrade_ID);
 
 		add_player_skill(get_player_upgrade(upgrade_ID) -> skills_unlocked[0]);
+		add_player_resource(get_player_upgrade(upgrade_ID) -> resources_unlocked[0]);
 	}
 }
 
@@ -2091,6 +2129,7 @@ int entry(int argc, char **argv)
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
 	load_sprite_data();
+	load_resource_data();
 	load_skill_data();
 	load_ability_data();
 	load_upgrade_data();

@@ -4,6 +4,7 @@ typedef enum ResourceID ResourceID;
 
 enum ResourceID
 {
+    RESOURCEID_nil,
     RESOURCEID_Mana,
     RESOURCEID_Intellect,
     RESOURCEID_MAX,
@@ -42,3 +43,11 @@ Resource intellect =
     .max = 50.0,
     .per_second = 0.5,
 };
+
+Resource resources[RESOURCEID_MAX];
+
+void load_resource_data()
+{
+    resources[RESOURCEID_Mana] = mana;
+    resources[RESOURCEID_Intellect] = intellect;
+}
