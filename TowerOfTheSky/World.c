@@ -5,6 +5,7 @@
 #include "Enemy.c"
 #include "Floor.c"
 #include "Projectile.c"
+#include "Player.c"
 
 typedef struct Projectile Projectile;
 
@@ -19,6 +20,8 @@ struct World
 	float inventory_alpha;
 
 	float inventory_alpha_target;
+
+	Player player;
 
 	int active_projectiles;
 

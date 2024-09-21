@@ -14,9 +14,10 @@ typedef enum SkillID SkillID;
 
 enum SkillID
 {
-    SKILL_Channel_Mana,
-    SKILL_wisdom,
-    SKILL_focus,
+    SKILLID_Channel_Mana,
+    SKILLID_wisdom,
+    SKILLID_focus,
+    SKILLID_MAX,
 };
 
 // Define the function pointer type for skill effects
@@ -113,8 +114,8 @@ void level_up_skill(Skill* self)
 
 Skill channel_mana = 
 {
-    .skill_ID = SKILL_Channel_Mana,
-    .unlocked = true,
+    .skill_ID = SKILLID_Channel_Mana,
+    .unlocked = false,
     .level = 0,
     .base_costs = {25.0, 0.0},                         // Base cost: 25 mana
     .current_costs = {25.0, 0.0},
@@ -131,7 +132,7 @@ Skill channel_mana =
 
 Skill wisdom = 
 {
-    .skill_ID = SKILL_wisdom,
+    .skill_ID = SKILLID_wisdom,
     .unlocked = false,
     .level = 0,
     .base_costs = {1.0, 0.0},                          // Base cost: 1 Intellect
@@ -149,7 +150,7 @@ Skill wisdom =
 
 Skill focus = 
 {
-    .skill_ID = SKILL_focus,
+    .skill_ID = SKILLID_focus,
     .unlocked = false,
     .level = 0,
     .base_costs = {50.0, 1.0},                         // Base cost: 50 Mana, 1 Intellect
@@ -166,6 +167,7 @@ Skill focus =
 };
 
 // Leveling up skills
+
 void level_up_channel_mana_if_unlocked() 
 {
     if (channel_mana.unlocked == true) 

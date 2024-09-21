@@ -14,6 +14,7 @@
 #include "Enemy.c"
 #include "Building.c"
 #include "WorldFrame.c"
+#include "Player.c"
 
 // Defines
 
@@ -471,6 +472,18 @@ void setup_player(Entity* player_en)
 
 	// Center X and Y
 	//player_en -> pos = v2((player_en -> pos.x - sprites[player_en -> spriteID].image -> width * 0.5),(player_en -> pos.y - sprites[player_en -> spriteID].image -> height * 0.5));
+}
+
+Resource* get_player_resource(ResourceID resource_ID)
+{
+	for (int i = 0; i < RESOURCEID_MAX; i++)
+	{
+		if (world -> player.resource_list[i].resource_ID == resource_ID)
+		{
+			return & world -> player.resource_list[i];
+		}
+	}
+	return 0;
 }
 
 void player_change_floor(int target_floor) 
@@ -970,7 +983,7 @@ void damage_entity(Entity *entity, float damage)
 		
 		default: 
 		{
-			log_error("misconfigured arch in Damage Entity"); 
+			log_error("misconfigured entity ID in Damage Entity"); 
 			break;
 		}
 	}
@@ -1125,24 +1138,24 @@ void set_world_space()
 
 // :UI
 
-void draw_resource_bar(float y_pos, float *current_resource, float *max_resource, float *resource_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, string *resource_name)
+void draw_resource_bar(Resource *resource, float y_pos, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color)
 {
 	// Increment resource
-	if (*current_resource < *max_resource)
+	if (resource -> current < resource -> max)
 	{
-		*current_resource += *resource_per_second * delta_t;
+		resource -> current += resource -> per_second * delta_t;
 	}
 
 	// Resource Overflow Check
-	if (*current_resource >= *max_resource)
+	if (resource -> current >= resource -> max)
 	{
-		*current_resource = *max_resource;
+		resource -> current = resource -> max;
 	}
 
 	// Resource underflow check
-	if (*current_resource <= 0)
+	if (resource -> current <= 0)
 	{
-		*current_resource = 0;
+		resource -> current = 0;
 	}
 
 	//log("%f %f %f", current_resource, max_resource, resource_per_second);
@@ -1151,13 +1164,13 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 
 	float x_start_pos = (screen_width * 0.025);
 
-	int current_resource_int = (int)*current_resource;
+	int current_resource_int = (int)resource -> current;
 
-	int max_resource_int = (int)*max_resource;
+	int max_resource_int = (int)resource -> max;
 
 	float percentage_of_bar_width = (bar_width / 100.0);
 
-	float current_resource_percentage = (*current_resource / *max_resource) * 100.0f;
+	float current_resource_percentage = (resource -> current / resource -> max) * 100.0f;
 
 	float bar_visual_size = (percentage_of_bar_width * current_resource_percentage);
 
@@ -1179,7 +1192,7 @@ void draw_resource_bar(float y_pos, float *current_resource, float *max_resource
 	{
 		string current_resource_string = STR("%s: %i/%i    +%.1f/s"); // %i is where the number goes.
 
-		current_resource_string = sprint(get_temporary_allocator(), current_resource_string, *resource_name, current_resource_int, max_resource_int, *resource_per_second);
+		current_resource_string = sprint(get_temporary_allocator(), current_resource_string, resource -> name, current_resource_int, max_resource_int, resource -> per_second);
 
 		Gfx_Text_Metrics metrics = measure_text(font, current_resource_string, font_height, v2(0.20, 0.20));
 
@@ -1415,19 +1428,19 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 
 		switch (ability) 
 		{
-			case SKILL_Channel_Mana:
+			case SKILLID_Channel_Mana:
 			{
 				level_up_channel_mana_if_unlocked();
 				break;
 			}
 
-			case SKILL_wisdom:
+			case SKILLID_wisdom:
 			{
 				level_up_wisdom_if_unlocked();
 				break;
 			}
 
-			case SKILL_focus:
+			case SKILLID_focus:
 			{
 				level_up_focus_if_unlocked();
 				break;
@@ -1596,34 +1609,15 @@ void render_ui()
 			}
 
 			// Mana bar
-			if (mana.unlocked == true)
+			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
 			{
-				string name = STR("Mana");
-				draw_resource_bar(240, & mana.current, & mana.max, & mana.per_second, icon_size, icon_row_count, accent_col_blue, bg_box_color, & name);
-
-				if (channel_mana.level >= 5)
-				{
-					wisdom.unlocked = true;
-
-					// Unlock intellect for now for testing other things (shouldn't be unlocked yet)
-
-					if (intellect.unlocked == false)
-					{
-						intellect.unlocked = true;
-					}
-				}
+				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_size, icon_row_count, accent_col_blue, bg_box_color);
 			}
 
 			// Intellect bar
-			if (intellect.unlocked == true)
+			if (get_player_resource(RESOURCEID_Intellect) != NULL && get_player_resource(RESOURCEID_Intellect) -> unlocked == true)
 			{
-				string name = STR("Intellect");
-				draw_resource_bar(220, & intellect.current, & intellect.max, & intellect.per_second, icon_size, icon_row_count, accent_col_purple, bg_box_color, & name);
-
-				if (wisdom.level >= 5)
-				{
-					focus.unlocked = true;
-				}
+				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_size, icon_row_count, accent_col_purple, bg_box_color);
 			}
 
 			// Level up channel mana button
@@ -1860,6 +1854,14 @@ void world_setup()
 
 	Entity* player_en = entity_create();
 	setup_player(player_en);
+
+	// new ability system testing
+	world -> player = hero_default;
+	world -> player.resource_list[0] = mana;
+	world -> player.ability_list[0] = fire_bolt;
+	world -> player.ability_list[0].unlocked = true;
+	world -> player.skill_list[0] = channel_mana;
+	world -> player.skill_list[0].unlocked = true;
 
 	// :test stuff
 	#if defined(DEV_TESTING)
@@ -2101,13 +2103,14 @@ int entry(int argc, char **argv)
 
 			tm_scope("Spawn Projectile")
 			{
-				// Ghetto Fireball Spawn Test
-				float fireball_cost = 5;
-
-				if(mana.current >= fireball_cost)
+				if (world -> player.ability_list[0].unlocked == true)
 				{
-					spawn_projectile(get_player(), 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
-					mana.current -= fireball_cost;
+					if(get_player_resource(RESOURCEID_Mana) -> current >= world -> player.ability_list[0].base_resource_cost)
+					{
+						spawn_projectile(get_player(), 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
+
+						get_player_resource(RESOURCEID_Mana) -> current -= world -> player.ability_list[0].base_resource_cost;
+					}
 				}
 			}
 		}
