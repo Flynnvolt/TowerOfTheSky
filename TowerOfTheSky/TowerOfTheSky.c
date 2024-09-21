@@ -1583,24 +1583,44 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size,
 	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
 
-void display_skill_level_up_button(SkillID skill, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
+void display_skill_level_up_button(float button_size, Vector4 color)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
 
-	if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+	int y_pos = 240;
+
+	int current_buttons = 0;
+
+	for (int i = 0; i < SKILLID_MAX; i++)
 	{
-		world_frame.hover_consumed = true;
+		if (get_player_skill(skills[i].skill_ID) != NULL && get_player_skill(skills[i].skill_ID) -> unlocked == true)
+		{
+			current_buttons++;
 
-		find_skill_to_level(skill);
-	}
+			Vector2 button_pos = v2(100, (y_pos - (current_buttons * 30)));
+			
+			Skill* skill = get_player_skill(skills[i].skill_ID);
 
-	Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %.1f %s"), skill -> name, skill -> level, skill -> current_costs[0], get_player_resource(skill -> cost_resources[0]) -> name);
 
-	if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
-	{
-		world_frame.hover_consumed = true;
-		quad -> color = COLOR_RED;
-		draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %.1f %s\n+%.2f Base Mana / second\n%s"), skill -> name, skill -> level, skill -> current_costs[0], get_player_resource(skill -> cost_resources[0]) -> name, skill -> current_effect_value, skill -> description);
+
+			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+
+				find_skill_to_level(skills[i].skill_ID);
+			}
+
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+
+			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+				quad -> color = COLOR_RED;
+				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+			}
+		}
 	}
 }
 
@@ -1612,8 +1632,21 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 		update_known_upgrades();
 		add_upgrade_to_player(upgrade_ID);
 
-		add_player_skill(get_player_upgrade(upgrade_ID) -> skills_unlocked[0]);
-		add_player_resource(get_player_upgrade(upgrade_ID) -> resources_unlocked[0]);
+		for (int i = 0; i < RESOURCEID_MAX; i++)
+		{ 
+			if (get_player_upgrade(upgrade_ID) -> resources_unlocked[i] != RESOURCEID_nil)
+			{
+				add_player_resource(get_player_upgrade(upgrade_ID) -> resources_unlocked[i]);
+			}
+		}
+
+		for (int i = 0; i < SKILLID_MAX; i++)
+		{
+			if (get_player_upgrade(upgrade_ID) -> skills_unlocked[i] != RESOURCEID_nil)
+			{
+				add_player_skill(get_player_upgrade(upgrade_ID) -> skills_unlocked[i]);
+			}
+		}
 	}
 }
 
@@ -1818,40 +1851,7 @@ void render_ui()
 				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_size, icon_row_count, accent_col_purple, bg_box_color);
 			}
 
-			// Level up channel mana button
-			if (get_player_skill(SKILLID_Channel_Mana) != NULL && get_player_skill(SKILLID_Channel_Mana) -> unlocked == true)
-			{
-				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana.level, channel_mana.current_costs[0]);
-
-				string channel_mana_tooltip = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana\n+%.2f Base Mana / second\nChannel your mana to Increase\nit's recovery speed."), channel_mana.level, channel_mana.current_costs[0], channel_mana.current_effect_value);
-
-				display_skill_level_up_button(channel_mana.skill_ID, 16, v2(175, y_pos), fill_col, channel_button_text, channel_mana_tooltip);
-
-				//log("Level:%i, mana Regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", channel_mana.level, channel_mana.current_effect_value, channel_mana.current_power_multiplier, channel_mana.current_costs[0], channel_mana.cost_multipliers[0], channel_mana.cost_multipliers[1]);
-			}
-			
-			// Level Up wisdom Button
-			if (get_player_skill(SKILLID_Wisdom) != NULL && get_player_skill(SKILLID_Wisdom) -> unlocked == true)
-			{
-				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
-
-				string wisdom_tooltip = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect\n+%.1f Max Mana\nWisdom expands your mana reserves."), wisdom.level, wisdom.current_costs[0], wisdom.current_effect_value);
-				
-				display_skill_level_up_button(wisdom.skill_ID, 16, v2(175, y_pos - 30), fill_col, wisdom_button_text, wisdom_tooltip);
-			}
-			
-			// Level Up Focus Button
-			if (get_player_skill(SKILLID_Focus) != NULL && get_player_skill(SKILLID_Focus) -> unlocked == true)
-			{
-				string focus_button_text = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
-
-				string focus_tooltip = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect\n+%.1f Base Intellect / second\nPassively generate Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1], focus.current_effect_value);
-
-				display_skill_level_up_button(focus.skill_ID, 16, v2(175, y_pos - 60), fill_col, focus_button_text, focus_tooltip);
-				
-				//log("Level:%i, intellect regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", focus.level, focus.current_effect_value, focus.current_power_multiplier, focus.current_costs[0], focus.cost_multipliers[0], focus.cost_multipliers[1]);
-			}
-
+			display_skill_level_up_button(16, fill_col);
 			display_upgrade_buttons(16, fill_col);
 		}
 		world_frame.hover_consumed = true;
