@@ -118,3 +118,10 @@ Ability fire_bolt =
     .max_level = 50,
     .allocate_cost = 1,
 };
+
+Ability abilities[ABILITYID_MAX];
+
+void load_ability_data()
+{
+    abilities[ABILITYID_Fire_Bolt] = fire_bolt;
+}

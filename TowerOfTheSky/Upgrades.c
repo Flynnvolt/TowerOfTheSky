@@ -31,83 +31,91 @@ struct Upgrade
     int level;
 };
 
-Upgrade upgrades[UPGRADEID_MAX] = 
+Upgrade unlock_mana = 
 {
-    [UPGRADEID_Unlock_Mana] = 
-    {
-        .upgrade_ID = UPGRADEID_Unlock_Mana,
-        .upgrades_revealed = {},
-        .abilities_unlocked = {},
-        .upgrades_required = {},
-        .skills_unlocked = {SKILLID_Channel_Mana},
-        .resources_unlocked = {RESOURCEID_Mana},
-        .known = true,
-        .unlocked = false,
-        .name = "Study Mana",
-        .description = "",
-        .level = 0,
-    },
-
-    [UPGRADEID_Unlock_Magic] = 
-    {
-        .upgrade_ID = UPGRADEID_Unlock_Magic,
-        .upgrades_revealed = {UPGRADEID_Unlock_Arcana, UPGRADEID_Unlock_Fire_Bolt},
-        .upgrades_required = {UPGRADEID_Unlock_Mana},
-        .abilities_unlocked = {},
-        .skills_unlocked = {SKILLID_wisdom},
-        .resources_unlocked = {RESOURCEID_Intellect},
-        .known = false,
-        .unlocked = false,
-        .name = "Study Magic",
-        .description = "",
-        .level = 0,
-    },
-
-    [UPGRADEID_Unlock_Arcana] = 
-    {
-        .upgrade_ID = UPGRADEID_Unlock_Arcana,
-        .upgrades_revealed = {UPGRADEID_Multishot},
-        .upgrades_required = {UPGRADEID_Unlock_Magic},
-        .abilities_unlocked = {},
-        .skills_unlocked = {SKILLID_focus},
-        .resources_unlocked = {},
-        .known = false,
-        .unlocked = false,
-        .name = "Study Arcana",
-        .description = "",
-        .level = 0,
-    },
-
-    [UPGRADEID_Unlock_Fire_Bolt] =
-    {
-        .upgrade_ID = UPGRADEID_Unlock_Fire_Bolt,
-        .upgrades_revealed = {},
-        .upgrades_required = {UPGRADEID_Unlock_Arcana},
-        .abilities_unlocked = {ABILITYID_Fire_Bolt},
-        .skills_unlocked = {},
-        .resources_unlocked = {},
-        .known = false,
-        .unlocked = false,
-        .name = "Learn Fire Bolt",
-        .description = "",
-        .level = 0,
-    },
-
-    [UPGRADEID_Multishot] = 
-    {
-        .upgrade_ID = UPGRADEID_Multishot,
-        .upgrades_revealed = {},
-        .upgrades_required = {UPGRADEID_Unlock_Fire_Bolt, UPGRADEID_Unlock_Arcana},
-        .abilities_unlocked = {},
-        .skills_unlocked = {},
-        .resources_unlocked = {},
-        .known = false,
-        .unlocked = false,
-        .name = "Multishot",
-        .description = "",
-        .level = 0,
-    }
+    .upgrade_ID = UPGRADEID_Unlock_Mana,
+    .upgrades_revealed = {},
+    .abilities_unlocked = {},
+    .upgrades_required = {},
+    .skills_unlocked = {SKILLID_Channel_Mana},
+    .resources_unlocked = {RESOURCEID_Mana},
+    .known = true,
+    .unlocked = false,
+    .name = "Study Mana",
+    .description = "",
+    .level = 0,
 };
+
+Upgrade unlock_magic = 
+{
+    .upgrade_ID = UPGRADEID_Unlock_Magic,
+    .upgrades_revealed = {UPGRADEID_Unlock_Arcana, UPGRADEID_Unlock_Fire_Bolt},
+    .upgrades_required = {UPGRADEID_Unlock_Mana},
+    .abilities_unlocked = {},
+    .skills_unlocked = {SKILLID_wisdom},
+    .resources_unlocked = {RESOURCEID_Intellect},
+    .known = false,
+    .unlocked = false,
+    .name = "Study Magic",
+    .description = "",
+    .level = 0,
+};
+
+Upgrade unlock_arcana = 
+{
+    .upgrade_ID = UPGRADEID_Unlock_Arcana,
+    .upgrades_revealed = {UPGRADEID_Multishot},
+    .upgrades_required = {UPGRADEID_Unlock_Magic},
+    .abilities_unlocked = {},
+    .skills_unlocked = {SKILLID_focus},
+    .resources_unlocked = {},
+    .known = false,
+    .unlocked = false,
+    .name = "Study Arcana",
+    .description = "",
+    .level = 0,
+};
+
+Upgrade unlock_firebolt = 
+{
+    .upgrade_ID = UPGRADEID_Unlock_Fire_Bolt,
+    .upgrades_revealed = {},
+    .upgrades_required = {UPGRADEID_Unlock_Arcana},
+    .abilities_unlocked = {ABILITYID_Fire_Bolt},
+    .skills_unlocked = {},
+    .resources_unlocked = {},
+    .known = false,
+    .unlocked = false,
+    .name = "Learn Fire Bolt",
+    .description = "",
+    .level = 0,
+};
+
+Upgrade multishot =  
+{
+    .upgrade_ID = UPGRADEID_Multishot,
+    .upgrades_revealed = {},
+    .upgrades_required = {UPGRADEID_Unlock_Fire_Bolt, UPGRADEID_Unlock_Arcana},
+    .abilities_unlocked = {},
+    .skills_unlocked = {},
+    .resources_unlocked = {},
+    .known = false,
+    .unlocked = false,
+    .name = "Multishot",
+    .description = "",
+    .level = 0,
+};
+
+Upgrade upgrades[UPGRADEID_MAX];
+
+void load_upgrade_data() 
+{
+    upgrades[UPGRADEID_Unlock_Mana] = unlock_mana;
+    upgrades[UPGRADEID_Unlock_Magic] = unlock_magic;
+    upgrades[UPGRADEID_Unlock_Arcana] = unlock_arcana;
+    upgrades[UPGRADEID_Unlock_Fire_Bolt] = unlock_firebolt;
+    upgrades[UPGRADEID_Multishot] = multishot;
+}
 
 Upgrade known_upgrades[UPGRADEID_MAX];
 

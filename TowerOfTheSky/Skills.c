@@ -166,6 +166,15 @@ Skill focus =
     .level_up = level_up_skill,
 };
 
+Skill skills[SKILLID_MAX];
+
+void load_skill_data()
+{
+    skills[SKILLID_Channel_Mana] = channel_mana;
+    skills[SKILLID_wisdom] = wisdom;
+    skills[SKILLID_focus] = focus;
+}
+
 // Leveling up skills
 
 void level_up_channel_mana_if_unlocked() 

@@ -2077,6 +2077,9 @@ int entry(int argc, char **argv)
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
 	load_sprite_data();
+	load_skill_data();
+	load_ability_data();
+	load_upgrade_data();
 
 	setup_fireball_anim(); // Setup fireball animation so it can be used.
 
