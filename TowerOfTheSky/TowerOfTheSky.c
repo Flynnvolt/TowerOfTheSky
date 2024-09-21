@@ -572,6 +572,25 @@ void add_player_skill(SkillID skill_ID)
     log("Player's skill list is full, cannot add skill '%s'.\n", skills[skill_ID].name);
 }
 
+Skill* get_skill_by_id(SkillID skill_id) 
+{
+    if (skill_id >= 0 && skill_id < SKILLID_MAX) 
+    {
+        return get_player_skill(skill_id);
+    }
+    return NULL;
+}
+
+void find_skill_to_level(SkillID skill_ID)
+{
+    Skill* skill = get_skill_by_id(skill_ID);  
+
+    if (skill != NULL && skill -> unlocked)  
+    {
+        skill -> level_up(skill, world -> player.resource_list);
+    }
+}
+
 Ability* get_player_ability(AbilityID ability_ID)
 {
 	for (int i = 0; i < ABILITYID_MAX; i++)

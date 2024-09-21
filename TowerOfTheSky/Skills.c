@@ -70,23 +70,41 @@ struct Skill
 
     EffectFunction apply_effect;                   // Function to apply the skill's effect
 
-    Resource* cost_resources[MAX_COSTS];           // Resources used for the cost
-    Resource* effect_resources[MAX_EFFECTS];       // Resources affected by the effect
+    ResourceID cost_resources[MAX_COSTS];           // Resources used for the cost
+    ResourceID effect_resources[MAX_EFFECTS];       // Resources affected by the effect
 
-    void (*level_up)(struct Skill* self);
+    void (*level_up)(struct Skill* self, Resource resources[RESOURCEID_MAX]);
 };
 
-void level_up_skill(Skill* self) 
+Resource* get_resource_from_resouce_list(ResourceID resource_ID, Resource resource_list[RESOURCEID_MAX])
+{
+	for (int i = 0; i < RESOURCEID_MAX; i++)
+	{
+		if (resource_list[i].resource_ID == resource_ID)
+		{
+			return & resource_list[i];
+		}
+	}
+	return NULL;
+}
+
+void level_up_skill(Skill* self, Resource resources[RESOURCEID_MAX]) 
 {
     // Spend resources and update costs
     for (int i = 0; i < MAX_COSTS; i++) 
     {
-        if (self -> cost_resources[i] != NULL) 
+        ResourceID cost_id = self -> cost_resources[i];
+        
+        // Ensure the resource ID is valid
+        if (cost_id != RESOURCEID_nil)
         {
-            if (self -> cost_resources[i] -> current >= self -> current_costs[i]) 
+            Resource* cost_resource = get_resource_from_resouce_list(cost_id, resources);
+            
+            // Check if enough resources are available to pay the cost
+            if (cost_resource->current >= self -> current_costs[i]) 
             {
                 // Spend the resource
-                self -> cost_resources[i] -> current -= self -> current_costs[i];
+                cost_resource -> current -= self -> current_costs[i];
 
                 // Increase the cost for the next level
                 self -> current_costs[i] *= self -> cost_multipliers[i];
@@ -97,13 +115,26 @@ void level_up_skill(Skill* self)
             else 
             {
                 log("Not enough resources to level up the skill.\n");
-                return; // Exit early if not enough resources
+                return;
             }
         }
     }
 
+    // Prepare an array of resource pointers to pass to the effect function
+    Resource* effect_resources[MAX_EFFECTS] = {NULL};
+    for (int i = 0; i < MAX_EFFECTS; i++) 
+    {
+        ResourceID effect_id = self -> effect_resources[i];
+        
+        // Ensure the effect resource ID is valid
+        if (effect_id != RESOURCEID_nil) 
+        {
+            effect_resources[i] = & resources[effect_id];
+        }
+    }
+
     // Apply the specific effect of the Skill
-    self -> apply_effect(self -> effect_resources, self -> current_effect_value);
+    self -> apply_effect(effect_resources, self -> current_effect_value);
 
     // Calculate the new effect value
     self -> current_effect_value *= self -> current_power_multiplier;
@@ -122,16 +153,16 @@ Skill channel_mana =
     .name = "Channel Mana",
     .description = "",
     .level = 0,
-    .base_costs = {25.0, 0.0},                         // Base cost: 25 mana
+    .base_costs = {25.0, 0.0},                                         // Base cost: 25 mana
     .current_costs = {25.0, 0.0},
     .cost_multipliers = {base_cost_multiplier, 1.0},
     .base_power_multiplier = base_power_multiplier,
     .current_power_multiplier = base_power_multiplier,
-    .base_effect_value = 2.0,                          // Base effect value for mana per second buff
-    .current_effect_value = 2.0,                       // Initialize with base effect value
+    .base_effect_value = 2.0,                                          // Base effect value for mana per second buff
+    .current_effect_value = 2.0,                                       // Initialize with base effect value
     .apply_effect = apply_channel_mana_effect,
-    .cost_resources = {& mana, NULL},                  // Cost resource: Mana
-    .effect_resources = {& mana, NULL},                // Effect resource: Mana
+    .cost_resources = {RESOURCEID_Mana},                               // Cost resource: Mana
+    .effect_resources = {RESOURCEID_Mana},                             // Effect resource: Mana
     .level_up = level_up_skill,
 };
 
@@ -142,16 +173,16 @@ Skill wisdom =
     .name = "Wisdom",
     .description = "",
     .level = 0,
-    .base_costs = {1.0, 0.0},                          // Base cost: 1 Intellect
+    .base_costs = {1.0, 0.0},                                           // Base cost: 1 Intellect
     .current_costs = {1.0, 0.0},
     .cost_multipliers = {base_cost_multiplier, 1.0},
     .base_power_multiplier = base_power_multiplier,
     .current_power_multiplier = base_power_multiplier,
-    .base_effect_value = 100.0,                        // Base effect value for max mana increase
-    .current_effect_value = 100.0,                     // Initialize with base effect value
+    .base_effect_value = 100.0,                                         // Base effect value for max mana increase
+    .current_effect_value = 100.0,                                      // Initialize with base effect value
     .apply_effect = apply_wisdom_effect,
-    .cost_resources = {& intellect, NULL},             // Cost resource: Intellect
-    .effect_resources = {& mana, NULL},                // Effect resource: Mana
+    .cost_resources = {RESOURCEID_Intellect},                           // Cost resource: Intellect
+    .effect_resources = {RESOURCEID_Mana},                              // Effect resource: Mana
     .level_up = level_up_skill,
 };
 
@@ -162,16 +193,16 @@ Skill focus =
     .name = "Focus",
     .description = "",
     .level = 0,
-    .base_costs = {50.0, 1.0},                         // Base cost: 50 Mana, 1 Intellect
+    .base_costs = {50.0, 1.0},                                           // Base cost: 50 Mana, 1 Intellect
     .current_costs = {50.0, 1.0},
     .cost_multipliers = {base_cost_multiplier, base_cost_multiplier},
     .base_power_multiplier = base_power_multiplier,
     .current_power_multiplier = base_power_multiplier,
-    .base_effect_value = 0.2,                          // Base effect value
-    .current_effect_value = 0.2,                       // Initialize with base effect value
+    .base_effect_value = 0.2,                                            // Base effect value
+    .current_effect_value = 0.2,                                         // Initialize with base effect value
     .apply_effect = apply_focus_effect,
-    .cost_resources = {& mana, & intellect},           // Cost resources: Mana and Intellect
-    .effect_resources = {& intellect, NULL},           // Effect resource: Intellect
+    .cost_resources = {RESOURCEID_Mana, RESOURCEID_Intellect},           // Cost resources: Mana and Intellect
+    .effect_resources = {RESOURCEID_Intellect},                          // Effect resource: Intellect
     .level_up = level_up_skill,
 };
 
@@ -182,25 +213,4 @@ void load_skill_data()
     skills[SKILLID_Channel_Mana] = channel_mana;
     skills[SKILLID_Wisdom] = wisdom;
     skills[SKILLID_Focus] = focus;
-}
-
-// Leveling up skills
-
-Skill* get_skill_by_id(SkillID skill_id) 
-{
-    if (skill_id >= 0 && skill_id < SKILLID_MAX) 
-    {
-        return & skills[skill_id]; 
-    }
-    return NULL; 
-}
-
-void find_skill_to_level(SkillID skill_ID)
-{
-    Skill* skill = get_skill_by_id(skill_ID);  
-
-    if (skill != NULL && skill -> unlocked)  
-    {
-        skill -> level_up(skill);
-    }
 }
