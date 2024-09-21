@@ -34,7 +34,7 @@ struct Upgrade
 Upgrade unlock_mana = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Mana,
-    .upgrades_revealed = {},
+    .upgrades_revealed = {UPGRADEID_Unlock_Magic},
     .abilities_unlocked = {},
     .upgrades_required = {},
     .skills_unlocked = {SKILLID_Channel_Mana},
@@ -166,6 +166,20 @@ void mark_upgrade_unlocked(UpgradeID upgrade_ID)
         {
             upgrades[i].unlocked = true;
             //log("Upgrade '%s' unlocked!\n", upgrades[i].name);
+            return;
+        }
+    }
+    log("Upgrade with ID %i not found.\n", upgrade_ID);
+}
+
+void mark_upgrade_known(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (upgrades[i].upgrade_ID == upgrade_ID)
+        {
+            upgrades[i].known = true;
+            //log("Upgrade '%s' known!\n", upgrades[i].name);
             return;
         }
     }

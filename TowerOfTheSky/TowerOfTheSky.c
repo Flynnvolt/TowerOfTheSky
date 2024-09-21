@@ -1586,9 +1586,7 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size,
 void display_skill_level_up_button(float button_size, Vector4 color)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
-
 	int y_pos = 240;
-
 	int current_buttons = 0;
 
 	for (int i = 0; i < SKILLID_MAX; i++)
@@ -1596,23 +1594,33 @@ void display_skill_level_up_button(float button_size, Vector4 color)
 		if (get_player_skill(skills[i].skill_ID) != NULL && get_player_skill(skills[i].skill_ID) -> unlocked == true)
 		{
 			current_buttons++;
-
 			Vector2 button_pos = v2(100, (y_pos - (current_buttons * 30)));
-			
 			Skill* skill = get_player_skill(skills[i].skill_ID);
 
-			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %.1f %s"), skill -> name, skill -> level, skill -> current_costs[0], get_player_resource(skill -> cost_resources[0]) -> name);
+			// Build the costs string
+			string costs_text = STR("");
+			for (int j = 0; j < MAX_COSTS; j++) 
+			{
+				if (skill -> current_costs[j] > 0) // Only add non-zero costs
+				{
+					if (j > 0) 
+					{
+						costs_text = string_concat(costs_text, STR(", "), get_temporary_allocator());
+					}
+					costs_text = string_concat(costs_text, sprint(get_temporary_allocator(), STR("%.1f %s"), skill -> current_costs[j], get_player_resource(skill -> cost_resources[j]) -> name), get_temporary_allocator());
+				}
+			}
 
-			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %.1f %s\n+%.2f Base Mana / second\n%s"), skill -> name, skill -> level, skill -> current_costs[0], get_player_resource(skill -> cost_resources[0]) -> name, skill -> current_effect_value, skill -> description);
+			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s"), skill->name, skill->level, costs_text);
+			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s\n+%.2f Base Mana / second\n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> description);
 
 			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 			{
 				world_frame.hover_consumed = true;
-
 				find_skill_to_level(skills[i].skill_ID);
 			}
 
-			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);
 
 			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 			{
@@ -1645,6 +1653,14 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 			if (get_player_upgrade(upgrade_ID) -> skills_unlocked[i] != RESOURCEID_nil)
 			{
 				add_player_skill(get_player_upgrade(upgrade_ID) -> skills_unlocked[i]);
+			}
+		}
+
+		for (int i = 0; i < UPGRADEID_MAX; i++)
+		{
+			if (get_player_upgrade(upgrade_ID) -> upgrades_revealed[i] != UPGRADEID_nil)
+			{
+				mark_upgrade_known(get_player_upgrade(upgrade_ID) -> upgrades_revealed[i]);
 			}
 		}
 	}
