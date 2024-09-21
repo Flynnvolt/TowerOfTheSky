@@ -15,6 +15,7 @@
 #include "Building.c"
 #include "WorldFrame.c"
 #include "Player.c"
+#include "Upgrades.c"
 
 // Defines
 
@@ -1257,7 +1258,7 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 	}	
 }
 
-Draw_Quad* draw_level_up_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
+Draw_Quad* draw_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
 {
 	Vector2 button_size_v2 = v2(16.0, 16.0);
 
@@ -1453,13 +1454,85 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 		}
 	}
 
-	Draw_Quad* quad = draw_level_up_button(button_text, button_size, button_pos, color);	
+	Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
 	if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
 	{
 		world_frame.hover_consumed = true;
 		color = COLOR_RED;
 		draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+	}
+}
+
+void display_upgrade_buttons(float button_size, Vector4 color)
+{
+	Vector2 button_size_v2 = v2(button_size, button_size);
+
+	update_known_upgrades();
+
+	int y_pos = 240;
+	
+	int current_buttons = 0;
+
+	for (int i = 0; i < UPGRADEID_MAX; i++)
+	{
+		if (upgrades[i].known == true)
+		{
+			current_buttons++;
+
+			Vector2 button_pos = v2(400, (y_pos - (current_buttons * 30)));
+
+			string button_text = sprint(get_temporary_allocator(), STR(upgrades[i].name));
+
+			string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
+
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+
+			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+
+				switch (upgrades[i].upgrade_ID) 
+				{
+					case UPGRADEID_Unlock_Mana:
+					{
+						break;
+					}
+
+					case UPGRADEID_Unlock_Magic:
+					{
+						break;
+					}
+
+					case UPGRADEID_Unlock_Arcana:
+					{
+						break;
+					}
+
+					case UPGRADEID_Unlock_Fire_Bolt:
+					{
+						break;
+					}
+
+					case UPGRADEID_Multishot:
+					{
+						break;
+					}
+
+					default:
+					{
+						break;
+					}
+				}
+			}
+
+			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+				color = COLOR_RED;
+				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+			}
+		}
 	}
 }
 
@@ -1653,6 +1726,8 @@ void render_ui()
 				
 				//log("Level:%i, intellect regen Effect:%.2f, Power Multi: %.2f, Cost: %.2f, Cost Multiplier1: %.2f, Cost Multiplier2 %.2f", focus.level, focus.current_effect_value, focus.current_power_multiplier, focus.current_costs[0], focus.cost_multipliers[0], focus.cost_multipliers[1]);
 			}
+
+			display_upgrade_buttons(16, fill_col);
 		}
 		world_frame.hover_consumed = true;
 	}
@@ -1855,13 +1930,15 @@ void world_setup()
 	Entity* player_en = entity_create();
 	setup_player(player_en);
 
-	// new ability system testing
 	world -> player = hero_default;
-	world -> player.resource_list[0] = mana;
-	world -> player.ability_list[0] = fire_bolt;
-	world -> player.ability_list[0].unlocked = true;
-	world -> player.skill_list[0] = channel_mana;
-	world -> player.skill_list[0].unlocked = true;
+
+	// new ability system testing
+
+	//world -> player.resource_list[0] = mana;
+	//world -> player.ability_list[0] = fire_bolt;
+	//world -> player.ability_list[0].unlocked = true;
+	//world -> player.skill_list[0] = channel_mana;
+	//world -> player.skill_list[0].unlocked = true;
 
 	// :test stuff
 	#if defined(DEV_TESTING)

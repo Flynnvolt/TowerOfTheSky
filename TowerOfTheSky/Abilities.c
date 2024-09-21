@@ -1,6 +1,5 @@
 #pragma once
 #include "Skills.c"
-#include "Upgrades.c"
 
 typedef enum AbilityID AbilityID;
 
