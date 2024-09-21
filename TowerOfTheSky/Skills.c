@@ -14,9 +14,10 @@ typedef enum SkillID SkillID;
 
 enum SkillID
 {
+    SKILLID_nil,
     SKILLID_Channel_Mana,
-    SKILLID_wisdom,
-    SKILLID_focus,
+    SKILLID_Wisdom,
+    SKILLID_Focus,
     SKILLID_MAX,
 };
 
@@ -54,6 +55,8 @@ struct Skill
 {
     SkillID skill_ID;
     bool unlocked;
+    char name[32];
+    char description[128];
     int level;
 
     float base_costs[MAX_COSTS];                   // Base costs for the skill
@@ -116,6 +119,8 @@ Skill channel_mana =
 {
     .skill_ID = SKILLID_Channel_Mana,
     .unlocked = false,
+    .name = "Channel Mana",
+    .description = "",
     .level = 0,
     .base_costs = {25.0, 0.0},                         // Base cost: 25 mana
     .current_costs = {25.0, 0.0},
@@ -132,8 +137,10 @@ Skill channel_mana =
 
 Skill wisdom = 
 {
-    .skill_ID = SKILLID_wisdom,
+    .skill_ID = SKILLID_Wisdom,
     .unlocked = false,
+    .name = "Wisdom",
+    .description = "",
     .level = 0,
     .base_costs = {1.0, 0.0},                          // Base cost: 1 Intellect
     .current_costs = {1.0, 0.0},
@@ -150,8 +157,10 @@ Skill wisdom =
 
 Skill focus = 
 {
-    .skill_ID = SKILLID_focus,
+    .skill_ID = SKILLID_Focus,
     .unlocked = false,
+    .name = "Focus",
+    .description = "",
     .level = 0,
     .base_costs = {50.0, 1.0},                         // Base cost: 50 Mana, 1 Intellect
     .current_costs = {50.0, 1.0},
@@ -171,32 +180,27 @@ Skill skills[SKILLID_MAX];
 void load_skill_data()
 {
     skills[SKILLID_Channel_Mana] = channel_mana;
-    skills[SKILLID_wisdom] = wisdom;
-    skills[SKILLID_focus] = focus;
+    skills[SKILLID_Wisdom] = wisdom;
+    skills[SKILLID_Focus] = focus;
 }
 
 // Leveling up skills
 
-void level_up_channel_mana_if_unlocked() 
+Skill* get_skill_by_id(SkillID skill_id) 
 {
-    if (channel_mana.unlocked == true) 
+    if (skill_id >= 0 && skill_id < SKILLID_MAX) 
     {
-        channel_mana.level_up(& channel_mana);
+        return & skills[skill_id]; 
     }
+    return NULL; 
 }
 
-void level_up_wisdom_if_unlocked() 
+void find_skill_to_level(SkillID skill_ID)
 {
-    if (wisdom.unlocked == true) 
-    {
-        wisdom.level_up(& wisdom);
-    }
-}
+    Skill* skill = get_skill_by_id(skill_ID);  
 
-void level_up_focus_if_unlocked() 
-{
-    if (focus.unlocked == true) 
+    if (skill != NULL && skill -> unlocked)  
     {
-        focus.level_up(& focus);
+        skill -> level_up(skill);
     }
 }

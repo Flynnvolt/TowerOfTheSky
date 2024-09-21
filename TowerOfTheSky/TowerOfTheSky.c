@@ -496,7 +496,43 @@ Skill* get_player_skill(SkillID skill_ID)
 			return & world -> player.skill_list[i];
 		}
 	}
-	return 0;
+	return NULL;
+}
+
+bool is_skill_in_player_list(SkillID skill_ID)
+{
+    for (int i = 0; i < SKILLID_MAX; i++)
+    {
+        if (world -> player.skill_list[i].skill_ID == skill_ID)
+        {
+            return true; 
+        }
+    }
+    return false; 
+}
+
+void add_player_skill(SkillID skill_ID)
+{
+    if (is_skill_in_player_list(skill_ID))
+    {
+        log("Skill '%s' is already in the player's skill list.\n", get_skill_by_id(skill_ID) -> name);
+        return;
+    }
+
+    for (int i = 0; i < SKILLID_MAX; i++)
+    {
+        if (get_player_skill(skill_ID) == NULL)
+        {
+            world -> player.skill_list[i] = skills[skill_ID];
+            world -> player.skill_list[i].unlocked = true;
+
+            log("Skill '%s' added to player's skill list.\n", skills[skill_ID].name);
+
+            return;
+        }
+    }
+
+    log("Player's skill list is full, cannot add skill '%s'.\n", skills[skill_ID].name);
 }
 
 Ability* get_player_ability(AbilityID ability_ID)
@@ -550,7 +586,7 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
             world -> player.upgrade_list[i] = upgrades[upgrade_ID];
 			world -> player.upgrade_list[i].unlocked = true;
 
-            //log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
+            log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
 
             return;
         }
@@ -1491,7 +1527,7 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size,
 	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 }
 
-void display_skill_level_up_button(SkillID ability, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
+void display_skill_level_up_button(SkillID skill, float button_size, Vector2 button_pos, Vector4 color, string button_text, string button_tooltip)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
 
@@ -1499,31 +1535,7 @@ void display_skill_level_up_button(SkillID ability, float button_size, Vector2 b
 	{
 		world_frame.hover_consumed = true;
 
-		switch (ability) 
-		{
-			case SKILLID_Channel_Mana:
-			{
-				level_up_channel_mana_if_unlocked();
-				break;
-			}
-
-			case SKILLID_wisdom:
-			{
-				level_up_wisdom_if_unlocked();
-				break;
-			}
-
-			case SKILLID_focus:
-			{
-				level_up_focus_if_unlocked();
-				break;
-			}
-
-			default:
-			{
-				break;
-			}
-		}
+		find_skill_to_level(skill);
 	}
 
 	Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
@@ -1543,6 +1555,8 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 		mark_upgrade_unlocked(upgrade_ID);
 		update_known_upgrades();
 		add_upgrade_to_player(upgrade_ID);
+
+		add_player_skill(get_player_upgrade(upgrade_ID) -> skills_unlocked[0]);
 	}
 }
 
@@ -1748,7 +1762,7 @@ void render_ui()
 			}
 
 			// Level up channel mana button
-			if(channel_mana.unlocked == true)
+			if (get_player_skill(SKILLID_Channel_Mana) != NULL && get_player_skill(SKILLID_Channel_Mana) -> unlocked == true)
 			{
 				string channel_button_text = sprint(get_temporary_allocator(), STR("Channel Mana\nLevel:%i\nCost: %.1f Mana"), channel_mana.level, channel_mana.current_costs[0]);
 
@@ -1760,7 +1774,7 @@ void render_ui()
 			}
 			
 			// Level Up wisdom Button
-			if (wisdom.unlocked == true)
+			if (get_player_skill(SKILLID_Wisdom) != NULL && get_player_skill(SKILLID_Wisdom) -> unlocked == true)
 			{
 				string wisdom_button_text = sprint(get_temporary_allocator(), STR("Wisdom\nLevel:%i\nCost: %.1f Intellect"), wisdom.level, wisdom.current_costs[0]);
 
@@ -1770,7 +1784,7 @@ void render_ui()
 			}
 			
 			// Level Up Focus Button
-			if (focus.unlocked == true)
+			if (get_player_skill(SKILLID_Focus) != NULL && get_player_skill(SKILLID_Focus) -> unlocked == true)
 			{
 				string focus_button_text = sprint(get_temporary_allocator(), STR("Focus\nLevel:%i\nCost: %.1f Mana + %.1f Intellect"), focus.level, focus.current_costs[0], focus.current_costs[1]);
 
