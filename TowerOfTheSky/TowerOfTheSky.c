@@ -1268,7 +1268,6 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
                     Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(current_angle), spawn_radius * sinf(current_angle)));
 
                     projectile -> position = spawn_position;
-					
 					// Debug logging
 
 					// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
@@ -1839,6 +1838,10 @@ void render_ui()
 			float entire_thing_width = icon_row_count_items * icon_size;
 			float x_start_pos = (screen_width * 0.5) - (entire_thing_width * 0.5);
 
+
+			// turning inventory off because it's causing crashes and i don't know why.
+			/*
+
 			// Black background box
 			{
 				Matrix4 xform = m4_identity;
@@ -1904,7 +1907,6 @@ void render_ui()
 						float rotate_adjust = PI32 * 0.05 * sin_breathe(os_get_elapsed_seconds(), 2.0);
 						xform = m4_rotate_z(xform, rotate_adjust);
 					}
-					*/
 
 					xform = m4_translate(xform, v3(icon_size * -0.5,  icon_size * -0.5, 0));
 
@@ -1930,6 +1932,7 @@ void render_ui()
 					slot_index += 1;
 				}
 			}
+			*/
 
 			// Mana bar
 			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
