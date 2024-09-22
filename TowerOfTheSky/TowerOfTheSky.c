@@ -599,7 +599,7 @@ Ability* get_player_ability(AbilityID ability_ID)
 			return & world -> player.ability_list[i];
 		}
 	}
-	return 0;
+	return NULL;
 }
 
 Ability* get_ability_by_id(AbilityID ability_ID) 
@@ -705,19 +705,50 @@ AbilityUpgrade* get_upgrade_in_ability_upgrade_list(AbilityUpgrade ability_upgra
 	return NULL;
 }
 
-void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
+bool is_ability_id_in_list(AbilityID* ability_list, AbilityID ability_ID)
+{
+    for (int i = 0; i < ABILITYID_MAX; i++) 
+    {
+		//log("%i", ability_list[i]);
+		//log("Ability id: %i", ability_ID);
+        if (ability_list[i] == ability_ID) 
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void upgrade_abilities(AbilityID abilities_list[ABILITYID_MAX], UpgradeID upgrade_ID)
 {
 	for (int i = 0; i < ABILITYID_MAX; i++)
 	{
-		if (is_ability_in_player_list(abilities[i]) == true)
-		{	
-			if (is_upgrade_in_ability_upgrade_list(get_player_ability(abilities[i]) -> ability_upgrades, upgrade_ID) == true)
+		if (abilities_list[i] == ABILITYID_Nil)
+		{
+			continue;
+		}
+		
+		if (is_ability_in_player_list(abilities_list[i]) == true)
+		{
+			//log("%i", get_player_upgrade(upgrade_ID) -> abilities_unlocked[0]);
+
+			//log("Abilties list: %i", abilities_list[i]);
+
+			if (is_ability_id_in_list(get_player_upgrade(upgrade_ID) -> abilities_unlocked, abilities_list[i]) == true)
+			{
+				find_ability_to_level(abilities_list[i]);
+				log("%s", upgrades[upgrade_ID].name);
+				log("got here");
+				break;
+			}
+			
+			if (is_upgrade_in_ability_upgrade_list(get_player_ability(abilities_list[i]) -> ability_upgrades, upgrade_ID) == true)
 			{
 				for (int j = 0; j < UPGRADEID_MAX; j++)
 				{
-					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == true)
+					if (get_player_ability(abilities_list[i]) -> ability_upgrades[j].active == true)
 					{
-						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
+						get_player_ability(abilities_list[i]) -> ability_upgrades[j].level++;
 					}
 				}
 			}
@@ -725,11 +756,11 @@ void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
 			{
 				for (int j = 0; j < UPGRADEID_MAX; j++)
 				{
-					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == false)
+					if (get_player_ability(abilities_list[i]) -> ability_upgrades[j].active == false)
 					{
-						get_player_ability(abilities[i]) -> ability_upgrades[j] = upgrades[upgrade_ID].ability_upgrade;
-						get_player_ability(abilities[i]) -> ability_upgrades[j].active = true;
-						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
+						get_player_ability(abilities_list[i]) -> ability_upgrades[j] = upgrades[upgrade_ID].ability_upgrade;
+						get_player_ability(abilities_list[i]) -> ability_upgrades[j].active = true;
+						get_player_ability(abilities_list[i]) -> ability_upgrades[j].level++;
 					}
 				}
 			}
@@ -1290,8 +1321,9 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
 		if (is_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) == true)
 		{
 			total_shots = 1 + get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level;
-			log("%i", get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level);
-			//log("Damage: %.1f", ability -> damage);
+			log("Multishot level: %i", get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level);
+			log("Damage: %.1f", ability -> damage);
+			log("Firebolt Level: %i", ability -> current_level);
 		}
 
         for (int shot_index = 0; shot_index < total_shots; shot_index++) 
