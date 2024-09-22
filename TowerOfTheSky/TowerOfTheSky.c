@@ -603,6 +603,42 @@ Ability* get_player_ability(AbilityID ability_ID)
 	return 0;
 }
 
+bool is_ability_in_player_list(AbilityID ability_ID)
+{
+    for (int i = 0; i < ABILITYID_MAX; i++)
+    {
+        if (world -> player.ability_list[i].ability_ID == ability_ID)
+        {
+            return true; 
+        }
+    }
+    return false; 
+}
+
+void add_player_ability(AbilityID ability_ID)
+{
+    if (is_ability_in_player_list(ability_ID))
+    {
+        log("Ability '%s' is already in the player's ability list.\n", abilities[ability_ID].name);
+        return;
+    }
+
+    for (int i = 0; i < ABILITYID_MAX; i++)
+    {
+        if (world -> player.ability_list[i].ability_ID == ABILITYID_Nil)
+        {
+            world -> player.ability_list[i] = abilities[ability_ID];
+            world -> player.ability_list[i].unlocked = true;
+
+            log("Ability '%s' added to player's ability list.\n", abilities[ability_ID].name);
+
+            return;
+        }
+    }
+
+    log("Player's Ability list is full, cannot add ability '%s'.\n", abilities[ability_ID].name);
+}
+
 Upgrade* get_player_upgrade(UpgradeID upgrade_ID)
 {
 	for (int i = 0; i < UPGRADEID_MAX; i++)
@@ -1656,6 +1692,14 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 			}
 		}
 
+		for (int i = 0; i < ABILITYID_MAX; i++)
+		{
+			if (get_player_upgrade(upgrade_ID) -> abilities_unlocked[i] != ABILITYID_Nil)
+			{
+				add_player_ability(get_player_upgrade(upgrade_ID) -> abilities_unlocked[i]);
+			}
+		}
+
 		for (int i = 0; i < UPGRADEID_MAX; i++)
 		{
 			if (get_player_upgrade(upgrade_ID) -> upgrades_revealed[i] != UPGRADEID_nil)
@@ -1859,10 +1903,6 @@ void render_ui()
 			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
 			{
 				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_size, icon_row_count, accent_col_blue, bg_box_color);
-			}
-			else
-			{
-				log("mana null");
 			}
 
 			// Intellect bar
@@ -2329,13 +2369,13 @@ int entry(int argc, char **argv)
 
 			tm_scope("Spawn Projectile")
 			{
-				if (world -> player.ability_list[0].unlocked == true)
+				if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
 				{
-					if(get_player_resource(RESOURCEID_Mana) -> current >= world -> player.ability_list[0].base_resource_cost)
+					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
 					{
 						spawn_projectile(get_player(), 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
 
-						get_player_resource(RESOURCEID_Mana) -> current -= world -> player.ability_list[0].base_resource_cost;
+						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
 					}
 				}
 			}

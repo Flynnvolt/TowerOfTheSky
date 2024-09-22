@@ -66,7 +66,7 @@ struct Ability
     TargetType target_type;
     AbilityTag ability_tags[ABILITYTAG_MAX];
     SkillRequirement required_skills[SKILLID_MAX];
-    char ability_name[32];
+    char name[32];
     char description[128];
     bool unlocked;
     int damage;
@@ -105,7 +105,7 @@ Ability fire_bolt =
     .target_type =  TARGETTYPE_Projectile,
     .ability_tags = {ABILITYTAG_Spell, ABILITYTAG_Ranged},
     .required_skills = {},
-    .ability_name = "Fire Bolt",
+    .name = "Fire Bolt",
     .description = "A bolt of flame",
     .unlocked = true,
     .damage = 25,
