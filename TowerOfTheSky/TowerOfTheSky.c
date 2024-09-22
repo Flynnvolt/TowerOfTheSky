@@ -2542,7 +2542,7 @@ int entry(int argc, char **argv)
 			load_next_floor();
 		}
 
-		if (is_key_just_pressed(KEY_F2))
+		if (is_key_just_pressed('1'))
 		{
 			// Draw the debug circle around the player
 			// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
@@ -2561,7 +2561,7 @@ int entry(int argc, char **argv)
 			}
 		}
 
-		if (is_key_just_pressed(KEY_F3))
+		if (is_key_just_pressed('2'))
 		{
 			// Draw the debug circle around the player
 			// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
@@ -2590,7 +2590,7 @@ int entry(int argc, char **argv)
 
 		Vector2 input_axis = v2(0,0);
 
-		if (is_key_down('A')) 
+		if (is_key_down('A'))
 		{
 			input_axis.x -= 1.0;
 		}
