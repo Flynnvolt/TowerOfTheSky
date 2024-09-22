@@ -1,6 +1,8 @@
 #pragma once
 #include "Skills.c"
 
+#define MAX_ABILITY_UPGRADES 50    // Maximum number of upgrades for any ability
+
 typedef enum AbilityID AbilityID;
 
 enum AbilityID
@@ -37,6 +39,14 @@ enum AbilityTag
     ABILITYTAG_MAX,
 };
 
+typedef enum AbilityUpgradeID AbilityUpgradeID;
+
+enum AbilityUpgradeID
+{
+    ABILITYUPGRADEID_No_Ability_Upgrade_ID,
+    ABILITYUPGRADEID_Multishot,
+};
+
 typedef enum TargetType TargetType;
 
 enum TargetType
@@ -63,9 +73,11 @@ struct Ability
 {
     AbilityID ability_ID;
     AbilityType ability_type;
-    TargetType target_type;
     AbilityTag ability_tags[ABILITYTAG_MAX];
+    AbilityUpgradeID ability_upgrades[MAX_ABILITY_UPGRADES];
     SkillRequirement required_skills[SKILLID_MAX];
+    TargetType target_type;
+
     char name[32];
     char description[128];
     bool unlocked;
@@ -102,8 +114,9 @@ Ability fire_bolt =
 {
     .ability_ID = ABILITYID_Fire_Bolt,
     .ability_type = ABILITYTYPE_Active,
-    .target_type =  TARGETTYPE_Projectile,
     .ability_tags = {ABILITYTAG_Spell, ABILITYTAG_Ranged},
+    .ability_upgrades = {},
+    .target_type =  TARGETTYPE_Projectile,
     .required_skills = {},
     .name = "Fire Bolt",
     .description = "A bolt of flame",

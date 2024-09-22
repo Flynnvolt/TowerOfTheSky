@@ -21,7 +21,6 @@ enum SkillID
     SKILLID_MAX,
 };
 
-// Define the function pointer type for skill effects
 typedef void (*EffectFunction)(Resource* resources[], float effect_value);
 
 // skill effect application

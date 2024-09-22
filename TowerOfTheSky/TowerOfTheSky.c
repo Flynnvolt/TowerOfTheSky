@@ -678,6 +678,17 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
             world -> player.upgrade_list[i] = upgrades[upgrade_ID];
 			world -> player.upgrade_list[i].unlocked = true;
 
+			if (upgrades[upgrade_ID].ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
+			{
+				for (int j = 0; j < ABILITYID_MAX; j++)
+				{
+					if (is_ability_in_player_list(upgrades[upgrade_ID].abilities_upgraded[j]))
+					{
+						get_player_ability(upgrades[upgrade_ID].abilities_upgraded[j]) -> ability_upgrades[0] = upgrades[upgrade_ID].ability_upgrade_ID;
+					}		
+				}
+			}
+
             log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
 
             return;
@@ -1192,7 +1203,7 @@ void damage_entity(Entity *entity, float damage)
 
 // :Projectiles
 
-void spawn_projectile(Entity *source_entity, float speed, float damage, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
+void spawn_projectile(Ability *ability, Entity *source_entity, float speed, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
 {
 	if (world -> active_projectiles < MAX_PROJECTILES)
 	{
@@ -1204,7 +1215,7 @@ void spawn_projectile(Entity *source_entity, float speed, float damage, Animatio
 				Projectile *projectile = & world -> projectiles[i];
 				projectile -> is_active = true;
 				projectile -> speed = speed;
-				projectile -> damage = damage;
+				projectile -> damage = ability -> damage;
 				projectile -> animation = *animation;
 				projectile -> scale = scale;
 				projectile -> source_entity = source_entity;
@@ -2373,7 +2384,7 @@ int entry(int argc, char **argv)
 				{
 					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
 					{
-						spawn_projectile(get_player(), 250.0, 10.0, & Fireball, 1.0, 22, 1000, 5);
+						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5);
 
 						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
 					}

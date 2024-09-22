@@ -19,9 +19,11 @@ typedef struct Upgrade Upgrade;
 struct Upgrade
 {
     UpgradeID upgrade_ID;
+    AbilityUpgradeID ability_upgrade_ID;
     UpgradeID upgrades_required[UPGRADEID_MAX];
     UpgradeID upgrades_revealed[UPGRADEID_MAX];
     AbilityID abilities_unlocked[ABILITYID_MAX];
+    AbilityID abilities_upgraded[ABILITYID_MAX];
     SkillID skills_unlocked[SKILLID_MAX];
     ResourceID resources_unlocked[RESOURCEID_MAX];
     bool known;
@@ -34,8 +36,10 @@ struct Upgrade
 Upgrade unlock_mana = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Mana,
+    .ability_upgrade_ID = {},
     .upgrades_revealed = {UPGRADEID_Unlock_Magic},
     .abilities_unlocked = {},
+    .abilities_upgraded = {},
     .upgrades_required = {},
     .skills_unlocked = {SKILLID_Channel_Mana},
     .resources_unlocked = {RESOURCEID_Mana},
@@ -49,9 +53,11 @@ Upgrade unlock_mana =
 Upgrade unlock_magic = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Magic,
+    .ability_upgrade_ID = {},
     .upgrades_revealed = {UPGRADEID_Unlock_Arcana, UPGRADEID_Unlock_Fire_Bolt},
     .upgrades_required = {UPGRADEID_Unlock_Mana},
     .abilities_unlocked = {},
+    .abilities_upgraded = {},
     .skills_unlocked = {SKILLID_Wisdom},
     .resources_unlocked = {RESOURCEID_Intellect},
     .known = false,
@@ -64,9 +70,11 @@ Upgrade unlock_magic =
 Upgrade unlock_arcana = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Arcana,
+    .ability_upgrade_ID = {},
     .upgrades_revealed = {UPGRADEID_Multishot},
     .upgrades_required = {UPGRADEID_Unlock_Magic},
     .abilities_unlocked = {},
+    .abilities_upgraded = {},
     .skills_unlocked = {SKILLID_Focus},
     .resources_unlocked = {},
     .known = false,
@@ -79,9 +87,11 @@ Upgrade unlock_arcana =
 Upgrade unlock_firebolt = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Fire_Bolt,
+    .ability_upgrade_ID = {},
     .upgrades_revealed = {},
     .upgrades_required = {UPGRADEID_Unlock_Arcana},
     .abilities_unlocked = {ABILITYID_Fire_Bolt},
+    .abilities_upgraded = {},
     .skills_unlocked = {},
     .resources_unlocked = {},
     .known = false,
@@ -94,9 +104,11 @@ Upgrade unlock_firebolt =
 Upgrade multishot =  
 {
     .upgrade_ID = UPGRADEID_Multishot,
+    .ability_upgrade_ID = ABILITYUPGRADEID_Multishot,
     .upgrades_revealed = {},
     .upgrades_required = {UPGRADEID_Unlock_Fire_Bolt, UPGRADEID_Unlock_Arcana},
     .abilities_unlocked = {},
+    .abilities_upgraded = {ABILITYID_Fire_Bolt},
     .skills_unlocked = {},
     .resources_unlocked = {},
     .known = false,
