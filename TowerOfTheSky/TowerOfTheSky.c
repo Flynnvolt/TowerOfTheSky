@@ -737,8 +737,7 @@ void upgrade_abilities(AbilityID abilities_list[ABILITYID_MAX], UpgradeID upgrad
 			if (is_ability_id_in_list(get_player_upgrade(upgrade_ID) -> abilities_unlocked, abilities_list[i]) == true)
 			{
 				find_ability_to_level(abilities_list[i]);
-				log("%s", upgrades[upgrade_ID].name);
-				log("got here");
+				//log("%s", upgrades[upgrade_ID].name);
 				break;
 			}
 			
@@ -1321,9 +1320,9 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
 		if (is_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) == true)
 		{
 			total_shots = 1 + get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level;
-			log("Multishot level: %i", get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level);
-			log("Damage: %.1f", ability -> damage);
-			log("Firebolt Level: %i", ability -> current_level);
+			//log("Multishot level: %i", get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level);
+			//log("Damage: %i", ability -> damage);
+			//log("Firebolt Level: %i", ability -> current_level);
 		}
 
         for (int shot_index = 0; shot_index < total_shots; shot_index++) 
@@ -2543,6 +2542,25 @@ int entry(int argc, char **argv)
 			load_next_floor();
 		}
 
+		if (is_key_just_pressed(KEY_F2))
+		{
+			// Draw the debug circle around the player
+			// start_debug_circle(& circle_state, player -> pos, 80, 0.5);
+
+			tm_scope("Spawn Projectile")
+			{
+				if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
+				{
+					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+					{
+						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
+
+						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+					}
+				}
+			}
+		}
+
 		if (is_key_just_pressed(KEY_F3))
 		{
 			// Draw the debug circle around the player
@@ -2554,9 +2572,7 @@ int entry(int argc, char **argv)
 				{
 					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
 					{
-
-						
-						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
+						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, true);
 
 						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
 					}
