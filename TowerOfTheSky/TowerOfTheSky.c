@@ -590,7 +590,6 @@ void find_skill_to_level(SkillID skill_ID)
         skill -> level_up(skill, world -> player.resource_list);
     }
 }
-
 Ability* get_player_ability(AbilityID ability_ID)
 {
 	for (int i = 0; i < ABILITYID_MAX; i++)
@@ -601,6 +600,25 @@ Ability* get_player_ability(AbilityID ability_ID)
 		}
 	}
 	return 0;
+}
+
+Ability* get_ability_by_id(AbilityID ability_ID) 
+{
+    if (ability_ID >= 0 && ability_ID < ABILITYID_MAX) 
+    {
+        return get_player_ability(ability_ID);
+    }
+    return NULL;
+}
+
+void find_ability_to_level(AbilityID ability_ID)
+{
+    Ability* ability = get_ability_by_id(ability_ID);  
+
+    if (ability != NULL && ability -> unlocked)  
+    {
+        ability -> level_up(ability);
+    }
 }
 
 bool is_ability_in_player_list(AbilityID ability_ID)
@@ -663,6 +681,49 @@ bool is_upgrade_in_player_list(UpgradeID upgrade_ID)
     return false; // Upgrade not found in player's list
 }
 
+bool is_upgrade_in_ability_upgrade_list(AbilityUpgrade ability_upgrades[UPGRADEID_MAX], UpgradeID upgrade_ID)
+{
+	for (int i = 0; i < UPGRADEID_MAX; i++)
+	{
+		if (ability_upgrades[i].ability_upgrade_ID == upgrades[upgrade_ID].ability_upgrade.ability_upgrade_ID)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
+{
+	for (int i = 0; i < ABILITYID_MAX; i++)
+	{
+		if (is_ability_in_player_list(abilities[i]) == true)
+		{	
+			if (is_upgrade_in_ability_upgrade_list(get_player_ability(abilities[i]) -> ability_upgrades, upgrade_ID) == true)
+			{
+				for (int j = 0; j < UPGRADEID_MAX; j++)
+				{
+					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == false)
+					{
+						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
+					}
+				}
+			}
+			else
+			{
+				for (int j = 0; j < UPGRADEID_MAX; j++)
+				{
+					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == false)
+					{
+						get_player_ability(abilities[i]) -> ability_upgrades[j] = upgrades[upgrade_ID].ability_upgrade;
+						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
+					}
+				}
+			}
+		}
+	}
+}
+
 void level_up_upgrade(UpgradeID upgrade_ID)
 {
 	if (is_upgrade_in_player_list(upgrade_ID) == true)
@@ -670,6 +731,8 @@ void level_up_upgrade(UpgradeID upgrade_ID)
 		if (get_player_upgrade(upgrade_ID) -> has_levels == true)
 		{
 			get_player_upgrade(upgrade_ID) -> level++;
+			log("Upgrade: %s leveled up", upgrades[upgrade_ID].name);
+			upgrade_abilities(get_player_upgrade(upgrade_ID) -> abilities_upgraded, upgrade_ID);
 		}
 	}
 }
@@ -691,15 +754,9 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
 
 			level_up_upgrade(upgrade_ID);
 
-			if (upgrades[upgrade_ID].ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
+			if (upgrades[upgrade_ID].ability_upgrade.ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
 			{
-				for (int j = 0; j < ABILITYID_MAX; j++)
-				{
-					if (is_ability_in_player_list(upgrades[upgrade_ID].abilities_upgraded[j]))
-					{
-						get_player_ability(upgrades[upgrade_ID].abilities_upgraded[j]) -> ability_upgrades[0] = upgrades[upgrade_ID].ability_upgrade_ID;
-					}		
-				}
+				upgrade_abilities(upgrades[upgrade_ID].abilities_upgraded, upgrade_ID);
 			}
 
             log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
@@ -1812,11 +1869,11 @@ void display_ability_upgrade_buttons(float button_size, Vector4 color)
 		{
 			current_buttons++;
 
-			Vector2 button_pos = v2(100 + (current_buttons * 30), y_pos);
+			Vector2 button_pos = v2(100 + (current_buttons * 40), y_pos);
 
 			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
 
-			string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
+			string button_tooltip = sprint(get_temporary_allocator(), STR(upgrades[i].description));
 
 			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
@@ -2201,14 +2258,6 @@ void world_setup()
 	setup_player(player_en);
 
 	world -> player = hero_default;
-
-	// new ability system testing
-
-	//world -> player.resource_list[0] = mana;
-	//world -> player.ability_list[0] = fire_bolt;
-	//world -> player.ability_list[0].unlocked = true;
-	//world -> player.skill_list[0] = channel_mana;
-	//world -> player.skill_list[0].unlocked = true;
 
 	// :test stuff
 	#if defined(DEV_TESTING)

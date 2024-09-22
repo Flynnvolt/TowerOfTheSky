@@ -19,7 +19,7 @@ typedef struct Upgrade Upgrade;
 struct Upgrade
 {
     UpgradeID upgrade_ID;
-    AbilityUpgradeID ability_upgrade_ID;
+    AbilityUpgrade ability_upgrade;
     UpgradeID upgrades_required[UPGRADEID_MAX];
     UpgradeID upgrades_revealed[UPGRADEID_MAX];
     AbilityID abilities_unlocked[ABILITYID_MAX];
@@ -38,7 +38,7 @@ struct Upgrade
 Upgrade unlock_mana = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Mana,
-    .ability_upgrade_ID = {},
+    .ability_upgrade = {},
     .upgrades_revealed = {UPGRADEID_Unlock_Magic},
     .abilities_unlocked = {},
     .abilities_upgraded = {},
@@ -57,7 +57,7 @@ Upgrade unlock_mana =
 Upgrade unlock_magic = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Magic,
-    .ability_upgrade_ID = {},
+    .ability_upgrade = {},
     .upgrades_revealed = {UPGRADEID_Unlock_Arcana, UPGRADEID_Unlock_Fire_Bolt},
     .upgrades_required = {UPGRADEID_Unlock_Mana},
     .abilities_unlocked = {},
@@ -76,7 +76,7 @@ Upgrade unlock_magic =
 Upgrade unlock_arcana = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Arcana,
-    .ability_upgrade_ID = {},
+    .ability_upgrade = {},
     .upgrades_revealed = {UPGRADEID_Multishot},
     .upgrades_required = {UPGRADEID_Unlock_Magic},
     .abilities_unlocked = {},
@@ -95,7 +95,7 @@ Upgrade unlock_arcana =
 Upgrade unlock_firebolt = 
 {
     .upgrade_ID = UPGRADEID_Unlock_Fire_Bolt,
-    .ability_upgrade_ID = {},
+    .ability_upgrade = {},
     .upgrades_revealed = {},
     .upgrades_required = {UPGRADEID_Unlock_Arcana},
     .abilities_unlocked = {ABILITYID_Fire_Bolt},
@@ -114,7 +114,7 @@ Upgrade unlock_firebolt =
 Upgrade multishot =  
 {
     .upgrade_ID = UPGRADEID_Multishot,
-    .ability_upgrade_ID = ABILITYUPGRADEID_Multishot,
+    .ability_upgrade = ABILITYUPGRADEID_Multishot,
     .upgrades_revealed = {},
     .upgrades_required = {UPGRADEID_Unlock_Fire_Bolt, UPGRADEID_Unlock_Arcana},
     .abilities_unlocked = {},
@@ -126,7 +126,7 @@ Upgrade multishot =
     .has_levels = true,
     .name = "Learn Multishot",
     .description = "",
-    .level_up_text = "Firebolt",
+    .level_up_text = "Multishot",
     .level = 0,
 };
 

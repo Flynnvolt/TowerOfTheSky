@@ -39,12 +39,21 @@ enum AbilityTag
     ABILITYTAG_MAX,
 };
 
-typedef enum AbilityUpgradeID AbilityUpgradeID;
+typedef enum ability_upgrade ability_upgrade;
 
-enum AbilityUpgradeID
+enum ability_upgrade
 {
     ABILITYUPGRADEID_No_Ability_Upgrade_ID,
     ABILITYUPGRADEID_Multishot,
+};
+
+typedef struct AbilityUpgrade AbilityUpgrade;
+
+struct AbilityUpgrade
+{
+    ability_upgrade ability_upgrade_ID;
+    bool active;
+    int level;
 };
 
 typedef enum TargetType TargetType;
@@ -74,7 +83,7 @@ struct Ability
     AbilityID ability_ID;
     AbilityType ability_type;
     AbilityTag ability_tags[ABILITYTAG_MAX];
-    AbilityUpgradeID ability_upgrades[MAX_ABILITY_UPGRADES];
+    AbilityUpgrade ability_upgrades[MAX_ABILITY_UPGRADES];
     SkillRequirement required_skills[SKILLID_MAX];
     TargetType target_type;
 
@@ -90,7 +99,24 @@ struct Ability
     int current_level;
     int max_level;
     int allocate_cost;
+
+    void (*level_up)(struct Ability* self);
  };
+
+ void level_up_ability(Ability* self) 
+{
+    self -> damage += self -> damage_per_level;
+    self -> base_resource_cost += self -> resource_cost_per_Level;
+
+    if (self -> current_level < self-> max_level)
+    {
+        self -> current_level++;
+    }
+    else
+    {
+        log("Ability: %s already at max level.", self -> name);
+    }
+}
 
 void skill_requirement_check(SkillRequirement *skill_requirement, AbilityID ability_ID, int required_level) 
 {
@@ -130,6 +156,7 @@ Ability fire_bolt =
     .current_level = 0,
     .max_level = 50,
     .allocate_cost = 1,
+    .level_up = level_up_ability,
 };
 
 Ability abilities[ABILITYID_MAX];
