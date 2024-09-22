@@ -651,6 +651,17 @@ Upgrade* get_player_upgrade(UpgradeID upgrade_ID)
 	return NULL;
 }
 
+void level_up_upgrade(UpgradeID upgrade_ID)
+{
+	if (is_upgrade_in_player_list(upgrade_ID) == true)
+	{
+		if (get_player_upgrade(upgrade_ID) -> has_levels == true)
+		{
+			get_player_upgrade(upgrade_ID) -> level++;
+		}
+	}
+}
+
 bool is_upgrade_in_player_list(UpgradeID upgrade_ID)
 {
     for (int i = 0; i < UPGRADEID_MAX; i++)
@@ -677,6 +688,8 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
         {
             world -> player.upgrade_list[i] = upgrades[upgrade_ID];
 			world -> player.upgrade_list[i].unlocked = true;
+
+			level_up_upgrade();
 
 			if (upgrades[upgrade_ID].ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
 			{
