@@ -484,7 +484,7 @@ Resource* get_player_resource(ResourceID resource_ID)
 			return & world -> player.resource_list[i];
 		}
 	}
-	return 0;
+	return NULL;
 }
 
 bool is_resource_in_player_list(ResourceID resource_ID)
@@ -501,7 +501,7 @@ bool is_resource_in_player_list(ResourceID resource_ID)
 
 void add_player_resource(ResourceID resource_ID)
 {
-    if (is_resource_in_player_list(resource_ID))
+    if (is_resource_in_player_list(resource_ID) == resource_ID)
     {
         log("Resource '%s' is already in the player's resource list.\n", resources[resource_ID].name);
         return;
@@ -509,7 +509,7 @@ void add_player_resource(ResourceID resource_ID)
 
     for (int i = 0; i < RESOURCEID_MAX; i++)
     {
-        if (get_player_resource(resource_ID) == NULL)
+		if (world -> player.resource_list[i].resource_ID == RESOURCEID_nil)
         {
             world -> player.resource_list[i] = resources[resource_ID];
             world -> player.resource_list[i].unlocked = true;
@@ -558,7 +558,7 @@ void add_player_skill(SkillID skill_ID)
 
     for (int i = 0; i < SKILLID_MAX; i++)
     {
-        if (get_player_skill(skill_ID) == NULL)
+        if (world -> player.skill_list[i].skill_ID == SKILLID_nil)
         {
             world -> player.skill_list[i] = skills[skill_ID];
             world -> player.skill_list[i].unlocked = true;
@@ -1859,6 +1859,10 @@ void render_ui()
 			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
 			{
 				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_size, icon_row_count, accent_col_blue, bg_box_color);
+			}
+			else
+			{
+				log("mana null");
 			}
 
 			// Intellect bar
