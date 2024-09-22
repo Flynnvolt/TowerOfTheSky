@@ -693,7 +693,7 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 		{
 			TileData *tile_data = & floor -> tiles[i];
 
-			int x = tile_data -> tile.x;
+			int x = tile_data -> tile.x; 
 			int y = tile_data -> tile.y;
 
 			// skip if building is on tile
@@ -1586,7 +1586,7 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size,
 void display_skill_level_up_button(float button_size, Vector4 color)
 {
 	Vector2 button_size_v2 = v2(button_size, button_size);
-	int y_pos = 240;
+	int y_pos = 220;
 	int current_buttons = 0;
 
 	for (int i = 0; i < SKILLID_MAX; i++)
@@ -1611,8 +1611,8 @@ void display_skill_level_up_button(float button_size, Vector4 color)
 				}
 			}
 
-			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s"), skill->name, skill->level, costs_text);
-			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s\n+%.2f Base Mana / second\n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> description);
+			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s"), skill -> name, skill -> level, costs_text);
+			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s\n+%.2f %s \n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> effect_text, skill -> description);
 
 			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 			{

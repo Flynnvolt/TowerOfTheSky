@@ -57,6 +57,7 @@ struct Skill
     bool unlocked;
     char name[32];
     char description[128];
+    char effect_text[128];
     int level;
 
     float base_costs[MAX_COSTS];                   // Base costs for the skill
@@ -101,7 +102,7 @@ void level_up_skill(Skill* self, Resource resources[RESOURCEID_MAX])
             Resource* cost_resource = get_resource_from_resouce_list(cost_id, resources);
             
             // Check if enough resources are available to pay the cost
-            if (cost_resource->current >= self -> current_costs[i]) 
+            if (cost_resource -> current >= self -> current_costs[i]) 
             {
                 // Spend the resource
                 cost_resource -> current -= self -> current_costs[i];
@@ -120,8 +121,8 @@ void level_up_skill(Skill* self, Resource resources[RESOURCEID_MAX])
         }
     }
 
-    // Prepare an array of resource pointers to pass to the effect function
     Resource* effect_resources[MAX_EFFECTS] = {NULL};
+
     for (int i = 0; i < MAX_EFFECTS; i++) 
     {
         ResourceID effect_id = self -> effect_resources[i];
@@ -152,6 +153,7 @@ Skill channel_mana =
     .unlocked = false,
     .name = "Channel Mana",
     .description = "Channel your mana to Increase\nit's recovery speed.",
+    .effect_text = "Base Mana / second",
     .level = 0,
     .base_costs = {25.0, 0.0},                                         // Base cost: 25 mana
     .current_costs = {25.0, 0.0},
@@ -172,6 +174,7 @@ Skill wisdom =
     .unlocked = false,
     .name = "Wisdom",
     .description = "Wisdom expands your mana reserves.",
+    .effect_text = "Max Mana",
     .level = 0,
     .base_costs = {1.0, 0.0},                                           // Base cost: 1 Intellect
     .current_costs = {1.0, 0.0},
@@ -192,6 +195,7 @@ Skill focus =
     .unlocked = false,
     .name = "Focus",
     .description = "Passively generate Intellect.",
+    .effect_text = "Base Intellect / second",
     .level = 0,
     .base_costs = {50.0, 1.0},                                           // Base cost: 50 Mana, 1 Intellect
     .current_costs = {50.0, 1.0},
