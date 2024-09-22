@@ -693,6 +693,18 @@ bool is_upgrade_in_ability_upgrade_list(AbilityUpgrade ability_upgrades[UPGRADEI
 	return false;
 }
 
+AbilityUpgrade* get_upgrade_in_ability_upgrade_list(AbilityUpgrade ability_upgrades[UPGRADEID_MAX], UpgradeID upgrade_ID)
+{
+	for (int i = 0; i < UPGRADEID_MAX; i++)
+	{
+		if (ability_upgrades[i].ability_upgrade_ID == upgrades[upgrade_ID].ability_upgrade.ability_upgrade_ID)
+		{
+			return & ability_upgrades[i];
+		}
+	}
+	return NULL;
+}
+
 void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
 {
 	for (int i = 0; i < ABILITYID_MAX; i++)
@@ -703,7 +715,7 @@ void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
 			{
 				for (int j = 0; j < UPGRADEID_MAX; j++)
 				{
-					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == false)
+					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == true)
 					{
 						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
 					}
@@ -716,6 +728,7 @@ void upgrade_abilities(AbilityID abilities[ABILITYID_MAX], UpgradeID upgrade_ID)
 					if (get_player_ability(abilities[i]) -> ability_upgrades[j].active == false)
 					{
 						get_player_ability(abilities[i]) -> ability_upgrades[j] = upgrades[upgrade_ID].ability_upgrade;
+						get_player_ability(abilities[i]) -> ability_upgrades[j].active = true;
 						get_player_ability(abilities[i]) -> ability_upgrades[j].level++;
 					}
 				}
@@ -753,11 +766,6 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
 			world -> player.upgrade_list[i].unlocked = true;
 
 			level_up_upgrade(upgrade_ID);
-
-			if (upgrades[upgrade_ID].ability_upgrade.ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
-			{
-				upgrade_abilities(upgrades[upgrade_ID].abilities_upgraded, upgrade_ID);
-			}
 
             log("Upgrade '%s' added to player's upgrade list.\n", upgrades[upgrade_ID].name);
 
@@ -1273,11 +1281,18 @@ void damage_entity(Entity *entity, float damage)
 
 // :Projectiles
 
-void spawn_projectile(Ability *ability, Entity *source_entity, float speed, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive, int multishot, bool nova) 
+void spawn_projectile(Ability *ability, Entity *source_entity, float speed, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive, bool nova) 
 {
+	int total_shots = 1;
+
     if (world -> active_projectiles < MAX_PROJECTILES)
     {
-        int total_shots = 1 + multishot; // Base shot + multishot projectiles
+		if (is_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) == true)
+		{
+			total_shots = 1 + get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level;
+			log("%i", get_upgrade_in_ability_upgrade_list(ability -> ability_upgrades, UPGRADEID_Multishot) -> level);
+			//log("Damage: %.1f", ability -> damage);
+		}
 
         for (int shot_index = 0; shot_index < total_shots; shot_index++) 
         {
@@ -2509,7 +2524,7 @@ int entry(int argc, char **argv)
 					{
 
 						
-						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, 50, true);
+						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
 
 						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
 					}
