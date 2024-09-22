@@ -651,17 +651,6 @@ Upgrade* get_player_upgrade(UpgradeID upgrade_ID)
 	return NULL;
 }
 
-void level_up_upgrade(UpgradeID upgrade_ID)
-{
-	if (is_upgrade_in_player_list(upgrade_ID) == true)
-	{
-		if (get_player_upgrade(upgrade_ID) -> has_levels == true)
-		{
-			get_player_upgrade(upgrade_ID) -> level++;
-		}
-	}
-}
-
 bool is_upgrade_in_player_list(UpgradeID upgrade_ID)
 {
     for (int i = 0; i < UPGRADEID_MAX; i++)
@@ -672,6 +661,17 @@ bool is_upgrade_in_player_list(UpgradeID upgrade_ID)
         }
     }
     return false; // Upgrade not found in player's list
+}
+
+void level_up_upgrade(UpgradeID upgrade_ID)
+{
+	if (is_upgrade_in_player_list(upgrade_ID) == true)
+	{
+		if (get_player_upgrade(upgrade_ID) -> has_levels == true)
+		{
+			get_player_upgrade(upgrade_ID) -> level++;
+		}
+	}
 }
 
 void add_upgrade_to_player(UpgradeID upgrade_ID)
@@ -689,7 +689,7 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
             world -> player.upgrade_list[i] = upgrades[upgrade_ID];
 			world -> player.upgrade_list[i].unlocked = true;
 
-			level_up_upgrade();
+			level_up_upgrade(upgrade_ID);
 
 			if (upgrades[upgrade_ID].ability_upgrade_ID != ABILITYUPGRADEID_No_Ability_Upgrade_ID)
 			{
@@ -1823,7 +1823,7 @@ void display_ability_upgrade_buttons(float button_size, Vector4 color)
 			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 			{
 				world_frame.hover_consumed = true;
-				// do leveling up here
+				level_up_upgrade(upgrades[i].upgrade_ID);
 			}
 
 			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
