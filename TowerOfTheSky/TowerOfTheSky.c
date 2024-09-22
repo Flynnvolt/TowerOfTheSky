@@ -1203,80 +1203,101 @@ void damage_entity(Entity *entity, float damage)
 
 // :Projectiles
 
-void spawn_projectile(Ability *ability, Entity *source_entity, float speed, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive) 
+void spawn_projectile(Ability *ability, Entity *source_entity, float speed, AnimationInfo *animation, float32 scale, float spawn_radius, float max_distance, float max_time_alive, int multishot, bool nova) 
 {
-	if (world -> active_projectiles < MAX_PROJECTILES)
-	{
-		for (int i = 0; i < world -> active_projectiles + 1; i++) 
-		{
-			if (world -> projectiles[i].is_active == false) 
-			{
-				world -> active_projectiles++;
-				Projectile *projectile = & world -> projectiles[i];
-				projectile -> is_active = true;
-				projectile -> speed = speed;
-				projectile -> damage = ability -> damage;
-				projectile -> animation = *animation;
-				projectile -> scale = scale;
-				projectile -> source_entity = source_entity;
-				projectile -> distance_traveled = 0.0f;
-				projectile -> max_distance = max_distance;
-				projectile -> time_alive = 0.0f;
-				projectile -> max_time_alive = max_time_alive;
+    if (world -> active_projectiles < MAX_PROJECTILES)
+    {
+        int total_shots = 1 + multishot; // Base shot + multishot projectiles
 
-				// Calculate the player's center position
-				SpriteData sprite_data = sprites[source_entity -> sprite_ID];
-				Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), 
-										   (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
+        for (int shot_index = 0; shot_index < total_shots; shot_index++) 
+        {
+            for (int i = 0; i < world -> active_projectiles + 1; i++) 
+            {
+                if (world -> projectiles[i].is_active == false) 
+                {
+                    world -> active_projectiles++;
+                    Projectile *projectile = & world -> projectiles[i];
+                    projectile -> is_active = true;
+                    projectile -> speed = speed;
+                    projectile -> damage = ability -> damage;
+                    projectile -> animation = *animation;
+                    projectile -> scale = scale;
+                    projectile -> source_entity = source_entity;
+                    projectile -> distance_traveled = 0.0f;
+                    projectile -> max_distance = max_distance;
+                    projectile -> time_alive = 0.0f;
+                    projectile -> max_time_alive = max_time_alive;
 
-				Vector2 mouse_pos = get_mouse_pos_in_world_space();
+                    // Calculate the player's center position
+                    SpriteData sprite_data = sprites[source_entity -> sprite_ID];
+                    Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
 
-				// Calculate direction from player to mouse
-				Vector2 direction = v2_sub(mouse_pos, player_center);
-				float32 length = v2_length(direction);
+                    Vector2 mouse_pos = get_mouse_pos_in_world_space();
 
-				Vector2 normalized_direction = direction;
-				if (length != 0.0f)
-				{
-					normalized_direction = v2_scale(direction, 1.0f / length);
-				}
+                    // Calculate direction from player to mouse
+                    Vector2 direction = v2_sub(mouse_pos, player_center);
+                    float32 length = v2_length(direction);
 
-				// Calculate angle 
-				float angle = atan2f(normalized_direction.y, normalized_direction.x);
+                    Vector2 normalized_direction = direction;
+                    if (length != 0.0f)
+                    {
+                        normalized_direction = v2_scale(direction, 1.0f / length);
+                    }
 
-				// Spawn the projectile at the edge of the spawn_radius circle
-				Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(angle), spawn_radius * sinf(angle)));
+                    // Base angle (toward the mouse) when nova is off
+                    float base_angle = atan2f(normalized_direction.y, normalized_direction.x);
 
-				projectile -> position = spawn_position;
+                    // Calculate angle for the current projectile
+                    float current_angle;
 
-				// Debug logging
+                    if (nova)
+                    {
+                        // Spread projectiles in a full 360-degree nova
+                        float angle_offset = (2 * PI32) / total_shots;
+                        current_angle = base_angle + (shot_index * angle_offset);
+                    }
+                    else
+                    {
+                        // Spread projectiles in a cone towards the mouse
+                        float cone_angle = PI32 / 6.0f; // 30-degree cone
+                        float angle_offset = cone_angle / (total_shots - 1); // Space within cone
+                        current_angle = base_angle - (cone_angle / 2) + (shot_index * angle_offset);
+                    }
 
-				// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
-				// printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
-				// printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
-				// printf("Projectile Direction Angle: %f\n", angle);
-				// printf("Spawn Radius: %f\n", spawn_radius);
+                    // Spawn the projectile at the edge of the spawn_radius circle
+                    Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(current_angle), spawn_radius * sinf(current_angle)));
 
-				// Draw the debug circle around the player when projectile is cast
-				//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
+                    projectile -> position = spawn_position;
+					
+					// Debug logging
+
+					// printf("Player Center: (%f, %f)\n", player_center.x, player_center.y);
+					// printf("Spawn Position: (%f, %f)\n", spawn_position.x, spawn_position.y);
+					// printf("Mouse Position: (%f, %f)\n", mouse_pos.x, mouse_pos.y);
+					// printf("Projectile Direction Angle: %f\n", angle);
+					// printf("Spawn Radius: %f\n", spawn_radius);
+
+					// Draw the debug circle around the player when projectile is cast
+					//start_debug_circle(& circle_state, player_center, spawn_radius, 1.0);
 
 
-				if (length != 0.0f)
-				{
-					Vector2 velocity_direction = normalized_direction; 
-					projectile -> velocity = v2_scale(velocity_direction, speed);
+                    if (length != 0.0f)
+                    {
+                        Vector2 velocity_direction = v2(cosf(current_angle), sinf(current_angle)); 
+                        projectile -> velocity = v2_scale(velocity_direction, speed);
 
-					projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
+                        projectile -> rotation = atan2f(-velocity_direction.y, velocity_direction.x) * (180.0f / PI32);
 
-					if (projectile -> rotation < 0.0f)
-					{
-						projectile -> rotation += 360.0f;
-					}
-				}
-				break;
-			}
-		}
-	}
+                        if (projectile -> rotation < 0.0f)
+                        {
+                            projectile -> rotation += 360.0f;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void update_projectile(Projectile *projectile) 
@@ -2384,7 +2405,7 @@ int entry(int argc, char **argv)
 				{
 					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
 					{
-						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5);
+						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, 50, true);
 
 						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
 					}
