@@ -129,8 +129,15 @@ void level_up_skill(Skill* self, Resource resources[RESOURCEID_MAX])
         
         // Ensure the effect resource ID is valid
         if (effect_id != RESOURCEID_nil) 
-        {
-            effect_resources[i] = & resources[effect_id];
+        {   
+
+            for (int j = 0; j < RESOURCEID_MAX; j++)
+            {
+                if (resources[j].resource_ID == effect_id)
+                {
+                    effect_resources[i] = & resources[j];
+                }
+            }
         }
     }
 
