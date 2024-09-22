@@ -1785,6 +1785,44 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 	}
 }
 
+void display_ability_upgrade_buttons(float button_size, Vector4 color)
+{
+	Vector2 button_size_v2 = v2(button_size, button_size);
+
+	int y_pos = 20;
+	
+	int current_buttons = 0;
+
+	for (int i = 0; i < UPGRADEID_MAX; i++)
+	{
+		if (get_player_upgrade(upgrades[i].upgrade_ID) != UPGRADEID_nil && get_player_upgrade(upgrades[i].upgrade_ID) -> has_levels == true)
+		{
+			current_buttons++;
+
+			Vector2 button_pos = v2(100 + (current_buttons * 30), y_pos);
+
+			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
+
+			string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
+
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+
+			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+				// do leveling up here
+			}
+
+			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+			{
+				world_frame.hover_consumed = true;
+				quad -> color = COLOR_RED;
+				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+			}					
+		}
+	}
+}
+
 void render_ui()
 {
 	set_screen_space();
@@ -1838,7 +1876,6 @@ void render_ui()
 			float entire_thing_width = icon_row_count_items * icon_size;
 			float x_start_pos = (screen_width * 0.5) - (entire_thing_width * 0.5);
 
-
 			// turning inventory off because it's causing crashes and i don't know why.
 			/*
 
@@ -1877,7 +1914,6 @@ void render_ui()
 						is_selected_alpha = 1.0;
 					}
 
-					/*
 					xform = m4_translate(xform, v3(icon_size * 0.5, icon_size * 0.5, 0.0));
 	
 					// Make items start slightly smaller so when sized up they dont get to big
@@ -1948,6 +1984,7 @@ void render_ui()
 
 			display_skill_level_up_button(16, fill_col);
 			display_upgrade_buttons(16, fill_col);
+			display_ability_upgrade_buttons(16, fill_col);
 		}
 		world_frame.hover_consumed = true;
 	}
@@ -2408,6 +2445,8 @@ int entry(int argc, char **argv)
 				{
 					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
 					{
+
+						
 						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, 50, true);
 
 						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;

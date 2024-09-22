@@ -28,8 +28,10 @@ struct Upgrade
     ResourceID resources_unlocked[RESOURCEID_MAX];
     bool known;
     bool unlocked;
+    bool has_levels;
     char name[32];
     char description[128];
+    char level_up_text[128];
     int level;
 };
 
@@ -45,8 +47,10 @@ Upgrade unlock_mana =
     .resources_unlocked = {RESOURCEID_Mana},
     .known = true,
     .unlocked = false,
+    .has_levels = false,
     .name = "Study Mana",
     .description = "",
+    .level_up_text = "",
     .level = 0,
 };
 
@@ -62,8 +66,10 @@ Upgrade unlock_magic =
     .resources_unlocked = {RESOURCEID_Intellect},
     .known = false,
     .unlocked = false,
+    .has_levels = false,
     .name = "Study Magic",
     .description = "",
+    .level_up_text = "",
     .level = 0,
 };
 
@@ -79,8 +85,10 @@ Upgrade unlock_arcana =
     .resources_unlocked = {},
     .known = false,
     .unlocked = false,
+    .has_levels = false,
     .name = "Study Arcana",
     .description = "",
+    .level_up_text = "",
     .level = 0,
 };
 
@@ -96,8 +104,10 @@ Upgrade unlock_firebolt =
     .resources_unlocked = {},
     .known = false,
     .unlocked = false,
+    .has_levels = true,
     .name = "Learn Fire Bolt",
     .description = "",
+    .level_up_text = "Firebolt",
     .level = 0,
 };
 
@@ -113,8 +123,10 @@ Upgrade multishot =
     .resources_unlocked = {},
     .known = false,
     .unlocked = false,
-    .name = "Multishot",
+    .has_levels = true,
+    .name = "Learn Multishot",
     .description = "",
+    .level_up_text = "Firebolt",
     .level = 0,
 };
 
