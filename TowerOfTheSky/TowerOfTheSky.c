@@ -2549,13 +2549,16 @@ int entry(int argc, char **argv)
 
 			tm_scope("Spawn Projectile")
 			{
-				if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
+				if(get_player_resource(RESOURCEID_Mana) != NULL)
 				{
-					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+					if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
 					{
-						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
+						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+						{
+							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
 
-						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+						}
 					}
 				}
 			}
@@ -2568,13 +2571,16 @@ int entry(int argc, char **argv)
 
 			tm_scope("Spawn Projectile")
 			{
-				if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
+				if(get_player_resource(RESOURCEID_Mana) != NULL)
 				{
-					if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+					if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
 					{
-						spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, true);
+						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+						{
+							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, true);
 
-						get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+						}
 					}
 				}
 			}
