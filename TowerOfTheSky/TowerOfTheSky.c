@@ -1366,19 +1366,35 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
                     // Calculate angle for the current projectile
                     float current_angle;
 
-                    if (nova)
-                    {
-                        // Spread projectiles in a full 360-degree nova
-                        float angle_offset = (2 * PI32) / total_shots;
-                        current_angle = base_angle + (shot_index * angle_offset);
-                    }
-                    else
-                    {
-                        // Spread projectiles in a cone towards the mouse
-                        float cone_angle = PI32 / 6.0f; // 30-degree cone
-                        float angle_offset = cone_angle / (total_shots - 1); // Space within cone
-                        current_angle = base_angle - (cone_angle / 2) + (shot_index * angle_offset);
-                    }
+					if (nova)
+					{
+						// Spread projectiles in a full 360-degree nova
+						float angle_offset = (2 * PI32) / total_shots;
+						current_angle = base_angle + (shot_index * angle_offset);
+					}
+					else
+					{
+						if (total_shots == 1)
+						{
+							// If only one shot, fire directly at the target (base angle)
+							current_angle = base_angle;
+						}
+						else
+						{
+							// Spread projectiles in a cone towards the mouse
+							float cone_angle = PI32 / 6.0f; // 30-degree cone
+							if (total_shots > 1)
+							{
+								float angle_offset = cone_angle / (total_shots - 1); // Space within cone
+								current_angle = base_angle - (cone_angle / 2) + (shot_index * angle_offset);
+							}
+							else
+							{
+								// Fallback in case of invalid shot count
+								current_angle = base_angle;
+							}
+						}
+					}
 
                     // Spawn the projectile at the edge of the spawn_radius circle
                     Vector2 spawn_position = v2_add(player_center, v2(spawn_radius * cosf(current_angle), spawn_radius * sinf(current_angle)));
