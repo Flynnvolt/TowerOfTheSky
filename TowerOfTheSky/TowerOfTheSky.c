@@ -1,8 +1,9 @@
 #pragma once
 #include "World.c"
 #include "Range.c"
-#include "AnimationData.c"
+#include "TextPivot.c"
 #include "TutorialMath.c"
+#include "AnimationData.c"
 #include "Projectile.c"
 #include "Abilities.c"
 #include "Limits.c"
@@ -16,8 +17,6 @@
 #include "WorldFrame.c"
 #include "Player.c"
 #include "Upgrades.c"
-
-// Defines
 
 #define DEV_TESTING
 
@@ -45,6 +44,23 @@ Vector4 color_0;
 
 float64 delta_t;
 
+float64 current_time;
+
+float64 last_time;
+
+// :Fps display
+#define FPS_BUFFER_SIZE 10 
+
+const float64 display_update_interval = 0.1; 
+float64 display_timer = 0.0;      
+int fps_buffer[FPS_BUFFER_SIZE] = {0}; 
+int fps_index = 0; 
+int frame_count = 0; 
+float total_frame_time = 0.0f; 
+
+int fps_display = 0;
+float frame_time_display = 0.0f;
+
 inline float64 now() 
 {
 	return world -> time_elapsed;
@@ -70,6 +86,48 @@ void update_cooldown(float *cooldown)
             *cooldown = 0;
         }
     }
+}
+
+int get_fps()
+{
+    if (delta_t > 0.0) 
+	{
+        return (int)(1.0 / delta_t); 
+    }
+    return 0;
+}
+
+void calculate_fps()
+{
+	int current_fps = get_fps(); 
+
+	fps_buffer[fps_index] = current_fps; 
+
+	fps_index = (fps_index + 1) % FPS_BUFFER_SIZE;
+
+	int total_fps = 0;
+
+	for (int i = 0; i < FPS_BUFFER_SIZE; i++) 
+	{
+		total_fps += fps_buffer[i];
+	}
+
+	int average_fps = total_fps / FPS_BUFFER_SIZE;
+
+	float frame_time = current_time - last_time;
+	total_frame_time += frame_time; 
+	frame_count++; 
+
+	display_timer += delta_t; 
+
+	if (display_timer >= display_update_interval) 
+	{
+		frame_time_display = (total_frame_time / frame_count) * 1000; // Average in ms
+		fps_display = average_fps;
+		total_frame_time = 0.0f; 
+		frame_count = 0; 
+		display_timer = 0.0; 
+	}
 }
 
 // :Debugging Tools
@@ -1967,6 +2025,12 @@ void render_ui()
 	Vector4 accent_col_blue = hex_to_rgba(0x44c3daff);
 	Vector4 accent_col_purple = hex_to_rgba(0x9d00ffff);
 
+	// :Fps Display
+
+	string current_fps = tprint("%i FPS %.2f ms", fps_display, frame_time_display);
+
+	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left);
+
 	// :Inventory UI
 	{
 		if (is_key_just_pressed(KEY_TAB))
@@ -2397,7 +2461,7 @@ int entry(int argc, char **argv)
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 
-	float64 last_time = os_get_elapsed_seconds();
+	last_time = os_get_elapsed_seconds();
 
 	// :Color
 
@@ -2440,23 +2504,22 @@ int entry(int argc, char **argv)
 
 	// :Game Loop
 
+	string current_fps = STR("0");
+
 	while (!window.should_close) 
 	{
 		reset_temporary_storage();
 		world_frame = (WorldFrame){0};
 
 		// :Time tracking
-		
-		float64 current_time = os_get_elapsed_seconds();
+		current_time = os_get_elapsed_seconds();
 		delta_t = current_time - last_time;
 
-		// Log fps
-		if ((int)current_time != (int)last_time) log("%.2f FPS\n%.2fms", 1.0 / (current_time - last_time), (current_time - last_time) * 1000);
+		calculate_fps();
+
 		last_time = current_time;
-
-		//log("Window Width:%i, Window Height:%i", window.scaled_width, window.scaled_height);
-
-		// :Frame Update
+						
+		// :Projection & Sorting
 
 		draw_frame.enable_z_sorting = true;
 
