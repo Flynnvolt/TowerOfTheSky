@@ -1230,7 +1230,11 @@ void update_entity(Entity *entity, Vector2 movement)
 
 void player_death() 
 {
-	// Player can't die right now until we add a respawn system or else it crashes.
+	world -> current_floor = 0;
+	world -> player.player.pos = v2(0, 0);
+	world -> player.player.pos = round_v2_to_tile(world -> player.player.pos);
+	world -> player.player.pos.y -= tile_width * 0.5;
+	world -> player.player.pos.x -= sprites[world -> player.player.sprite_ID].image -> width * 0.5;
 }
 
 void enemy_death(Entity *entity)
