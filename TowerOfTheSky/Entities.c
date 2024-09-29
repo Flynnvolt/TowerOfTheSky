@@ -19,11 +19,11 @@ struct Entity
 	bool is_valid;
 	SpriteID sprite_ID;
 	Vector2 pos;
+	bool is_immortal;
 	float health;
 	float max_health;
 	float health_regen;
 	float speed;
-	bool is_immortal;
 	float x_remainder;
 	float y_remainder;
 	int current_floor;

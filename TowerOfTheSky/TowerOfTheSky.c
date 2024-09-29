@@ -244,6 +244,31 @@ Entity* entity_create()
 	return entity_found;
 }
 
+Enemy* enemy_create()
+{
+	Enemy* enemy_found = 0;
+
+	// Search for an available enemy slot
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	{
+		Enemy* existing_enemy = & world -> floors[world -> current_floor].enemies[i];
+
+		if (!existing_enemy -> enemy_entity.is_valid) 
+		{
+			enemy_found = existing_enemy;
+			break;
+		}
+	}
+
+	// log("%i", world -> current_floor);
+	assert(enemy_found, "No more free enemies!");
+
+	enemy_found -> enemy_entity.is_valid = true;
+	enemy_found -> enemy_entity.current_floor = world -> current_floor;
+
+	return enemy_found;
+}
+
 void entity_destroy(Entity* entity) 
 {
 	memset(entity, 0, sizeof(Entity));
@@ -291,14 +316,27 @@ void create_circle_floor_data(FloorData* floor)
 
 // :Setup
 
-void setup_slime(Entity* en) 
+void setup_slime(Enemy* en)
 {
-	en -> entity_ID = ENTITY_Enemy;
-    en -> sprite_ID = SPRITE_Slime;
-	en -> health = 50;
-	en -> max_health = 50;
-	en -> health_regen = 0.1;
-	en -> speed = 20;
+    // Entity setup
+    en -> enemy_entity.entity_ID = ENTITY_Enemy;
+    en -> enemy_entity.sprite_ID = SPRITE_Slime;
+    en -> enemy_entity.health = 50;
+    en -> enemy_entity.max_health = 50;
+    en -> enemy_entity.health_regen = 0.2f;
+    en -> enemy_entity.speed = 20;
+
+    // Enemy setup
+    en -> enemy_logic.enemy_state = ENEMYSTATE_idle;
+    en -> enemy_logic.roam_direction = (Vector2){0, 0}; 
+	en -> enemy_logic.damage = 5;
+	en -> enemy_logic.attack_cooldown = 1;   
+	en -> enemy_logic.current_attack_cooldown = 0;  
+    en -> enemy_logic.attack_range = 25;   
+    en -> enemy_logic.aggro_range = 100;  
+    en -> enemy_logic.roam_time = 0;
+    en -> enemy_logic.idle_time = 0;
+    en -> enemy_logic.flee_time = 0;
 }
 
 void setup_target(Entity* en) 
@@ -503,7 +541,7 @@ void setup_player(Entity* player_en)
 	player_en -> is_valid = true;
 	player_en -> health = 100;
 	player_en -> max_health = 100;
-	player_en -> health_regen = 4;
+	player_en -> health_regen = 2;
 	player_en -> speed = 75;
 	player_en -> pos = v2(0, 0);
 	player_en -> pos = round_v2_to_tile(player_en -> pos);
@@ -888,7 +926,7 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 
 			if (random_value < spawn_chance) 
 			{
-				Entity* enemy = entity_create();
+				Enemy* enemy = enemy_create();
 
 				switch (enemy_ID) 
 				{
@@ -905,7 +943,7 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 					}
 				}
 
-				enemy -> pos = v2((x * tile_width), (y * tile_width));
+				enemy -> enemy_entity.pos = v2((x * tile_width), (y * tile_width));
 			}
 		}
 		else
@@ -1005,6 +1043,29 @@ bool collide_at(Entity *current_entity, int x, int y)
 
 	int x_end1 = x + width1;
 	int y_end1 = y + height1;
+
+	// check player collide
+
+	Entity *actor = & world -> player.player;
+
+	// Skip ourselves to avoid self-collision
+	if (actor -> is_valid && actor != current_entity) 
+	{
+		SpriteData sprite_data_2 = sprites[actor -> sprite_ID];
+		int width2 = sprite_data_2.image -> width;
+		int height2 = sprite_data_2.image -> height;
+
+		int actor_x_end = actor -> pos.x + width2;
+		int actor_y_end = actor-> pos.y + height2;
+
+		// Check for bounding box overlap
+		if (x < actor_x_end && x_end1 > actor -> pos.x &&
+			y < actor_y_end && y_end1 > actor -> pos.y) 
+		{
+			//log("Collision detected with entity %d\n", i);
+			return true;
+		}
+	}
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
@@ -1165,99 +1226,6 @@ void update_entity(Entity *entity, Vector2 movement)
 	//collide_visual_debug_buildings(entity);
 }
 
-// :Enemy AI
-
-void update_enemy_states(Enemy *enemy)
-{
-    if (enemy -> enemy_entity.is_valid == false) return;
-
-	if (enemy -> enemy_logic.state_setup  == false)
-	{
-		enemy -> enemy_logic.state_setup = true;
-	}
-
-	Entity *player = get_player();
-
-	Vector2 player_center = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5f)), 
-							(player -> pos.y + (sprites[player -> sprite_ID].image -> height * 0.5f)));
-
-	float distance_to_player = v2_distance(enemy -> enemy_entity.pos, player_center);
-	
-	// wander
-	if (distance_to_player >= 150)
-	{
-		enemy -> enemy_logic.enemy_state = ENEMYSTATE_patrol;
-
-		if (enemy -> enemy_logic.roam_time <= 0)
-		{
-			enemy -> enemy_logic.roam_time = 3;
-
-			// random direction for wandering
-			float random_angle = (float)(rand() % 360) * (PI32/ 180.0f);
-			enemy -> enemy_logic.roam_direction.x = cosf(random_angle);
-			enemy -> enemy_logic.roam_direction.y = sinf(random_angle);
-		}
-		else
-		{
-			update_cooldown(& enemy -> enemy_logic.roam_time);
-		}
-	
-		Vector2 direction = enemy -> enemy_logic.roam_direction;
-
-		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
-
-		Vector2 movement = v2_scale(velocity, delta_t);
-
-		update_entity(& enemy -> enemy_entity, movement);
-
-		return;
-	}
-
-	// flee if low hp
-	if (distance_to_player <= 150 && enemy -> enemy_entity.health < (enemy -> enemy_entity.max_health / 4))
-	{
-		enemy -> enemy_logic.enemy_state = ENEMYSTATE_flee;
-
-		Vector2 direction = v2_add(player_center, enemy -> enemy_entity.pos);
-		float length = v2_length(direction);
-
-		if (length != 0.0f)
-		{
-			direction = v2_scale(direction, 1.0f / length);
-		}
-
-		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
-
-		Vector2 movement = v2_scale(velocity, delta_t);
-
-		update_entity(& enemy -> enemy_entity, movement);
-
-		return;
-	}
-
-	// Only move enemy if close to player
-	if (distance_to_player <= 150)
-	{
-		enemy -> enemy_logic.enemy_state = ENEMYSTATE_combat;
-
-		Vector2 direction = v2_sub(player_center, enemy-> enemy_entity.pos);
-		float length = v2_length(direction);
-
-		if (length != 0.0f)
-		{
-			direction = v2_scale(direction, 1.0f / length);
-		}
-
-		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
-
-		Vector2 movement = v2_scale(velocity, delta_t);
-
-		update_entity(& enemy -> enemy_entity, movement);
-
-		return;
-	}
-}
-
 // :Damage Calcs
 
 void player_death() 
@@ -1287,11 +1255,11 @@ void damage_enemy(Entity *entity, float damage)
 	}
 }
 
-void damage_player(Entity *entity, float damage)
+void damage_player(float damage)
 {
-	entity -> health -= damage;
+	get_player() -> health -= damage;
 
-	if (entity -> health <= 0)
+	if (get_player() -> health <= 0)
 	{
 		player_death();
 	}
@@ -1305,7 +1273,7 @@ void damage_entity(Entity *entity, float damage)
 	{
 		case ENTITY_Player:
 		{
-			damage_player(entity, damage);
+			damage_player(damage);
 			break;
 		}
 
@@ -1320,6 +1288,109 @@ void damage_entity(Entity *entity, float damage)
 			log_error("misconfigured entity ID in Damage Entity"); 
 			break;
 		}
+	}
+}
+
+// :Enemy AI
+
+void update_enemy_states(Enemy *enemy)
+{
+    if (enemy -> enemy_entity.is_valid == false) return;
+
+	Entity *player = get_player();
+
+	Vector2 player_center = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5f)), (player -> pos.y + (sprites[player -> sprite_ID].image -> height * 0.5f)));
+
+	float distance_to_player = v2_distance(enemy -> enemy_entity.pos, player_center);
+	
+	// wander
+	if (distance_to_player >= enemy -> enemy_logic.aggro_range)
+	{
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_patrol;
+
+		if (enemy -> enemy_logic.roam_time <= 0)
+		{
+			enemy -> enemy_logic.roam_time = 3;
+
+			// random direction for wandering
+			float random_angle = (float)(rand() % 360) * (PI32/ 180.0f);
+			enemy -> enemy_logic.roam_direction.x = cosf(random_angle);
+			enemy -> enemy_logic.roam_direction.y = sinf(random_angle);
+		}
+		else
+		{
+			update_cooldown(& enemy -> enemy_logic.roam_time);
+		}
+	
+		Vector2 direction = enemy -> enemy_logic.roam_direction;
+
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
+
+		Vector2 movement = v2_scale(velocity, delta_t);
+
+		update_entity(& enemy -> enemy_entity, movement);
+
+		return;
+	}
+
+	// flee if low hp
+	if (distance_to_player <= enemy -> enemy_logic.aggro_range && enemy -> enemy_entity.health < (enemy -> enemy_entity.max_health / 4))
+	{
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_flee;
+
+		Vector2 direction = v2_add(player_center, enemy -> enemy_entity.pos);
+		float length = v2_length(direction);
+
+		if (length != 0.0f)
+		{
+			direction = v2_scale(direction, 1.0f / length);
+		}
+
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
+
+		Vector2 movement = v2_scale(velocity, delta_t);
+
+		update_entity(& enemy -> enemy_entity, movement);
+
+		return;
+	}
+
+	// Only move enemy if close to player
+	if (distance_to_player <= enemy -> enemy_logic.aggro_range)
+	{
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_combat;
+
+		Vector2 direction = v2_sub(player_center, enemy-> enemy_entity.pos);
+		float length = v2_length(direction);
+
+		if (length != 0.0f)
+		{
+			direction = v2_scale(direction, 1.0f / length);
+		}
+
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
+
+		Vector2 movement = v2_scale(velocity, delta_t);
+
+		if (distance_to_player <= enemy -> enemy_logic.attack_range)
+		{
+			// Combat: Attack
+
+			if (enemy -> enemy_logic.current_attack_cooldown <= 0)
+			{
+				enemy -> enemy_logic.current_attack_cooldown = enemy -> enemy_logic.attack_cooldown;
+
+				damage_player(enemy -> enemy_logic.damage);
+			}
+			else
+			{
+				update_cooldown(& enemy -> enemy_logic.current_attack_cooldown);
+			}
+		}
+			
+		update_entity(& enemy -> enemy_entity, movement);
+
+		return;
 	}
 }
 

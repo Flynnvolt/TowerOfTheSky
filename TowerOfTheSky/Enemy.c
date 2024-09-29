@@ -17,9 +17,13 @@ typedef struct EnemyLogic EnemyLogic;
 struct EnemyLogic
 {
 	EnemyState enemy_state;
-	bool state_setup;
-	float roam_time;
 	Vector2 roam_direction;
+	float damage;
+	float attack_cooldown;
+	float current_attack_cooldown;
+	float attack_range;
+	float aggro_range;
+	float roam_time;
 	float idle_time;
 	float flee_time;
 };
