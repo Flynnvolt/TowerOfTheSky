@@ -7,6 +7,7 @@ typedef struct Player Player;
 struct Player
 {
     char name[32];
+    Entity player;
     Resource resource_list[RESOURCEID_MAX];
     Skill skill_list[SKILLID_MAX];
     Ability ability_list[ABILITYID_MAX];
@@ -18,6 +19,7 @@ struct Player
 Player hero_default =
 {
     .name = "Hero",
+    .player = 0,
     .resource_list = {},
     .skill_list = {},
     .ability_list = {},

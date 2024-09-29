@@ -28,8 +28,6 @@ struct World
 	Projectile projectiles[MAX_PROJECTILES];
 
 	ItemData items[ITEM_MAX];
-
-	EnemyLogic enemy_logic[MAX_ENTITY_COUNT];
 	
 	int current_floor;
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Entities.c"
 
 typedef enum EnemyState EnemyState;
 
@@ -21,4 +22,12 @@ struct EnemyLogic
 	Vector2 roam_direction;
 	float idle_time;
 	float flee_time;
+};
+
+typedef struct Enemy Enemy;
+
+struct Enemy
+{
+	Entity enemy_entity;
+	EnemyLogic enemy_logic;
 };

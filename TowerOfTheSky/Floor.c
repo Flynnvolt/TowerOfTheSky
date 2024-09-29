@@ -2,6 +2,7 @@
 #include "Limits.c"
 #include "Entities.c"
 #include "Building.c"
+#include "Enemy.c"
 
 typedef Vector2i Tile;
  
@@ -21,5 +22,5 @@ struct FloorData
 	int floor_ID;
 	bool is_valid;
 	TileData tiles[MAX_TILE_COUNT];
-	Entity entities[MAX_ENTITY_COUNT];
+	Enemy enemies[MAX_ENTITY_COUNT];
 };

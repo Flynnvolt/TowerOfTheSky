@@ -136,7 +136,7 @@ void collide_visual_debug(Entity *current_entity)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *actor = & world -> floors[world -> current_floor].entities[i];
+		Entity *actor = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
 
 		if (actor -> is_valid && actor != current_entity) 
 		{
@@ -227,7 +227,7 @@ Entity* entity_create()
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity* existing_entity = & world -> floors[world -> current_floor].entities[i];
+		Entity* existing_entity = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
 
 		if (!existing_entity -> is_valid) 
 		{
@@ -488,38 +488,19 @@ void setup_walls(FloorData *floor, int floor_ID)
 
 Entity* get_player() 
 {
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
+	if (world -> player.player.is_valid == true)
 	{
-		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
-		{
-			world_frame.player = en;
-			return world_frame.player;
-		}
+		return & world -> player.player;
 	}
-	log("Player not found on current floor: %i", world -> current_floor);
+
     return NULL;
-}
-
-int get_player_data_location() 
-{
-	int data_location;
-
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-	{
-		Entity* en = & world -> floors[world -> current_floor].entities[i];
-		if (en -> is_valid && en -> entity_ID == ENTITY_Player) 
-		{
-			data_location = i;
-		}
-	}
-	return data_location;
 }
 
 void setup_player(Entity* player_en) 
 {
 	player_en -> entity_ID = ENTITY_Player;
     player_en -> sprite_ID = SPRITE_Player;
+	player_en -> is_valid = true;
 	player_en -> health = 100;
 	player_en -> max_health = 100;
 	player_en -> health_regen = 4;
@@ -866,33 +847,8 @@ void add_upgrade_to_player(UpgradeID upgrade_ID)
 
 void player_change_floor(int target_floor) 
 {
-    int player_index = get_player_data_location();
-    Entity* current_entity = & world -> floors[world -> current_floor].entities[player_index];
-    Entity* target_entity = NULL;
+	world -> player.player.current_floor = target_floor;
 
-    // Find an available spot in the target floor's entity list
-    for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
-    {
-        Entity* existing_entity = & world -> floors[target_floor].entities[i];
-        if (!existing_entity -> is_valid) 
-        {
-            target_entity = existing_entity;
-            break;
-        }
-    }
-    assert(target_entity, "No more free entity slots on the target floor!");
-
-    // Copy entity data to the target
-    *target_entity = *current_entity;
-
-    // Ensure the player is marked as valid on the target floor
-    target_entity -> is_valid = true;
-    target_entity -> current_floor = target_floor;
-
-    // Invalidate the entity in the current floor
-    current_entity -> is_valid = false;
-
-    // Log transfer success
     log("Player transferred to floor %i", target_floor);
 }
 
@@ -1052,7 +1008,7 @@ bool collide_at(Entity *current_entity, int x, int y)
 
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *actor = & world -> floors[world -> current_floor].entities[i];
+		Entity *actor = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
 
 		// Skip ourselves to avoid self-collision
 		if (actor -> is_valid && actor != current_entity) 
@@ -1136,7 +1092,7 @@ Entity* projectile_collides_with_entity(Projectile *projectile)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
-		Entity *entity = & world -> floors[world -> current_floor].entities[i];
+		Entity *entity = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
 
 		if (entity -> is_valid && entity != projectile -> source_entity) // Skip the caster
 		{
@@ -1211,13 +1167,13 @@ void update_entity(Entity *entity, Vector2 movement)
 
 // :Enemy AI
 
-void update_enemy_states(Entity *enemy, int enemy_memory_ID)
+void update_enemy_states(Enemy *enemy)
 {
-    if (!enemy -> is_valid) return;
+    if (enemy -> enemy_entity.is_valid == false) return;
 
-	if (world -> enemy_logic[enemy_memory_ID].state_setup == false)
+	if (enemy -> enemy_logic.state_setup  == false)
 	{
-		world -> enemy_logic[enemy_memory_ID].state_setup = true;
+		enemy -> enemy_logic.state_setup = true;
 	}
 
 	Entity *player = get_player();
@@ -1225,44 +1181,44 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 	Vector2 player_center = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5f)), 
 							(player -> pos.y + (sprites[player -> sprite_ID].image -> height * 0.5f)));
 
-	float distance_to_player = v2_distance(enemy -> pos, player_center);
+	float distance_to_player = v2_distance(enemy -> enemy_entity.pos, player_center);
 	
 	// wander
 	if (distance_to_player >= 150)
 	{
-		world -> enemy_logic[enemy_memory_ID].enemy_state = ENEMYSTATE_patrol;
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_patrol;
 
-		if (world -> enemy_logic[enemy_memory_ID].roam_time <= 0)
+		if (enemy -> enemy_logic.roam_time <= 0)
 		{
-			world -> enemy_logic[enemy_memory_ID].roam_time = 3;
+			enemy -> enemy_logic.roam_time = 3;
 
 			// random direction for wandering
 			float random_angle = (float)(rand() % 360) * (PI32/ 180.0f);
-			world -> enemy_logic[enemy_memory_ID].roam_direction.x = cosf(random_angle);
-			world -> enemy_logic[enemy_memory_ID].roam_direction.y = sinf(random_angle);
+			enemy -> enemy_logic.roam_direction.x = cosf(random_angle);
+			enemy -> enemy_logic.roam_direction.y = sinf(random_angle);
 		}
 		else
 		{
-			update_cooldown(& world -> enemy_logic[enemy_memory_ID].roam_time);
+			update_cooldown(& enemy -> enemy_logic.roam_time);
 		}
 	
-		Vector2 direction = world -> enemy_logic[enemy_memory_ID].roam_direction;
+		Vector2 direction = enemy -> enemy_logic.roam_direction;
 
-		Vector2 velocity = v2_scale(direction, enemy -> speed);
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		update_entity(enemy, movement);
+		update_entity(& enemy -> enemy_entity, movement);
 
 		return;
 	}
 
 	// flee if low hp
-	if (distance_to_player <= 150 && enemy -> health < (enemy -> max_health / 4))
+	if (distance_to_player <= 150 && enemy -> enemy_entity.health < (enemy -> enemy_entity.max_health / 4))
 	{
-		world -> enemy_logic[enemy_memory_ID].enemy_state = ENEMYSTATE_flee;
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_flee;
 
-		Vector2 direction = v2_add(player_center, enemy -> pos);
+		Vector2 direction = v2_add(player_center, enemy -> enemy_entity.pos);
 		float length = v2_length(direction);
 
 		if (length != 0.0f)
@@ -1270,11 +1226,11 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 			direction = v2_scale(direction, 1.0f / length);
 		}
 
-		Vector2 velocity = v2_scale(direction, enemy -> speed);
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		update_entity(enemy, movement);
+		update_entity(& enemy -> enemy_entity, movement);
 
 		return;
 	}
@@ -1282,9 +1238,9 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 	// Only move enemy if close to player
 	if (distance_to_player <= 150)
 	{
-		world -> enemy_logic[enemy_memory_ID].enemy_state = ENEMYSTATE_combat;
+		enemy -> enemy_logic.enemy_state = ENEMYSTATE_combat;
 
-		Vector2 direction = v2_sub(player_center, enemy -> pos);
+		Vector2 direction = v2_sub(player_center, enemy-> enemy_entity.pos);
 		float length = v2_length(direction);
 
 		if (length != 0.0f)
@@ -1292,11 +1248,11 @@ void update_enemy_states(Entity *enemy, int enemy_memory_ID)
 			direction = v2_scale(direction, 1.0f / length);
 		}
 
-		Vector2 velocity = v2_scale(direction, enemy -> speed);
+		Vector2 velocity = v2_scale(direction, enemy -> enemy_entity.speed);
 
 		Vector2 movement = v2_scale(velocity, delta_t);
 
-		update_entity(enemy, movement);
+		update_entity(& enemy -> enemy_entity, movement);
 
 		return;
 	}
@@ -2315,7 +2271,7 @@ void render_entities()
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 	{
-		Entity* en = & world -> floors[world -> current_floor].entities[i];
+		Entity* en = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
 		//log("%i floor in rendering",  world -> current_floor);
 
 		if (en -> is_valid)
@@ -2380,10 +2336,8 @@ void world_setup()
 	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
 	world -> active_floors++;
 
-	Entity* player_en = entity_create();
-	setup_player(player_en);
-
 	world -> player = hero_default;
+	setup_player(& world -> player.player);
 
 	// :test stuff
 	#if defined(DEV_TESTING)
@@ -2597,16 +2551,9 @@ int entry(int argc, char **argv)
 			// Loop through all enemies and update enemy state
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 			{	
-				if (world -> floors[world -> current_floor].entities[i].is_valid == true) 
+				if (world -> floors[world -> current_floor].enemies[i].enemy_entity.is_valid == true) 
 				{
-					if (world -> floors[world -> current_floor].entities[i].entity_ID == ENTITY_Player)
-					{
-						continue;
-					}
-					else
-					{
-						update_enemy_states(& world -> floors[world -> current_floor].entities[i], i);
-					}
+					update_enemy_states(& world -> floors[world -> current_floor].enemies[i]);
 				}
 			}
 		}
