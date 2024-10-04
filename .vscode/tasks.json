@@ -25,10 +25,6 @@
             "label": "Compile Release",
             "type": "shell",
             "command": "${workspaceFolder}\\build_release",
-            "args": [
-                "--flag", 
-                "-fdiagnostics-absolute-paths"
-            ],
             "group": {
                 "kind": "build"
             },

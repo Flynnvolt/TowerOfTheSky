@@ -47,78 +47,78 @@ void load_sprite_data()
 	// Missing Texture Sprite
 	sprites[0] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Nil
 	};
 
 	// Player
 	sprites[SPRITE_Player] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/player.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Player
 	};
 
 	// Entities
 	sprites[SPRITE_Target] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/Target.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/Target.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Target
 	};
 
 	sprites[SPRITE_Slime] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/slime.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/slime.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Slime
 	};
 
 	// Items
 	sprites[SPRITE_Exp] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Exp
 	};
 
 	// Buildings
 	sprites[SPRITE_Wall] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/wall.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/wall.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Wall
 	};
 
 	sprites[SPRITE_Research_Station] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/research_station.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Research_Station
 	};
 
 	sprites[SPRITE_Exp_Vein] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Exp_Vein
 	};
 
 	sprites[SPRITE_Stairs_Up] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Stairs_Up
 	};
 
 	sprites[SPRITE_Stairs_Down] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Stairs_Down
 	};
 
 	sprites[SPRITE_Crate] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/crate.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/crate.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Crate
 	};
 
 	// Spells
 	sprites[SPRITE_Fireball_Sheet] = (SpriteData)
 	{ 
-		.image = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
+		.image = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
 		.sprite_ID = SPRITE_Fireball_Sheet
 	};
 
