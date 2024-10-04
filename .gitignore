@@ -7,6 +7,7 @@ uid
 *.exe
 *.pdb
 .build/
+.build_release/
 *.sublime-workspace
 *.sublime-project
 *.vs
