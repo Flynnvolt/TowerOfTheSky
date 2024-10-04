@@ -118,6 +118,22 @@ struct Ability
     }
 }
 
+void set_ability_functions(Ability* ability) 
+{
+    switch (ability -> ability_ID) 
+    {
+        case ABILITYID_Fire_Bolt:
+            ability -> level_up = level_up_ability;
+            // Assign other ability-specific functions if needed
+            break;
+        
+        // Add cases for other abilities
+        default:
+            log("Unknown ability ID: %i", ability -> ability_ID);
+            break;
+    }
+}
+
 void skill_requirement_check(SkillRequirement *skill_requirement, AbilityID ability_ID, int required_level) 
 {
     skill_requirement -> ability_ID = ability_ID;

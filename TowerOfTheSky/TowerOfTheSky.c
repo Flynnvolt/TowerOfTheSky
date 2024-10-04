@@ -2450,6 +2450,20 @@ bool world_attempt_load_from_disk()
 
     dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
 
+	// this doesnt feel very good but it works
+
+	// After loading the skills, restore the function pointers
+    for (int i = 0; i < SKILLID_MAX; i++) 
+    {
+        set_skill_functions(& world -> player.skill_list[i]);
+    }
+
+	// After loading the abilties, restore the function pointers
+    for (int i = 0; i < ABILITYID_MAX; i++) 
+    {
+        set_ability_functions(& world -> player.ability_list[i]);
+    }
+
     return true;
 }
 

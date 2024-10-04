@@ -153,6 +153,32 @@ void level_up_skill(Skill* self, Resource resources[RESOURCEID_MAX])
     self -> level++;
 }
 
+void set_skill_functions(Skill* skill) 
+{
+    switch (skill -> skill_ID) 
+    {
+        case SKILLID_Channel_Mana:
+            skill -> apply_effect = apply_channel_mana_effect;
+            skill -> level_up = level_up_skill;
+            break;
+
+        case SKILLID_Wisdom:
+            skill -> apply_effect = apply_wisdom_effect;
+            skill -> level_up = level_up_skill;
+            break;
+
+        case SKILLID_Focus:
+            skill -> apply_effect = apply_focus_effect;
+            skill -> level_up = level_up_skill;
+            break;
+
+        default:
+            skill -> apply_effect = NULL;
+            skill -> level_up = NULL;
+            break;
+    }
+}
+
 Skill channel_mana = 
 {
     .skill_ID = SKILLID_Channel_Mana,
