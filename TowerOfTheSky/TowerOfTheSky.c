@@ -649,18 +649,9 @@ void add_player_skill(SkillID skill_ID)
     log("Player's skill list is full, cannot add skill '%s'.\n", skills[skill_ID].name);
 }
 
-Skill* get_skill_by_id(SkillID skill_id) 
-{
-    if (skill_id >= 0 && skill_id < SKILLID_MAX) 
-    {
-        return get_player_skill(skill_id);
-    }
-    return NULL;
-}
-
 void find_skill_to_level(SkillID skill_ID)
 {
-    Skill* skill = get_skill_by_id(skill_ID);  
+    Skill* skill = get_player_skill(skill_ID);  
 
     if (skill != NULL && skill -> unlocked)  
     {
@@ -679,18 +670,9 @@ Ability* get_player_ability(AbilityID ability_ID)
 	return NULL;
 }
 
-Ability* get_ability_by_id(AbilityID ability_ID) 
-{
-    if (ability_ID >= 0 && ability_ID < ABILITYID_MAX) 
-    {
-        return get_player_ability(ability_ID);
-    }
-    return NULL;
-}
-
 void find_ability_to_level(AbilityID ability_ID)
 {
-    Ability* ability = get_ability_by_id(ability_ID);  
+    Ability* ability = get_player_ability(ability_ID);  
 
     if (ability != NULL && ability -> unlocked)  
     {
