@@ -716,6 +716,73 @@ void add_player_ability(AbilityID ability_ID)
     log("Player's Ability list is full, cannot add ability '%s'.\n", abilities[ability_ID].name);
 }
 
+bool is_upgrade_in_known(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.known_upgrades[i].upgrade_ID == upgrade_ID)
+        {
+            return true; // Upgrade already exists
+        }
+    }
+    return false; // Upgrade not found
+}
+
+void update_known_upgrades()
+{
+    int known_count = 0;
+
+    // Clear unlocked upgrades
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.known_upgrades[i].unlocked == true)
+        {
+            world -> player.known_upgrades[i].known = false;
+        }
+    }
+
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.all_upgrades[i].known && !world -> player.all_upgrades[i].unlocked)
+        {
+            // Check if upgrade is already in known
+            if (!is_upgrade_in_known(world -> player.all_upgrades[i].upgrade_ID))
+            {
+                world -> player.known_upgrades[known_count] = world -> player.all_upgrades[i];
+                known_count++;
+            }
+        }
+    }
+}
+
+void mark_upgrade_unlocked(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.all_upgrades[i].upgrade_ID == upgrade_ID)
+        {
+            world -> player.all_upgrades[i].unlocked = true;
+            //log("Upgrade '%s' unlocked!\n", upgrades[i].name);
+            return;
+        }
+    }
+    log("Upgrade with ID %i not found.\n", upgrade_ID);
+}
+
+void mark_upgrade_known(UpgradeID upgrade_ID)
+{
+    for (int i = 0; i < UPGRADEID_MAX; i++)
+    {
+        if (world -> player.all_upgrades[i].upgrade_ID == upgrade_ID)
+        {
+            world -> player.all_upgrades[i].known = true;
+            //log("Upgrade '%s' known!\n", upgrades[i].name);
+            return;
+        }
+    }
+    log("Upgrade with ID %i not found.\n", upgrade_ID);
+}
+
 Upgrade* get_player_upgrade(UpgradeID upgrade_ID)
 {
 	for (int i = 0; i < UPGRADEID_MAX; i++)
@@ -1956,17 +2023,17 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 
 	for (int i = 0; i < UPGRADEID_MAX; i++)
 	{
-		if (is_upgrade_in_known(upgrades[i].upgrade_ID) == true)
+		if (is_upgrade_in_known(world -> player.all_upgrades[i].upgrade_ID) == true)
 		{
-			if (get_player_upgrade(upgrades[i].upgrade_ID) == NULL)
+			if (get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) == NULL)
 			{
 				current_buttons++;
 
 				Vector2 button_pos = v2(400, (y_pos - (current_buttons * 30)));
 
-				string button_text = sprint(get_temporary_allocator(), STR(upgrades[i].name));
+				string button_text = sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].name));
 
-				string button_tooltip =  sprint(get_temporary_allocator(), STR(upgrades[i].description));
+				string button_tooltip =  sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].description));
 
 				Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
@@ -1974,7 +2041,7 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 				{
 					world_frame.hover_consumed = true;
 
-					unlock_upgrade(upgrades[i].upgrade_ID);
+					unlock_upgrade(world -> player.all_upgrades[i].upgrade_ID);
 				}
 
 				if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
@@ -1998,22 +2065,22 @@ void display_ability_upgrade_buttons(float button_size, Vector4 color)
 
 	for (int i = 0; i < UPGRADEID_MAX; i++)
 	{
-		if (get_player_upgrade(upgrades[i].upgrade_ID) != UPGRADEID_nil && get_player_upgrade(upgrades[i].upgrade_ID) -> has_levels == true)
+		if (get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) != UPGRADEID_nil && get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) -> has_levels == true)
 		{
 			current_buttons++;
 
 			Vector2 button_pos = v2(100 + (current_buttons * 40), y_pos);
 
-			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
+			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
 
-			string button_tooltip = sprint(get_temporary_allocator(), STR(upgrades[i].description));
+			string button_tooltip = sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].description));
 
 			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
 			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
 			{
 				world_frame.hover_consumed = true;
-				level_up_upgrade(upgrades[i].upgrade_ID);
+				level_up_upgrade(world -> player.all_upgrades[i].upgrade_ID);
 			}
 
 			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
@@ -2382,6 +2449,7 @@ void render_entities()
 
 void world_setup()
 {
+	log("fresh world made");
 	//start inventory open
 	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
@@ -2395,6 +2463,7 @@ void world_setup()
 
 	world -> player = hero_default;
 	setup_player(& world -> player.player);
+	memcpy(world -> player.all_upgrades, upgrades, sizeof(upgrades));
 
 	// :test stuff
 	#if defined(DEV_TESTING)
@@ -2419,7 +2488,9 @@ bool create_directory_if_not_exists(const char* path)
         if (CreateDirectoryA(path, NULL)) 
 		{
             return true;
-        } else 
+        
+		} 
+		else 
 		{
             return false; 
         }
@@ -2566,8 +2637,17 @@ int entry(int argc, char **argv)
 	float zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
-	// world load / setup
-	if (os_is_file_s(STR("world"))) 
+	string saves_path = get_saves_path();
+
+	String_Builder world_path_builder;
+	string_builder_init(&world_path_builder, get_temporary_allocator());
+
+	string_builder_append(&world_path_builder, saves_path);
+	string_builder_append(&world_path_builder, STR("\\world"));
+
+	string world_path = string_builder_get_string(world_path_builder);
+
+	if (os_is_file_s(world_path)) 
 	{
 		bool succ = world_attempt_load_from_disk();
 		if (!succ) 
