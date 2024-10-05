@@ -2617,16 +2617,16 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float zoom = 1;
+	float camera_zoom = 1;
 	Vector2 camera_pos = v2(0, 0);
 
 	string saves_path = get_saves_path();
 
 	String_Builder world_path_builder;
-	string_builder_init(&world_path_builder, get_temporary_allocator());
+	string_builder_init(& world_path_builder, get_temporary_allocator());
 
-	string_builder_append(&world_path_builder, saves_path);
-	string_builder_append(&world_path_builder, STR("\\world"));
+	string_builder_append(& world_path_builder, saves_path);
+	string_builder_append(& world_path_builder, STR("\\world"));
 
 	string world_path = string_builder_get_string(world_path_builder);
 
@@ -2676,7 +2676,7 @@ int entry(int argc, char **argv)
 
 			world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0));
 			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
-			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
+			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0 / camera_zoom, 1.0 / camera_zoom, 1.0)));
 		}
 
 		set_world_space();
@@ -2806,6 +2806,21 @@ int entry(int argc, char **argv)
 		if (is_key_just_pressed(KEY_F1))
 		{
 			window.should_close = true;
+		}
+
+		// Camera 
+		if (is_key_down(KEY_SHIFT)) 
+		{
+			if (is_key_down('Q')) 
+			{
+				camera_zoom += 1 * delta_t;
+				camera_zoom = clamp_top(camera_zoom, 4);
+			}
+			if (is_key_down('E')) 
+			{
+				camera_zoom -= 1 * delta_t;
+				camera_zoom = clamp_bottom(camera_zoom, 1);
+			}
 		}
 
 		// :Wasd Movement
