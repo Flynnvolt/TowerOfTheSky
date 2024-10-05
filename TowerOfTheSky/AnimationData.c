@@ -16,7 +16,8 @@ struct AnimationInfo
     float32 playback_fps;
 };
 
-AnimationInfo create_animation_info(
+AnimationInfo create_animation_info
+(
     Gfx_Image *anim_sheet, 
     u32 anim_start_frame_x,
     u32 anim_start_frame_y,
@@ -141,9 +142,12 @@ void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale
 // Setup Fireball animation
 AnimationInfo Fireball;
 
-void setup_fireball_anim()
+void setup_fireball_anim(const string base_path)
 {
-    Gfx_Image *anim_sheet = load_image_from_disk(STR("TowerOfTheSky/Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator());
+    string full_path;
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\missing_tex.png"), get_temporary_allocator());
+
+    Gfx_Image *anim_sheet = load_image_from_disk(full_path, get_heap_allocator());
     assert(anim_sheet, "Could not open Resources/Sprites/fireball_sprite_sheet.png");
     
     Fireball = create_animation_info

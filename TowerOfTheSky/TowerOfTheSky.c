@@ -2554,7 +2554,7 @@ int entry(int argc, char **argv)
 	load_ability_data();
 	load_upgrade_data();
 
-	setup_fireball_anim(); // Setup fireball animation so it can be used.
+	setup_fireball_anim(exe_path); // Setup fireball animation so it can be used.
 
 	// :Font Setup
 
