@@ -1,5 +1,26 @@
 #pragma once
 
+string char_to_string(char* char_array) 
+{
+    return STR(char_array); 
+}
+
+void get_executable_path(char* out_path, size_t max_length)
+{
+    // Get the full path of the executable
+    GetModuleFileName(NULL, out_path, (DWORD)max_length);
+
+    // Find the last backslash to remove the executable name and keep only the directory
+    for (size_t i = strlen(out_path); i > 0; --i)
+    {
+        if (out_path[i] == '\\')
+        {
+            out_path[i] = '\0';  // Terminate the string after the last backslash
+            break;
+        }
+    }
+}
+
 typedef enum SpriteID SpriteID;
 
 enum SpriteID
@@ -40,97 +61,107 @@ Vector2 get_sprite_size(SpriteData sprite_data)
     return (Vector2) {sprite_data.image -> width, sprite_data.image -> height};
 }
 
-void load_sprite_data()
+void load_sprite_data(const string base_path)
 {
-	// :Load Sprites
+    string full_path;
 
-	// Missing Texture Sprite
-	sprites[0] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/missing_tex.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Nil
-	};
+    // Missing Texture Sprite
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\missing_tex.png"), get_temporary_allocator());
+    sprites[0] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Nil
+    };
 
-	// Player
-	sprites[SPRITE_Player] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/player.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Player
-	};
+    // Player
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\player.png"), get_temporary_allocator());
+    sprites[SPRITE_Player] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Player
+    };
 
-	// Entities
-	sprites[SPRITE_Target] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/Target.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Target
-	};
+    // Entities
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\Target.png"), get_temporary_allocator());
+    sprites[SPRITE_Target] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Target
+    };
 
-	sprites[SPRITE_Slime] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/slime.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Slime
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\slime.png"), get_temporary_allocator());
+    sprites[SPRITE_Slime] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Slime
+    };
 
-	// Items
-	sprites[SPRITE_Exp] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/exp.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Exp
-	};
+    // Items
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\exp.png"), get_temporary_allocator());
+    sprites[SPRITE_Exp] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Exp
+    };
 
-	// Buildings
-	sprites[SPRITE_Wall] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/wall.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Wall
-	};
+    // Buildings
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\wall.png"), get_temporary_allocator());
+    sprites[SPRITE_Wall] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Wall
+    };
 
-	sprites[SPRITE_Research_Station] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/research_station.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Research_Station
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\research_station.png"), get_temporary_allocator());
+    sprites[SPRITE_Research_Station] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Research_Station
+    };
 
-	sprites[SPRITE_Exp_Vein] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/exp_vein.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Exp_Vein
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\exp_vein.png"), get_temporary_allocator());
+    sprites[SPRITE_Exp_Vein] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Exp_Vein
+    };
 
-	sprites[SPRITE_Stairs_Up] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/stairs_up.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Stairs_Up
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\stairs_up.png"), get_temporary_allocator());
+    sprites[SPRITE_Stairs_Up] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Stairs_Up
+    };
 
-	sprites[SPRITE_Stairs_Down] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/stairs_down.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Stairs_Down
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\stairs_down.png"), get_temporary_allocator());
+    sprites[SPRITE_Stairs_Down] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Stairs_Down
+    };
 
-	sprites[SPRITE_Crate] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/crate.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Crate
-	};
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\crate.png"), get_temporary_allocator());
+    sprites[SPRITE_Crate] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Crate
+    };
 
-	// Spells
-	sprites[SPRITE_Fireball_Sheet] = (SpriteData)
-	{ 
-		.image = load_image_from_disk(STR("Resources/Sprites/fireball_sprite_sheet.png"), get_heap_allocator()), 
-		.sprite_ID = SPRITE_Fireball_Sheet
-	};
+    // Spells
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\fireball_sprite_sheet.png"), get_temporary_allocator());
+    sprites[SPRITE_Fireball_Sheet] = (SpriteData)
+    { 
+        .image = load_image_from_disk(full_path, get_heap_allocator()), 
+        .sprite_ID = SPRITE_Fireball_Sheet
+    };
 
-	#if CONFIGURATION == DEBUG
-		{
-			for (SpriteID i = 0; i < SPRITE_MAX; i++) 
-			{
-				SpriteData* sprite = & sprites[i];
-				assert(sprite -> image, "Sprite was not setup properly");
-			}
-		}
-	#endif
+    #if CONFIGURATION == DEBUG
+        for (SpriteID i = 0; i < SPRITE_MAX; i++) 
+        {
+            SpriteData* sprite = &sprites[i];
+            assert(sprite->image, "Sprite was not setup properly");
+        }
+    #endif
 }
 
 Gfx_Image* get_image_by_id(SpriteID sprite_ID) 

@@ -2410,28 +2410,81 @@ void world_setup()
 
 // :Save / Load System
 
+bool create_directory_if_not_exists(const char* path) 
+{
+    DWORD ftyp = GetFileAttributesA(path);
+    if (ftyp == INVALID_FILE_ATTRIBUTES) 
+	{
+        // Path does not exist, create it
+        if (CreateDirectoryA(path, NULL)) 
+		{
+            return true;
+        } else 
+		{
+            return false; 
+        }
+    }
+    return (ftyp & FILE_ATTRIBUTE_DIRECTORY) != 0; // Path exists
+}
+
+string get_saves_path() 
+{
+    char exe_path[260];
+    get_executable_path(exe_path, sizeof(exe_path));
+
+    // Create the "Saves" folder path
+    String_Builder path_builder;
+    string_builder_init(& path_builder, get_temporary_allocator());
+
+    // Append executable path
+    string_builder_append(& path_builder, STR(exe_path));
+    string_builder_append(& path_builder, STR("\\Saves"));
+
+    // Create the directory if it doesn't exist
+    create_directory_if_not_exists((const char*)path_builder.buffer);
+
+    return string_builder_get_string(path_builder);
+}
+
 bool world_save_to_disk() 
 {
-	u64 everything_but_floors = offsetof(World, floors);
+    string saves_path = get_saves_path();
 
-	u64 active_floors = world -> active_floors * sizeof(FloorData);
+    // Construct the full path for the world file
+    String_Builder world_path_builder;
+    string_builder_init(& world_path_builder, get_temporary_allocator());
+    
+    string_builder_append(& world_path_builder, saves_path);
+    string_builder_append(& world_path_builder, STR("\\world"));
 
-	u64 all_save_data = everything_but_floors + active_floors;
+    u64 everything_but_floors = offsetof(World, floors);
+    u64 active_floors = world->active_floors * sizeof(FloorData);
+    u64 all_save_data = everything_but_floors + active_floors;
 
-	return os_write_entire_file_s(STR("world"), (string){all_save_data, (u8*)world});
+    return os_write_entire_file_s(string_builder_get_string(world_path_builder), (string){all_save_data, (u8*)world});
 }
 
 bool world_attempt_load_from_disk() 
 {
+    string saves_path = get_saves_path();
+
+    // Construct the full path for the world file
+    String_Builder world_path_builder;
+    string_builder_init(& world_path_builder, get_temporary_allocator());
+    
+    string_builder_append(& world_path_builder, saves_path);
+    string_builder_append(& world_path_builder, STR("\\world"));
+
     string result = {0};
-    bool succ = os_read_entire_file_s(STR("world"), & result, get_heap_allocator()); // <--------------- Allocate on heap instead (temp is killed every frame)
+    
+	bool succ = os_read_entire_file_s(string_builder_get_string(world_path_builder), & result, get_heap_allocator()); // <- Allocate on heap instead (temp is killed every frame)
     if (!succ) 
     {
         log_error("Failed to load world.");
         return false;
     }
 
-    // NOTE, for errors I used to do stuff like this assert:
+	// NOTE, for errors I used to do stuff like this assert:
     // assert(result.count == sizeof(World), "world size has changed!");
     //
     // But since shipping to users, I've noticed that it's always better to gracefully fail somehow.
@@ -2447,17 +2500,15 @@ bool world_attempt_load_from_disk()
 	*/
 
     memcpy(world, result.data, result.count);
+    dealloc_string(get_heap_allocator(), result); 
 
-    dealloc_string(get_heap_allocator(), result); // <-------------------- Dealloc after copied over
-
-	// this doesnt feel very good but it works
 
 	// After loading the skills, restore the function pointers
     for (int i = 0; i < SKILLID_MAX; i++) 
     {
         set_skill_functions(& world -> player.skill_list[i]);
     }
-
+	
 	// After loading the abilties, restore the function pointers
     for (int i = 0; i < ABILITYID_MAX; i++) 
     {
@@ -2492,7 +2543,12 @@ int entry(int argc, char **argv)
 
 	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
 
-	load_sprite_data();
+    char exe_path_char[260];
+    
+    get_executable_path(exe_path_char, sizeof(exe_path_char)); 
+    string exe_path = char_to_string(exe_path_char);
+
+    load_sprite_data(exe_path);
 	load_resource_data();
 	load_skill_data();
 	load_ability_data();
