@@ -18,14 +18,21 @@ struct Player
     int max_level;
 };
 
-Player hero_default =
+Player player_hero = 
 {
+    .player = 
+    {
+        .entity_ID = ENTITY_Player,
+        .sprite_ID = SPRITE_Player,
+        .is_valid = true,
+        .health = 100,
+        .max_health = 100,
+        .health_regen = 2,
+        .speed = 75,
+        .pos = {0, 0}, 
+    },
+    
     .name = "Hero",
-    .player = 0,
-    .resource_list = {},
-    .skill_list = {},
-    .ability_list = {},
-    .upgrade_list = {},
     .level = 1,
     .max_level = 100,
 };
