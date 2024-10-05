@@ -2617,7 +2617,7 @@ int entry(int argc, char **argv)
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
 	// Camera Settings
-	float camera_zoom = 1;
+	float camera_zoom = 2;
 	Vector2 camera_pos = v2(0, 0);
 
 	string saves_path = get_saves_path();
@@ -2808,7 +2808,7 @@ int entry(int argc, char **argv)
 			window.should_close = true;
 		}
 
-		// Camera 
+		// Camera zoom
 		if (is_key_down(KEY_SHIFT)) 
 		{
 			if (is_key_down('Q')) 
