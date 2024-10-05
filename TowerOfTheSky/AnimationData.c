@@ -145,7 +145,7 @@ AnimationInfo Fireball;
 void setup_fireball_anim(const string base_path)
 {
     string full_path;
-    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\missing_tex.png"), get_temporary_allocator());
+    full_path = string_concat(base_path, STR("\\Resources\\Sprites\\fireball_sprite_sheet.png"), get_temporary_allocator());
 
     Gfx_Image *anim_sheet = load_image_from_disk(full_path, get_heap_allocator());
     assert(anim_sheet, "Could not open Resources/Sprites/fireball_sprite_sheet.png");
