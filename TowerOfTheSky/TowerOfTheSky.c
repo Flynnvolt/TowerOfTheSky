@@ -2458,7 +2458,7 @@ bool world_save_to_disk()
     string_builder_append(& world_path_builder, STR("\\world"));
 
     u64 everything_but_floors = offsetof(World, floors);
-    u64 active_floors = world->active_floors * sizeof(FloorData);
+    u64 active_floors = world -> active_floors * sizeof(FloorData);
     u64 all_save_data = everything_but_floors + active_floors;
 
     return os_write_entire_file_s(string_builder_get_string(world_path_builder), (string){all_save_data, (u8*)world});
