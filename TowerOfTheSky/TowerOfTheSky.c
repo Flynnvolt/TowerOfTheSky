@@ -1324,6 +1324,121 @@ void damage_entity(Entity *entity, float damage)
 
 // :Enemy AI
 
+void update_enemy_movement(Enemy *enemy)
+{
+    EnemyID enemy_ID = enemy -> enemy_logic.enemy_ID;
+
+    Entity *player = get_player();
+
+    Vector2 player_center = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5f)), (player -> pos.y + (sprites[player -> sprite_ID].image -> height * 0.5f)));
+
+	Vector2 enemy_center = v2((enemy-> enemy_entity.pos.x + (sprites[enemy -> enemy_entity.sprite_ID].image -> width * 0.5f)), (enemy-> enemy_entity.pos.y + (sprites[enemy -> enemy_entity.sprite_ID].image -> height * 0.5f)));
+
+    float distance_to_player = v2_distance(enemy_center, player_center);
+
+    Vector2 player_direction = v2_sub(player_center, enemy -> enemy_entity.pos);
+    float length = v2_length(player_direction);
+
+    if (length != 0.0f)
+    {
+        player_direction = v2_scale(player_direction, 1.0f / length);
+    }
+
+	switch (enemy -> enemy_logic.enemy_state)
+	{	
+		case ENEMYSTATE_idle:
+		{
+			break;
+		}
+
+		case ENEMYSTATE_sleep:
+		{
+			break;
+		}
+
+		case ENEMYSTATE_patrol:
+		{
+			if (enemy -> enemy_logic.roam_time <= 0)
+			{
+				enemy -> enemy_logic.roam_time = 3;
+
+				// Random direction for wandering
+				float random_angle = (float)(rand() % 360) * (PI32 / 180.0f);
+				enemy -> enemy_logic.direction.x = cosf(random_angle);
+				enemy -> enemy_logic.direction.y = sinf(random_angle);
+			}
+
+			enemy -> enemy_entity.velocity = v2_scale(enemy -> enemy_logic.direction, enemy -> enemy_entity.speed);
+		
+			break;
+		}
+
+		case ENEMYSTATE_combat:
+		{
+			enemy -> enemy_logic.direction = player_direction;
+
+			if (distance_to_player <= enemy -> enemy_logic.attack_range * 2)
+			{
+				// Rush in
+				if (enemy -> enemy_logic.current_attack_cooldown <= 0)
+				{
+					enemy -> enemy_entity.speed = get_enemy_defaults(enemy_ID).enemy_entity.speed * 10;
+				}
+			}
+
+			if (distance_to_player <= enemy -> enemy_logic.attack_range)
+			{
+				// Attack
+				if (enemy -> enemy_logic.current_attack_cooldown <= 0)
+				{
+					enemy -> enemy_logic.current_attack_cooldown = enemy -> enemy_logic.attack_cooldown;
+					damage_player(enemy -> enemy_logic.damage);
+					enemy -> enemy_entity.speed = get_enemy_defaults(enemy_ID).enemy_entity.speed;
+				}
+			}
+
+			enemy -> enemy_entity.velocity = v2_scale(enemy -> enemy_logic.direction, enemy -> enemy_entity.speed);
+
+			break;
+		}
+
+		case ENEMYSTATE_flee:
+		{
+			Vector2 flee_direction = v2_add(player_center, enemy -> enemy_entity.pos);
+			
+			float length = v2_length(flee_direction);
+
+			if (length != 0.0f)
+			{
+				flee_direction = v2_scale(flee_direction, 1.0f / length);
+			}
+
+			enemy -> enemy_logic.direction = flee_direction;
+
+			enemy -> enemy_entity.velocity = v2_scale(enemy -> enemy_logic.direction, enemy -> enemy_entity.speed);
+
+			break;
+		}
+
+		case ENEMYSTATE_knockback:
+		{
+			enemy -> enemy_entity.velocity = v2_mulf(player_direction, -500);
+
+			break;
+		}
+
+		default:
+		{
+			break;
+		}
+	}
+
+	Vector2 movement = v2_scale(enemy -> enemy_entity.velocity, delta_t);
+    update_cooldown(& enemy -> enemy_logic.current_attack_cooldown);
+    update_cooldown(& enemy -> enemy_logic.roam_time);
+    update_entity(& enemy -> enemy_entity, movement);
+}
+
 void update_enemy_states(Enemy *enemy)
 {
     if (enemy -> enemy_entity.is_valid == false) return;
@@ -1349,85 +1464,30 @@ void update_enemy_states(Enemy *enemy)
     bool state_set = false;
 
     // Wander if out of aggro range
-    if (distance_to_player >= enemy -> enemy_logic.aggro_range && !state_set)
+    if (distance_to_player >= enemy -> enemy_logic.aggro_range)
     {
         enemy -> enemy_logic.enemy_state = ENEMYSTATE_patrol;
-
-        if (enemy -> enemy_logic.roam_time <= 0)
-        {
-            enemy -> enemy_logic.roam_time = 3;
-
-            // Random direction for wandering
-            float random_angle = (float)(rand() % 360) * (PI32 / 180.0f);
-            enemy -> enemy_logic.direction.x = cosf(random_angle);
-            enemy -> enemy_logic.direction.y = sinf(random_angle);
-        }
-
-        state_set = true;
-    }
-
-    // Flee if low HP and within aggro range
-    if (distance_to_player <= enemy -> enemy_logic.aggro_range && enemy -> enemy_entity.health < (enemy -> enemy_entity.max_health / 4) && !state_set)
-    {
-        Vector2 flee_direction = v2_add(player_center, enemy -> enemy_entity.pos);
-        
-        float length = v2_length(flee_direction);
-
-        if (length != 0.0f)
-        {
-            flee_direction = v2_scale(flee_direction, 1.0f / length);
-        }
-
-        enemy -> enemy_logic.enemy_state = ENEMYSTATE_flee;
-        enemy -> enemy_logic.direction = flee_direction;
-
-        state_set = true;
     }
 
     // Combat if within aggro range
-    if (distance_to_player <= enemy -> enemy_logic.aggro_range && !state_set)
+    if (distance_to_player <= enemy -> enemy_logic.aggro_range)
     {
         enemy -> enemy_logic.enemy_state = ENEMYSTATE_combat;
-        enemy -> enemy_logic.direction = player_direction;
-
-        if (distance_to_player <= enemy -> enemy_logic.attack_range * 2)
-        {
-            // Rush in
-            if (enemy -> enemy_logic.current_attack_cooldown <= 0)
-            {
-                enemy -> enemy_entity.speed = get_enemy_defaults(enemy_ID).enemy_entity.speed * 10;
-            }
-        }
-
-        if (distance_to_player <= enemy -> enemy_logic.attack_range)
-        {
-            // Attack
-            if (enemy -> enemy_logic.current_attack_cooldown <= 0)
-            {
-                enemy -> enemy_logic.current_attack_cooldown = enemy -> enemy_logic.attack_cooldown;
-                damage_player(enemy -> enemy_logic.damage);
-                enemy -> enemy_entity.speed = get_enemy_defaults(enemy_ID).enemy_entity.speed;
-            }
-        }
-
-        state_set = true;
     }
 
-    enemy -> enemy_entity.velocity = v2_scale(enemy -> enemy_logic.direction, enemy -> enemy_entity.speed);
+	// Flee if low HP and within aggro range
+    if (distance_to_player <= enemy -> enemy_logic.aggro_range && enemy -> enemy_entity.health < (enemy -> enemy_entity.max_health / 4))
+    {
+        enemy -> enemy_logic.enemy_state = ENEMYSTATE_flee;
+    }
 
 	// Knockback state
 	if (enemy -> enemy_logic.current_attack_cooldown > 0.95)
 	{
 		enemy -> enemy_logic.enemy_state = ENEMYSTATE_knockback;
-		enemy -> enemy_entity.velocity = v2_mulf(player_direction, -500);
-
-		state_set = true;
 	}
 
-    Vector2 movement = v2_scale(enemy -> enemy_entity.velocity, delta_t);
-    update_cooldown(& enemy -> enemy_logic.current_attack_cooldown);
-    update_cooldown(& enemy -> enemy_logic.roam_time);
-    update_entity(& enemy -> enemy_entity, movement);
+	update_enemy_movement(enemy);
 }
 
 // :Projectiles
