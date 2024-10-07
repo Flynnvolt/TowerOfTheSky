@@ -36,7 +36,13 @@ const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
 
-Vector4 bg_box_color = {0, 0, 0, 0.5};
+Vector4 bg_box_color = {0, 0, 0, 1};
+
+const float icon_size = 16;
+
+const Vector2 button_size = {64, 16};
+
+const Vector2 tooltip_size = {80, 32};
 
 Vector4 color_0;
 
@@ -1683,7 +1689,30 @@ void set_world_space()
 
 // :UI
 
-void draw_resource_bar(Resource *resource, float y_pos, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color)
+void draw_ui_box_frame(Matrix4 base_transform, Vector2 box_size, float border_thickness, Vector4 bg_color, Vector4 border_color) 
+{
+    // Draw top border
+    Vector2 top_border_size = v2(box_size.x, border_thickness);
+    Matrix4 top_xform = m4_translate(base_transform, v3(0, box_size.y - (border_thickness / 2.0f), 0));
+    draw_rect_xform(top_xform, top_border_size, border_color);
+
+    // Draw bottom border
+    Vector2 bottom_border_size = v2(box_size.x, border_thickness);
+    Matrix4 bottom_xform = m4_translate(base_transform, v3(0, (-border_thickness / 2.0f), 0));
+    draw_rect_xform(bottom_xform, bottom_border_size, border_color);
+
+    // Draw left border
+    Vector2 left_border_size = v2(border_thickness, box_size.y);
+    Matrix4 left_xform = m4_translate(base_transform, v3( (-border_thickness / 2.0f), 0, 0));
+    draw_rect_xform(left_xform, left_border_size, border_color);
+
+    // Draw right border
+    Vector2 right_border_size = v2(border_thickness, box_size.y);
+    Matrix4 right_xform = m4_translate(base_transform, v3(box_size.x - (border_thickness / 2.0f), 0, 0));
+    draw_rect_xform(right_xform, right_border_size, border_color);
+}
+
+void draw_resource_bar(Resource *resource, float y_pos, int icon_row_count, Vector4 color, Vector4 bg_color)
 {
 	// Increment resource
 	if (resource -> current < resource -> max)
@@ -1731,6 +1760,7 @@ void draw_resource_bar(Resource *resource, float y_pos, int icon_size, int icon_
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
 		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
+		draw_ui_box_frame(xform, v2(bar_width, icon_size), 1, bg_color, COLOR_WHITE);
 	}	
 
 	// Bar current resource display
@@ -1799,28 +1829,25 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y + icon_size), 0.0));
 		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
+		draw_ui_box_frame(xform, v2(bar_visual_size, icon_size), 1, color, COLOR_WHITE);
 	}	
 }
 
-Draw_Quad* draw_button(string button_tooltip, float button_size, Vector2 button_position, Vector4 color)
+Draw_Quad* draw_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
 {
 	Vector2 button_size_v2 = v2(16.0, 16.0);
 
 	Matrix4 xform = m4_scalar(1.0);
 
-	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
+	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0)); 
 
-	Vector2 icon_positon = v2(button_position.x, button_position.y);
-	
-	// White transparent box to show item slot is filled.
-	Draw_Quad* quad = draw_rect_xform(xform, v2(button_size, button_size), color);
-
-	// Setup box for mouse collision
-	Range2f button_range = range2f_make_bottom_left(button_position, button_size_v2);
+	float border_thickness = 1;
+	Draw_Quad* quad = draw_rect_xform(xform, button_size, bg_box_color);
+	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE);
 
 	// Draw Button Text
 	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
-	Vector2 draw_pos = v2((button_position.x + (button_size_v2.x * 0.5)), (button_position.y + (button_size_v2.y * 0.5)));
+	Vector2 draw_pos = v2((button_position.x + (button_size.x * 0.5)), (button_position.y + (button_size.y * 0.5)));
 	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
@@ -1885,7 +1912,9 @@ void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size
 
 	xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
-	draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+    float border_thickness = 1;
+    draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE);
 
 	float current_y_pos = icon_center.y;
 
@@ -1935,37 +1964,43 @@ void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip
 	draw_text_xform(font, *title, font_height, text_xform, v2(0.1, 0.1), COLOR_WHITE);
 }
 
-void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, float tooltip_size, string *title)
+void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, Vector2 button_size, Vector2 tooltip_size, string *title) 
 {
-	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+    // Convert to screen space
+    Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+    Range2f screen_range = quad_to_range(screen_quad);
+    Vector2 button_center = range2f_get_center(screen_range);
 
-	Range2f screen_range = quad_to_range(screen_quad);
+    // Create transformation matrix
+    Matrix4 xform = m4_scalar(1.0f);
 
-	Vector2 icon_center = range2f_get_center(screen_range);
+    // Set the position of the tooltip box relative to the icon center
+    Vector2 button_position = v2((button_center.x + (tooltip_size.x / 2)), (button_center.y - (tooltip_size.y / 2)));
 
-	Matrix4 xform = m4_scalar(1.0);
+	//Vector2 button_position = v2(((screen_width / 2) - (tooltip_size.x / 2)), (screen_height - tooltip_size.y - button_size.y));
 
-	Vector2 tooltip_box_size = v2(tooltip_size * 5, tooltip_size * 2);
+    // Translate the transformation matrix to the correct position
+    xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0f));
 
-	Vector2 button_position = v2(icon_center.x + (tooltip_box_size.x) + (tooltip_size * 5), icon_center.y + (- tooltip_box_size.y) + (tooltip_size * 0.5));
+    // Draw the tooltip background with border
+    float border_thickness = 1;
+    draw_rect_xform(xform, tooltip_size, bg_box_color);
+	draw_ui_box_frame(xform, tooltip_size, border_thickness, bg_box_color, COLOR_WHITE);
 
-	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0));
-	
-	// Draw tooltip background box
-	Draw_Quad* tooltip_quad = draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+    // Text display inside the tooltip
+    Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1f, 0.1f));
 
-	// String Display	
-	Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1, 0.1));
-	Vector2 draw_pos = v2((button_position.x + (tooltip_box_size.x * 0.5)), (button_position.y + (tooltip_box_size.y * 0.5)));
-	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
-	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
+    // Calculate position for drawing text centered in the tooltip box
+    Vector2 draw_pos = v2_add(button_position, v2_mul(tooltip_size, v2(0.5f, 0.5f)));
+    draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+    draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5f, 0.5f)));
 
-	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+    // Draw the text
+    draw_text(font, *title, font_height, draw_pos, v2(0.1f, 0.1f), COLOR_WHITE);
 }
 
-void display_skill_level_up_button(float button_size, Vector4 color)
+void display_skill_level_up_button(Vector2 button_size, Vector4 color)
 {
-	Vector2 button_size_v2 = v2(button_size, button_size);
 	int y_pos = 220;
 	int current_buttons = 0;
 
@@ -1974,7 +2009,7 @@ void display_skill_level_up_button(float button_size, Vector4 color)
 		if (get_player_skill(skills[i].skill_ID) != NULL && get_player_skill(skills[i].skill_ID) -> unlocked == true)
 		{
 			current_buttons++;
-			Vector2 button_pos = v2(100, (y_pos - (current_buttons * 30)));
+			Vector2 button_pos = v2((screen_width * 0.025), (y_pos - (current_buttons * 20)));
 			Skill* skill = get_player_skill(skills[i].skill_ID);
 
 			// Build the costs string
@@ -1994,7 +2029,7 @@ void display_skill_level_up_button(float button_size, Vector4 color)
 			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s"), skill -> name, skill -> level, costs_text);
 			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s\n+%.2f %s \n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> effect_text, skill -> description);
 
-			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 			{
 				world_frame.hover_consumed = true;
 				find_skill_to_level(skills[i].skill_ID);
@@ -2002,11 +2037,11 @@ void display_skill_level_up_button(float button_size, Vector4 color)
 
 			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);
 
-			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+			if (check_if_mouse_hovering_button(button_pos, button_size) == true)
 			{
 				world_frame.hover_consumed = true;
 				quad -> color = COLOR_RED;
-				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
 			}
 		}
 	}
@@ -2054,13 +2089,11 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 	}
 }
 
-void display_upgrade_buttons(float button_size, Vector4 color)
+void display_upgrade_buttons(Vector2 button_size, Vector4 color)
 {
-	Vector2 button_size_v2 = v2(button_size, button_size);
-
 	update_known_upgrades();
 
-	int y_pos = 240;
+	int y_pos = 260;
 	
 	int current_buttons = 0;
 
@@ -2072,7 +2105,7 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 			{
 				current_buttons++;
 
-				Vector2 button_pos = v2(400, (y_pos - (current_buttons * 30)));
+				Vector2 button_pos = v2(300, (y_pos - (current_buttons * 20)));
 
 				string button_text = sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].name));
 
@@ -2080,29 +2113,27 @@ void display_upgrade_buttons(float button_size, Vector4 color)
 
 				Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
-				if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+				if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 				{
 					world_frame.hover_consumed = true;
 
 					unlock_upgrade(world -> player.all_upgrades[i].upgrade_ID);
 				}
 
-				if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+				if (check_if_mouse_hovering_button(button_pos, button_size) == true)
 				{
 					world_frame.hover_consumed = true;
 					quad -> color = COLOR_RED;
-					draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+					draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
 				}					
 			}
 		}
 	}
 }
 
-void display_ability_upgrade_buttons(float button_size, Vector4 color)
+void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color)
 {
-	Vector2 button_size_v2 = v2(button_size, button_size);
-
-	int y_pos = 20;
+	int y_pos = 160;
 	
 	int current_buttons = 0;
 
@@ -2112,7 +2143,7 @@ void display_ability_upgrade_buttons(float button_size, Vector4 color)
 		{
 			current_buttons++;
 
-			Vector2 button_pos = v2(100 + (current_buttons * 40), y_pos);
+			Vector2 button_pos = v2((screen_width * 0.025), (y_pos - (current_buttons * 20)));
 
 			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
 
@@ -2120,17 +2151,17 @@ void display_ability_upgrade_buttons(float button_size, Vector4 color)
 
 			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
-			if (check_if_mouse_clicked_button(button_pos, button_size_v2) == true)
+			if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 			{
 				world_frame.hover_consumed = true;
 				level_up_upgrade(world -> player.all_upgrades[i].upgrade_ID);
 			}
 
-			if (check_if_mouse_hovering_button(button_pos, button_size_v2) == true)
+			if (check_if_mouse_hovering_button(button_pos, button_size) == true)
 			{
 				world_frame.hover_consumed = true;
 				quad -> color = COLOR_RED;
-				draw_tooltip_box_string_to_side_larger(quad, button_size, & button_tooltip);
+				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
 			}					
 		}
 	}
@@ -2185,8 +2216,6 @@ void render_ui()
 					item_count += 1;
 				}
 			}
-
-			const float icon_size = 16.0;
 
 			const int icon_row_count = 8;
 
@@ -2292,18 +2321,18 @@ void render_ui()
 			// Mana bar
 			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
 			{
-				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_size, icon_row_count, accent_col_blue, bg_box_color);
+				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_row_count, accent_col_blue, bg_box_color);
 			}
 
 			// Intellect bar
 			if (get_player_resource(RESOURCEID_Intellect) != NULL && get_player_resource(RESOURCEID_Intellect) -> unlocked == true)
 			{
-				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_size, icon_row_count, accent_col_purple, bg_box_color);
+				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_row_count, accent_col_purple, bg_box_color);
 			}
 
-			display_skill_level_up_button(16, fill_col);
-			display_upgrade_buttons(16, fill_col);
-			display_ability_upgrade_buttons(16, fill_col);
+			display_skill_level_up_button(button_size, fill_col);
+			display_upgrade_buttons(button_size, fill_col);
+			display_ability_upgrade_buttons(button_size, fill_col);
 		}
 		world_frame.hover_consumed = true;
 	}
