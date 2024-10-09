@@ -49,7 +49,7 @@ Upgrade unlock_mana =
     .unlocked = false,
     .has_levels = false,
     .name = "Study Mana",
-    .description = "",
+    .description = "Extensive studying of mana\n allows you replicate it for yourself.",
     .level_up_text = "",
     .level = 0,
 };
@@ -68,7 +68,7 @@ Upgrade unlock_magic =
     .unlocked = false,
     .has_levels = false,
     .name = "Study Magic",
-    .description = "",
+    .description = "You delve further into your studies\n of magic and discover\n even more power.",
     .level_up_text = "",
     .level = 0,
 };
@@ -87,7 +87,7 @@ Upgrade unlock_arcana =
     .unlocked = false,
     .has_levels = false,
     .name = "Study Arcana",
-    .description = "",
+    .description = "After great effort\n you are able to cast more\n advanced magic.",
     .level_up_text = "",
     .level = 0,
 };
@@ -106,7 +106,7 @@ Upgrade unlock_firebolt =
     .unlocked = false,
     .has_levels = true,
     .name = "Learn Fire Bolt",
-    .description = "",
+    .description = "A spell of fire,\n a simple yet powerful magic.",
     .level_up_text = "Firebolt",
     .level = 0,
 };
@@ -125,7 +125,7 @@ Upgrade multishot =
     .unlocked = false,
     .has_levels = true,
     .name = "Learn Multishot",
-    .description = "",
+    .description = "Muticasting is very powerful,\n at a cost.",
     .level_up_text = "Multishot",
     .level = 0,
 };

@@ -94,7 +94,7 @@ struct Ability
     int damage_per_level;
     float ability_cooldown;
     float ability_duration; // 0 will be infinite Duration
-    int base_resource_cost;
+    int resource_cost;
     int resource_cost_per_Level;
     int current_level;
     int max_level;
@@ -106,7 +106,7 @@ struct Ability
  void level_up_ability(Ability* self) 
 {
     self -> damage += self -> damage_per_level;
-    self -> base_resource_cost += self -> resource_cost_per_Level;
+    self -> resource_cost += self -> resource_cost_per_Level;
 
     if (self -> current_level < self-> max_level)
     {
@@ -169,9 +169,9 @@ Ability fire_bolt =
     .damage_per_level = 1,
     .ability_cooldown = 0,
     .ability_duration = 0,
-    .base_resource_cost = 5,
+    .resource_cost = 5,
     .resource_cost_per_Level = 1,
-    .current_level = 0,
+    .current_level = 1,
     .max_level = 50,
     .allocate_cost = 1,
     .level_up = level_up_ability,

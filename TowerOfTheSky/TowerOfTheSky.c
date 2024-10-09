@@ -2026,8 +2026,8 @@ void display_skill_level_up_button(Vector2 button_size, Vector4 color)
 				}
 			}
 
-			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s"), skill -> name, skill -> level, costs_text);
-			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel:%i\nCost: %s\n+%.2f %s \n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> effect_text, skill -> description);
+			string button_text = sprint(get_temporary_allocator(), STR("%s\nLevel: %i\nCost: %s"), skill -> name, skill -> level, costs_text);
+			string button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel: %i\nCost: %s\n+%.2f %s \n%s"), skill -> name, skill -> level, costs_text, skill -> current_effect_value, skill -> effect_text, skill -> description);
 
 			if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 			{
@@ -2143,11 +2143,24 @@ void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color)
 		{
 			current_buttons++;
 
+			Ability* ability = get_player_ability(world -> player.all_upgrades[i].abilities_unlocked[0]);
+
+			Upgrade* upgrade = get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID);
+
 			Vector2 button_pos = v2((screen_width * 0.025), (y_pos - (current_buttons * 20)));
 
-			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), get_player_upgrade(world -> player.all_upgrades[i].upgrade_ID) -> level_up_text, get_player_upgrade(upgrades[i].upgrade_ID) -> level);
+			string button_text = sprint(get_temporary_allocator(), STR("Level Up: %s \n Current Level: %i"), upgrade -> level_up_text, upgrade -> level);
 
-			string button_tooltip = sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].description));
+			string button_tooltip;
+
+			if (ability -> ability_ID != ABILITYID_Nil)
+			{
+				button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel: %i \nDamage: %i \nMana Cost: %i"), ability -> name, ability -> current_level, ability -> damage, ability -> resource_cost);
+			}
+			else
+			{
+				button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel: %i"), upgrade -> level_up_text, upgrade -> level);
+			}
 
 			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
 
@@ -2858,11 +2871,11 @@ int entry(int argc, char **argv)
 				{
 					if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
 					{
-						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost)
 						{
 							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
 
-							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost;
 						}
 					}
 				}
@@ -2880,11 +2893,11 @@ int entry(int argc, char **argv)
 				{
 					if (is_ability_in_player_list(ABILITYID_Fire_Bolt) == true)
 					{
-						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost)
+						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost)
 						{
 							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, true);
 
-							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> base_resource_cost;
+							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost;
 						}
 					}
 				}
