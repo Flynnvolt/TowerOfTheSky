@@ -1701,8 +1701,8 @@ void update_projectile(Projectile *projectile)
 
 void set_screen_space() 
 {
-	current_draw_frame -> camera_xform = world_frame.screen_view;
 	current_draw_frame -> projection = world_frame.screen_proj;
+	current_draw_frame -> camera_xform = world_frame.screen_view;
 }
 void set_world_space() 
 {
@@ -2815,7 +2815,7 @@ Matrix4 construct_view_matrix(Vector2 pos, float zoom)
 	view = m4_translate(view, v3(pos.x, pos.y, 0));
 
 	// scale the zoom
-	view = m4_scale(view, v3(1.0/zoom, 1.0/zoom, 1.0));
+	view = m4_scale(view, v3(1.0 / zoom, 1.0 / zoom, 1.0));
 
 	return view;
 }
@@ -2935,113 +2935,7 @@ int entry(int argc, char **argv)
 		reset_temporary_storage();
 		world_frame = (WorldFrame){0};
 		current_draw_frame = 0;
-
-		// Shader / Draw
-
-		// Create bloom map and game image when window size changes (or first time)
-		local_persist Os_Window last_window;
-		if ((last_window.width != window.width || last_window.height != window.height || !game_image) && window.width > 0 && window.height > 0) 
-		{
-			if (bloom_map)   delete_image(bloom_map);
-			if (game_image)  delete_image(game_image);
-			if (final_image) delete_image(final_image);
-			
-			bloom_map  = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
-			game_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
-			final_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
-		}
-		last_window = window;
-		
-		// Set stuff in cbuffer which we need to pass to shaders
-		scene_cbuffer.mouse_pos_screen = v2(input_frame.mouse_x, input_frame.mouse_y);
-		scene_cbuffer.window_size = v2(window.width, window.height);
-		
-		// Draw game with light shader to game_image
-		// Reset draw frame & clear the image with a clear color
-		draw_frame_reset(& offscreen_draw_frame);
-		gfx_clear_render_target(game_image, v4(.7, .7, .7, 1.0));
-		// Draw game things to offscreen Draw_Frame
 		current_draw_frame = & offscreen_draw_frame;
-		draw_game(& current_draw_frame);
-		
-		// Set the shader & cbuffer before the render call
-		offscreen_draw_frame.shader_extension = light_shader;
-		offscreen_draw_frame.cbuffer = & scene_cbuffer;
-		
-		// Render Draw_Frame to the image
-		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
-		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
-		gfx_render_draw_frame(& offscreen_draw_frame, game_image);
-		
-		// Draw game with bloom map shader to the bloom map
-		
-		// Reset draw frame & clear the image
-		draw_frame_reset(& offscreen_draw_frame);
-		gfx_clear_render_target(bloom_map, COLOR_BLACK);
-		
-		// Draw game things to offscreen Draw_Frame
-		draw_game(& current_draw_frame);
-		
-		// Set the shader & cbuffer before the render call
-		offscreen_draw_frame.shader_extension = bloom_map_shader;
-		offscreen_draw_frame.cbuffer = & scene_cbuffer;
-		
-		// Render Draw_Frame to the image
-		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
-		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
-		gfx_render_draw_frame(& offscreen_draw_frame, bloom_map);
-		
-		// Draw game image into final image, using the bloom shader which samples from the bloom_map
-		
-		draw_frame_reset(& offscreen_draw_frame);
-		gfx_clear_render_target(final_image, COLOR_BLACK);
-		
-		// To sample from another image in the shader, we must bind it to a specific slot.
-		draw_frame_bind_image_to_shader(& offscreen_draw_frame, bloom_map, 0);
-		
-		// Draw the game the final image, but now with the post process shader
-		draw_image_in_frame(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE, & offscreen_draw_frame);
-		
-		offscreen_draw_frame.shader_extension = postprocess_bloom_shader;
-		offscreen_draw_frame.cbuffer = & scene_cbuffer;
-		
-		gfx_render_draw_frame(& offscreen_draw_frame, final_image);
-		
-		switch (view) 
-		{
-			case VIEW_GAME_AFTER_POSTPROCESS:
-			{
-				Draw_Quad *q = draw_image(final_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
-				// The draw image will be flipped on y, so we want to draw it "upside down"
-				//swap(q -> uv.y, q -> uv.w, float);
-				break;
-			}
-
-			case VIEW_GAME_BEFORE_POSTPROCESS:
-			{
-				draw_image(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
-				break;
-			}
-
-			case VIEW_BLOOM_MAP:
-			{
-				draw_image(bloom_map, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
-				break;
-			}
-
-			default: break;
-			{
-
-			}
-		}
-
-		for (int i = 0; i < VIEW_MODE_MAX; i += 1) 
-		{
-			if (button(view_mode_stringify(i), v2(-window.width / 2 + 40, window.height / 2 - 100 -i * 60), v2(500, 50), i == view)) 
-			{
-				view = i;
-			}
-		}
 		
 		// :Time tracking
 		current_time = os_get_elapsed_seconds();
@@ -3056,7 +2950,6 @@ int entry(int argc, char **argv)
 		draw_frame.enable_z_sorting = true;
 
 		world_frame.world_proj = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
-		
 		// Camera
 		{
 			Vector2 target_pos = get_player() -> pos;
@@ -3226,6 +3119,112 @@ int entry(int argc, char **argv)
 			Vector2 movement = v2_scale(velocity, delta_t);
 
 			update_entity(player, movement);
+		}
+
+		// Shader / Draw
+
+		// Create bloom map and game image when window size changes (or first time)
+		local_persist Os_Window last_window;
+		if ((last_window.width != window.width || last_window.height != window.height || !game_image) && window.width > 0 && window.height > 0) 
+		{
+			if (bloom_map)   delete_image(bloom_map);
+			if (game_image)  delete_image(game_image);
+			if (final_image) delete_image(final_image);
+			
+			bloom_map  = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+			game_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+			final_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+		}
+		last_window = window;
+		
+		// Set stuff in cbuffer which we need to pass to shaders
+		scene_cbuffer.mouse_pos_screen = v2(input_frame.mouse_x, input_frame.mouse_y);
+		scene_cbuffer.window_size = v2(window.width, window.height);
+		
+		// Draw game with light shader to game_image
+		// Reset draw frame & clear the image with a clear color
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(game_image, v4(.7, .7, .7, 1.0));
+		// Draw game things to offscreen Draw_Frame
+		draw_game(current_draw_frame);
+		
+		// Set the shader & cbuffer before the render call
+		offscreen_draw_frame.shader_extension = light_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		// Render Draw_Frame to the image
+		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
+		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
+		gfx_render_draw_frame(& offscreen_draw_frame, game_image);
+		
+		// Draw game with bloom map shader to the bloom map
+		
+		// Reset draw frame & clear the image
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(bloom_map, COLOR_BLACK);
+		
+		// Draw game things to offscreen Draw_Frame
+		draw_game(current_draw_frame);
+		
+		// Set the shader & cbuffer before the render call
+		offscreen_draw_frame.shader_extension = bloom_map_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		// Render Draw_Frame to the image
+		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
+		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
+		gfx_render_draw_frame(& offscreen_draw_frame, bloom_map);
+		
+		// Draw game image into final image, using the bloom shader which samples from the bloom_map
+		
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(final_image, COLOR_BLACK);
+		
+		// To sample from another image in the shader, we must bind it to a specific slot.
+		draw_frame_bind_image_to_shader(& offscreen_draw_frame, bloom_map, 0);
+		
+		// Draw the game the final image, but now with the post process shader
+		draw_image_in_frame(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE, & offscreen_draw_frame);
+		
+		offscreen_draw_frame.shader_extension = postprocess_bloom_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		gfx_render_draw_frame(& offscreen_draw_frame, final_image);
+		
+		switch (view) 
+		{
+			case VIEW_GAME_AFTER_POSTPROCESS:
+			{
+				Draw_Quad *q = draw_image(final_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				// The draw image will be flipped on y, so we want to draw it "upside down"
+				//swap(q -> uv.y, q -> uv.w, float);
+				break;
+			}
+
+			case VIEW_GAME_BEFORE_POSTPROCESS:
+			{
+				draw_image(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				break;
+			}
+
+			case VIEW_BLOOM_MAP:
+			{
+				draw_image(bloom_map, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				break;
+			}
+
+			default: break;
+			{
+
+			}
+		}
+
+		for (int i = 0; i < VIEW_MODE_MAX; i += 1) 
+		{
+			if (button(view_mode_stringify(i), v2(-window.width / 2 + 40, window.height / 2 - 100 -i * 60), v2(500, 50), i == view)) 
+			{
+				view = i;
+			}
 		}
 
 		// load/save commands
