@@ -118,6 +118,44 @@ void update_cooldown(float *cooldown)
     }
 }
 
+Vector2 get_mouse_pos_in_current_space() 
+{
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+
+	// this is a bit icky, but we're using the draw frame's matricies if valid. If not, we default to world space
+	Matrix4 proj;
+	if (current_draw_frame) 
+	{
+		proj = current_draw_frame->projection;
+	} else {
+		proj = world_frame.world_proj;
+	}
+	Matrix4 view;
+	if (current_draw_frame) 
+	{
+		view = current_draw_frame->camera_xform;
+	} else {
+		view = world_frame.world_view;
+	}
+
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	// Transform to world coordinates
+	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
+	world_pos = m4_transform(m4_inverse(proj), world_pos);
+	world_pos = m4_transform(view, world_pos);
+	// log("%f, %f", world_pos.x, world_pos.y);
+
+	// Return as 2D vector
+	return (Vector2){ world_pos.x, world_pos.y };
+}
+
 int get_fps()
 {
     if (delta_t > 0.0) 
@@ -1559,7 +1597,7 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
                     SpriteData sprite_data = sprites[source_entity -> sprite_ID];
                     Vector2 player_center = v2((source_entity -> pos.x + (sprite_data.image -> width * 0.5f)), (source_entity -> pos.y + (sprite_data.image -> height * 0.5f)));
 
-                    Vector2 mouse_pos = get_mouse_pos_in_world_space();
+                    Vector2 mouse_pos = get_mouse_pos_in_current_space();
 
                     // Calculate direction from player to mouse
                     Vector2 direction = v2_sub(mouse_pos, player_center);
@@ -1884,7 +1922,7 @@ bool check_if_mouse_clicked_button(Vector2 button_pos, Vector2 button_size)
 	Range2f button_range = range2f_make_bottom_left(button_pos, button_size);
 
 	// Check if mouse is on button
-	if (range2f_contains(button_range, get_mouse_pos_in_world_space())) 
+	if (range2f_contains(button_range, get_mouse_pos_in_current_space())) 
 	{
 		if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) 
 		{
@@ -1909,7 +1947,7 @@ bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 	Range2f button_range = range2f_make_bottom_left(button_pos, button_size);
 
 	// Check if mouse is on button
-	if (range2f_contains(button_range, get_mouse_pos_in_world_space())) 
+	if (range2f_contains(button_range, get_mouse_pos_in_current_space())) 
 	{
 		return true;
 	}
@@ -2968,7 +3006,7 @@ int entry(int argc, char **argv)
 
 		push_z_layer_in_frame(Layer_WORLD, current_draw_frame);
 
-		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
+		Vector2 mouse_pos_world = get_mouse_pos_in_current_space();
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
