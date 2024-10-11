@@ -32,6 +32,8 @@ float screen_width = 480.0;
 
 float screen_height = 270.0;
 
+Draw_Frame* current_draw_frame = 0;
+
 const s32 Layer_UI = 20;
 
 const s32 Layer_WORLD = 10;
@@ -43,6 +45,10 @@ const float icon_size = 16;
 const Vector2 button_size = {64, 16};
 
 const Vector2 tooltip_size = {80, 32};
+
+float camera_zoom = 3;
+
+Vector2 camera_pos = {0};
 
 Vector4 color_0;
 
@@ -66,6 +72,24 @@ float total_frame_time = 0.0f;
 
 int fps_display = 0;
 float frame_time_display = 0.0f;
+
+typedef enum View_Mode View_Mode;
+
+enum View_Mode 
+{
+	VIEW_GAME_AFTER_POSTPROCESS,
+	VIEW_GAME_BEFORE_POSTPROCESS,
+	VIEW_BLOOM_MAP,
+	VIEW_MODE_MAX
+};
+
+typedef struct Scene_Cbuffer Scene_Cbuffer;
+
+struct Scene_Cbuffer 
+{
+	Vector2 mouse_pos_screen; // We use this to make a light around the mouse cursor
+	Vector2 window_size; // We only use this to revert the Y in the shader because for some reason d3d11 inverts it.
+};
 
 inline float64 now() 
 {
@@ -138,7 +162,7 @@ void calculate_fps()
 
 // :Debugging Tools
 
-void collide_visual_debug(Entity *current_entity)
+void collide_visual_debug(Entity *current_entity, Draw_Frame *frame)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) 
 	{
@@ -153,14 +177,14 @@ void collide_visual_debug(Entity *current_entity)
 			SpriteData sprite_data_2 = sprites[current_entity -> sprite_ID];
 
 			// Visual Debug tools
-			draw_rect(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite_data_2.image -> width, sprite_data_2.image -> height), v4(255, 0, 0, 0.2));  // Draw bounding box
-			draw_rect(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1)); // Where we are
+			draw_rect_in_frame(v2(actor -> pos.x, actor -> pos.y), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2), frame);  // Draw bounding box
+			draw_rect_in_frame(v2(current_entity -> pos.x, current_entity -> pos.y), v2(sprite_data_2.image -> width, sprite_data_2.image -> height), v4(255, 0, 0, 0.2), frame);  // Draw bounding box
+			draw_rect_in_frame(v2(current_entity -> pos.x, current_entity -> pos.y), v2(1, 1), v4(0, 255, 255, 1), frame); // Where we are
 		}
 	}
 }
 
-void collide_visual_debug_buildings(Entity *current_entity)
+void collide_visual_debug_buildings(Entity *current_entity, Draw_Frame *frame)
 {
 	float half_tile_width = tile_width * 0.5f;
 
@@ -175,7 +199,7 @@ void collide_visual_debug_buildings(Entity *current_entity)
             int sprite_height = sprite_data.image -> height;
 
             // Visual Debug tools
-            draw_rect(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2));  // Draw bounding box
+            draw_rect_in_frame(v2(building -> pos.x - half_tile_width, building -> pos.y - half_tile_width), v2(sprite_width, sprite_height), v4(255, 0, 0, 0.2), frame);  // Draw bounding box
         }
     }
 }
@@ -200,7 +224,7 @@ void start_debug_circle(DebugCircleState *state, Vector2 center, float radius, f
     state -> time_remaining = duration;
 }
 
-void update_debug_circle(DebugCircleState *state) 
+void update_debug_circle(DebugCircleState *state, Draw_Frame *frame) 
 {
     if (state -> active) 
     {
@@ -210,10 +234,10 @@ void update_debug_circle(DebugCircleState *state)
             Vector4 circle_color = v4(255, 0, 0, 1);
 
 			// Center it on the position
-            draw_circle(v2(state -> center.x - state -> radius, state -> center.y - state -> radius), circle_size, circle_color);
+            draw_circle_in_frame(v2(state -> center.x - state -> radius, state -> center.y - state -> radius), circle_size, circle_color, frame);
 
             // Draw the current position of the circle for debugging
-            draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), state -> center.x, state -> center.y), font_height, state -> center, v2(0.2, 0.2), COLOR_WHITE);
+            draw_text_in_frame(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), state -> center.x, state -> center.y), font_height, state -> center, v2(0.2, 0.2), COLOR_WHITE, frame);
 
             state -> time_remaining -= delta_t;
 
@@ -1675,44 +1699,43 @@ void update_projectile(Projectile *projectile)
 
 // :UI Rendering
 
-void set_screen_space()
+void set_screen_space() 
 {
-	draw_frame.camera_xform = m4_scalar(1.0);
-	draw_frame.projection = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
+	current_draw_frame -> camera_xform = world_frame.screen_view;
+	current_draw_frame -> projection = world_frame.screen_proj;
 }
-
 void set_world_space() 
 {
-	draw_frame.projection = world_frame.world_proj;
-	draw_frame.camera_xform = world_frame.world_view;
+	current_draw_frame -> projection = world_frame.world_proj;
+	current_draw_frame -> camera_xform = world_frame.world_view;
 }
 
 // :UI
 
-void draw_ui_box_frame(Matrix4 base_transform, Vector2 box_size, float border_thickness, Vector4 bg_color, Vector4 border_color) 
+void draw_ui_box_frame(Matrix4 base_transform, Vector2 box_size, float border_thickness, Vector4 bg_color, Vector4 border_color, Draw_Frame *frame) 
 {
     // Draw top border
     Vector2 top_border_size = v2(box_size.x, border_thickness);
     Matrix4 top_xform = m4_translate(base_transform, v3(0, box_size.y - (border_thickness / 2.0f), 0));
-    draw_rect_xform(top_xform, top_border_size, border_color);
+    draw_rect_xform_in_frame(top_xform, top_border_size, border_color, frame);
 
     // Draw bottom border
     Vector2 bottom_border_size = v2(box_size.x, border_thickness);
     Matrix4 bottom_xform = m4_translate(base_transform, v3(0, (-border_thickness / 2.0f), 0));
-    draw_rect_xform(bottom_xform, bottom_border_size, border_color);
+    draw_rect_xform_in_frame(bottom_xform, bottom_border_size, border_color, frame);
 
     // Draw left border
     Vector2 left_border_size = v2(border_thickness, box_size.y);
     Matrix4 left_xform = m4_translate(base_transform, v3( (-border_thickness / 2.0f), 0, 0));
-    draw_rect_xform(left_xform, left_border_size, border_color);
+    draw_rect_xform_in_frame(left_xform, left_border_size, border_color, frame);
 
     // Draw right border
     Vector2 right_border_size = v2(border_thickness, box_size.y);
     Matrix4 right_xform = m4_translate(base_transform, v3(box_size.x - (border_thickness / 2.0f), 0, 0));
-    draw_rect_xform(right_xform, right_border_size, border_color);
+    draw_rect_xform_in_frame(right_xform, right_border_size, border_color, frame);
 }
 
-void draw_resource_bar(Resource *resource, float y_pos, int icon_row_count, Vector4 color, Vector4 bg_color)
+void draw_resource_bar(Resource *resource, float y_pos, int icon_row_count, Vector4 color, Vector4 bg_color, Draw_Frame *frame)
 {
 	// Increment resource
 	if (resource -> current < resource -> max)
@@ -1752,15 +1775,15 @@ void draw_resource_bar(Resource *resource, float y_pos, int icon_row_count, Vect
 	{
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
+		draw_rect_xform_in_frame(xform, v2(bar_width, icon_size), bg_color, frame);
 	}
 
 	// Bar Fill
 	{
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
-		draw_ui_box_frame(xform, v2(bar_width, icon_size), 1, bg_color, COLOR_WHITE);
+		draw_rect_xform_in_frame(xform, v2(bar_visual_size, icon_size), color, frame);
+		draw_ui_box_frame(xform, v2(bar_width, icon_size), 1, bg_color, COLOR_WHITE, frame);
 	}	
 
 	// Bar current resource display
@@ -1779,11 +1802,11 @@ void draw_resource_bar(Resource *resource, float y_pos, int icon_row_count, Vect
 
 		draw_pos = v2_add(draw_pos, v2(0, -2.0)); // padding
 
-		draw_text(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE);
+		draw_text_in_frame(font, current_resource_string, font_height, draw_pos, v2(0.20, 0.20), COLOR_WHITE, frame);
 	}
 }
 
-void draw_unit_bar(Vector2 position, float *current_value, float *max_value, float *recovery_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color)
+void draw_unit_bar(Vector2 position, float *current_value, float *max_value, float *recovery_per_second, int icon_size, int icon_row_count, Vector4 color, Vector4 bg_color, Draw_Frame *frame)
 {
 	// Update bar
 	if (*current_value < *max_value)
@@ -1821,19 +1844,19 @@ void draw_unit_bar(Vector2 position, float *current_value, float *max_value, flo
 	{
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y + icon_size), 0.0));
-		draw_rect_xform(xform, v2(bar_width, icon_size), bg_color);
+		draw_rect_xform_in_frame(xform, v2(bar_width, icon_size), bg_color, frame);
 	}
 
 	// Bar Fill
 	{
 		Matrix4 xform = m4_identity;
 		xform = m4_translate(xform, v3((position.x - (bar_width * 0.5)), (position.y + icon_size), 0.0));
-		draw_rect_xform(xform, v2(bar_visual_size, icon_size), color);
-		draw_ui_box_frame(xform, v2(bar_visual_size, icon_size), 1, color, COLOR_WHITE);
+		draw_rect_xform_in_frame(xform, v2(bar_visual_size, icon_size), color, frame);
+		draw_ui_box_frame(xform, v2(bar_visual_size, icon_size), 1, color, COLOR_WHITE, frame);
 	}	
 }
 
-Draw_Quad* draw_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color)
+Draw_Quad* draw_button(string button_tooltip, Vector2 button_size, Vector2 button_position, Vector4 color, Draw_Frame *frame)
 {
 	Vector2 button_size_v2 = v2(16.0, 16.0);
 
@@ -1842,8 +1865,8 @@ Draw_Quad* draw_button(string button_tooltip, Vector2 button_size, Vector2 butto
 	xform = m4_translate(xform, v3(button_position.x, button_position.y, 0.0)); 
 
 	float border_thickness = 1;
-	Draw_Quad* quad = draw_rect_xform(xform, button_size, bg_box_color);
-	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE);
+	Draw_Quad* quad = draw_rect_xform_in_frame(xform, button_size, bg_box_color, frame);
+	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE, frame);
 
 	// Draw Button Text
 	Gfx_Text_Metrics metrics = measure_text(font, button_tooltip, font_height, v2(0.1, 0.1));
@@ -1851,7 +1874,7 @@ Draw_Quad* draw_button(string button_tooltip, Vector2 button_size, Vector2 butto
 	draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
 	draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5, 0.5)));
 
-	draw_text(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+	draw_text_in_frame(font, button_tooltip, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE, frame);
 
 	return quad;
 }
@@ -1896,7 +1919,7 @@ bool check_if_mouse_hovering_button(Vector2 button_pos, Vector2 button_size)
 	}
 }
 
-void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size, string *title)
+void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size, string *title, Draw_Frame *frame)
 {
 	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
 
@@ -1913,8 +1936,8 @@ void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size
 	xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
     float border_thickness = 1;
-    draw_rect_xform(xform, tooltip_box_size, bg_box_color);
-	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE);
+    draw_rect_xform_in_frame(xform, tooltip_box_size, bg_box_color, frame);
+	draw_ui_box_frame(xform, button_size, border_thickness, bg_box_color, COLOR_WHITE, frame);
 
 	float current_y_pos = icon_center.y;
 
@@ -1932,12 +1955,12 @@ void draw_tooltip_box_string_below_same_size(Draw_Quad* quad, float tooltip_size
 
 	draw_pos = v2_add(draw_pos, v2(0, -2.0)); // Padding
 
-	draw_text(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
+	draw_text_in_frame(font, *title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE, frame);
 
 	current_y_pos = draw_pos.y;
 }
 
-void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip_size, string *title)
+void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip_size, string *title, Draw_Frame *frame)
 {
 	Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
 
@@ -1953,7 +1976,7 @@ void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip
 
 	xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
-	draw_rect_xform(xform, tooltip_box_size, bg_box_color);
+	draw_rect_xform_in_frame(xform, tooltip_box_size, bg_box_color, frame);
 
 	// String Display	
 
@@ -1961,10 +1984,10 @@ void draw_tooltip_box_string_to_side_larger_xform(Draw_Quad* quad, float tooltip
 
 	text_xform = m4_translate(xform, v3((tooltip_box_size.x * 0.10), (tooltip_box_size.y * 0.65), 0));
 	
-	draw_text_xform(font, *title, font_height, text_xform, v2(0.1, 0.1), COLOR_WHITE);
+	draw_text_xform_in_frame(font, *title, font_height, text_xform, v2(0.1, 0.1), COLOR_WHITE, frame);
 }
 
-void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, Vector2 button_size, Vector2 tooltip_size, string *title) 
+void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, Vector2 button_size, Vector2 tooltip_size, string *title, Draw_Frame *frame) 
 {
     // Convert to screen space
     Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
@@ -1984,8 +2007,8 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, Vector2 button_size
 
     // Draw the tooltip background with border
     float border_thickness = 1;
-    draw_rect_xform(xform, tooltip_size, bg_box_color);
-	draw_ui_box_frame(xform, tooltip_size, border_thickness, bg_box_color, COLOR_WHITE);
+    draw_rect_xform_in_frame(xform, tooltip_size, bg_box_color, frame);
+	draw_ui_box_frame(xform, tooltip_size, border_thickness, bg_box_color, COLOR_WHITE, frame);
 
     // Text display inside the tooltip
     Gfx_Text_Metrics metrics = measure_text(font, *title, font_height, v2(0.1f, 0.1f));
@@ -1996,10 +2019,10 @@ void draw_tooltip_box_string_to_side_larger(Draw_Quad* quad, Vector2 button_size
     draw_pos = v2_sub(draw_pos, v2_mul(metrics.visual_size, v2(0.5f, 0.5f)));
 
     // Draw the text
-    draw_text(font, *title, font_height, draw_pos, v2(0.1f, 0.1f), COLOR_WHITE);
+    draw_text_in_frame(font, *title, font_height, draw_pos, v2(0.1f, 0.1f), COLOR_WHITE, frame);
 }
 
-void display_skill_level_up_button(Vector2 button_size, Vector4 color)
+void display_skill_level_up_button(Vector2 button_size, Vector4 color, Draw_Frame *frame)
 {
 	int y_pos = 220;
 	int current_buttons = 0;
@@ -2035,13 +2058,13 @@ void display_skill_level_up_button(Vector2 button_size, Vector4 color)
 				find_skill_to_level(skills[i].skill_ID);
 			}
 
-			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color, frame);
 
 			if (check_if_mouse_hovering_button(button_pos, button_size) == true)
 			{
 				world_frame.hover_consumed = true;
 				quad -> color = COLOR_RED;
-				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
+				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip, frame);
 			}
 		}
 	}
@@ -2089,7 +2112,7 @@ void unlock_upgrade(UpgradeID upgrade_ID)
 	}
 }
 
-void display_upgrade_buttons(Vector2 button_size, Vector4 color)
+void display_upgrade_buttons(Vector2 button_size, Vector4 color, Draw_Frame *frame)
 {
 	update_known_upgrades();
 
@@ -2111,7 +2134,7 @@ void display_upgrade_buttons(Vector2 button_size, Vector4 color)
 
 				string button_tooltip =  sprint(get_temporary_allocator(), STR(world -> player.all_upgrades[i].description));
 
-				Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+				Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color, frame);	
 
 				if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 				{
@@ -2124,14 +2147,14 @@ void display_upgrade_buttons(Vector2 button_size, Vector4 color)
 				{
 					world_frame.hover_consumed = true;
 					quad -> color = COLOR_RED;
-					draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
+					draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip, frame);
 				}					
 			}
 		}
 	}
 }
 
-void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color)
+void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color, Draw_Frame *frame)
 {
 	int y_pos = 160;
 	
@@ -2162,7 +2185,7 @@ void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color)
 				button_tooltip = sprint(get_temporary_allocator(), STR("%s\nLevel: %i"), upgrade -> level_up_text, upgrade -> level);
 			}
 
-			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color);	
+			Draw_Quad* quad = draw_button(button_text, button_size, button_pos, color, frame);	
 
 			if (check_if_mouse_clicked_button(button_pos, button_size) == true)
 			{
@@ -2174,17 +2197,17 @@ void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color)
 			{
 				world_frame.hover_consumed = true;
 				quad -> color = COLOR_RED;
-				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip);
+				draw_tooltip_box_string_to_side_larger(quad, button_size, tooltip_size, & button_tooltip, frame);
 			}					
 		}
 	}
 }
 
-void render_ui()
+void render_ui(Draw_Frame *frame)
 {
 	set_screen_space();
 
-	push_z_layer(Layer_UI);
+	push_z_layer_in_frame(Layer_UI, current_draw_frame);
 
 	Vector2 txt_scale = v2(0.1, 0.1);
 	Vector4 bg_col = v4(0, 0, 0, 0.90);
@@ -2196,7 +2219,7 @@ void render_ui()
 
 	string current_fps = tprint("%i FPS %.2f ms", fps_display, frame_time_display);
 
-	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left);
+	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
 
 	// :Inventory UI
 	{
@@ -2334,18 +2357,18 @@ void render_ui()
 			// Mana bar
 			if (get_player_resource(RESOURCEID_Mana) != NULL && get_player_resource(RESOURCEID_Mana) -> unlocked == true)
 			{
-				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_row_count, accent_col_blue, bg_box_color);
+				draw_resource_bar(get_player_resource(RESOURCEID_Mana), 240, icon_row_count, accent_col_blue, bg_box_color, frame);
 			}
 
 			// Intellect bar
 			if (get_player_resource(RESOURCEID_Intellect) != NULL && get_player_resource(RESOURCEID_Intellect) -> unlocked == true)
 			{
-				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_row_count, accent_col_purple, bg_box_color);
+				draw_resource_bar(get_player_resource(RESOURCEID_Intellect), 220, icon_row_count, accent_col_purple, bg_box_color, frame);
 			}
 
-			display_skill_level_up_button(button_size, fill_col);
-			display_upgrade_buttons(button_size, fill_col);
-			display_ability_upgrade_buttons(button_size, fill_col);
+			display_skill_level_up_button(button_size, fill_col, frame);
+			display_upgrade_buttons(button_size, fill_col, frame);
+			display_ability_upgrade_buttons(button_size, fill_col, frame);
 		}
 		world_frame.hover_consumed = true;
 	}
@@ -2358,13 +2381,15 @@ void render_ui()
 	}
 
 	set_world_space();
-	pop_z_layer();
+	pop_z_layer_in_frame(current_draw_frame);
 }
 
 // :Floor Rendering
 
-void render_floor_tiles(FloorData* floor, Vector4 color_0)
+void render_floor_tiles(Draw_Frame *frame)
 {	
+	FloorData* floor = & world -> floors[world -> current_floor];
+
 	float half_tile_width = tile_width * 0.5f;
 
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
@@ -2386,7 +2411,7 @@ void render_floor_tiles(FloorData* floor, Vector4 color_0)
 			float x_pos = x * tile_width;
 			float y_pos = y * tile_width;
 			
-			draw_rect(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col);
+			draw_rect_in_frame(v2(x_pos - half_tile_width, y_pos - half_tile_width), v2(tile_width, tile_width), col, frame);
 		}
 	}
 
@@ -2404,8 +2429,10 @@ void render_floor_tiles(FloorData* floor, Vector4 color_0)
 
 // :Building Rendering
 
-void render_buildings(FloorData* floor, Vector4 color_0)
+void render_buildings(Draw_Frame *frame)
 {
+	FloorData* floor = & world -> floors[world -> current_floor];
+
 	float half_tile_width = tile_width * 0.5f;
 
 	for (int i = 0; i < MAX_TILE_COUNT; i++) 
@@ -2428,7 +2455,7 @@ void render_buildings(FloorData* floor, Vector4 color_0)
 
 			xform = m4_translate(xform, v3(x_pos - half_tile_width, y_pos - half_tile_width, 0));
 
-			draw_image_xform(sprites[tile_data -> building.sprite_data.sprite_ID].image, xform, sprite_size, COLOR_WHITE);
+			draw_image_xform_in_frame(sprites[tile_data -> building.sprite_data.sprite_ID].image, xform, sprite_size, COLOR_WHITE, frame);
 
 			// pos debug
 			//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), tile_data -> building.pos.x, tile_data -> building.pos.y), font_height, tile_data -> building.pos, v2(0.2, 0.2), COLOR_WHITE);
@@ -2441,7 +2468,7 @@ void render_buildings(FloorData* floor, Vector4 color_0)
 
 // :Player Rendering
 
-void render_player()
+void render_player(Draw_Frame *frame)
 {
 	Entity *player = get_player();
 	SpriteData sprite_data = sprites[player -> sprite_ID];
@@ -2453,13 +2480,13 @@ void render_player()
 	xform = m4_translate(xform, v3(player -> pos.x, player -> pos.y, 0));
 
 	Vector4 col = COLOR_WHITE;
-	draw_image_xform(sprite_data.image, xform, sprite_size, col);
+	draw_image_xform_in_frame(sprite_data.image, xform, sprite_size, col, frame);
 
 	// Healthbar test values
 	Vector2 health_bar_pos = v2((player -> pos.x + (sprite_data.image -> width * 0.5)), (player -> pos.y + (sprite_data.image -> height)));
 
 	// Temperary render player healthbar test
-	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
 
 	// World space current location debug for object pos
 	//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
@@ -2476,7 +2503,7 @@ void render_player()
 
 // Entities Rendering
 
-void render_entities()
+void render_entities(Draw_Frame *frame)
 {
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 	{
@@ -2510,12 +2537,12 @@ void render_entities()
 
 					Vector4 col = COLOR_WHITE;
 
-					draw_image_xform(sprites[en -> sprite_ID].image, xform, sprite_size, col);
+					draw_image_xform_in_frame(sprites[en -> sprite_ID].image, xform, sprite_size, col, frame);
 
 					Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> sprite_ID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> sprite_ID].image -> height)));
 
 					// Temp healthbar for non-players
-					draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color);
+					draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
 
 					//world space current location debug for object pos
 					//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
@@ -2527,6 +2554,110 @@ void render_entities()
 				}
 			}
 		}
+	}
+}
+
+Gfx_Shader_Extension load_shader(string file_path, int cbuffer_size) 
+{
+	string source;
+	
+	bool ok = os_read_entire_file(file_path, & source, get_heap_allocator());
+	assert(ok, "Could not read %s", file_path);
+	
+	Gfx_Shader_Extension shader;
+	ok = gfx_compile_shader_extension(source, cbuffer_size, & shader);
+	assert(ok, "Failed compiling shader extension");
+	
+	return shader;
+}
+
+bool button(string label, Vector2 pos, Vector2 size, bool enabled) 
+{
+	Vector4 color = v4(.45, .45, .45, 1);
+	
+	float L = pos.x;
+	float R = L + size.x;
+	float B = pos.y;
+	float T = B + size.y;
+	
+	float mx = input_frame.mouse_x - window.width / 2;
+	float my = input_frame.mouse_y - window.height / 2;
+
+	bool pressed = false;
+
+	if (mx >= L && mx < R && my >= B && my < T) 
+	{
+		color = v4(.15, .15, .15, 1);
+		if (is_key_down(MOUSE_BUTTON_LEFT)) 
+		{
+			color = v4(.05, .05, .05, 1);
+		}
+		
+		pressed = is_key_just_released(MOUSE_BUTTON_LEFT);
+	}
+	
+	if (enabled) 
+	{
+		color = v4_sub(color, v4(.2, .2, .2, 0));
+	}
+
+	draw_rect(pos, size, color);
+	
+	Gfx_Text_Metrics m = measure_text(font, label, font_height, v2(1, 1));
+	
+	Vector2 bottom_left = v2_sub(pos, m.functional_pos_min);
+	bottom_left.x += size.x / 2;
+	bottom_left.x -= m.functional_size.x / 2;
+	
+	bottom_left.y += size.y / 2;
+	bottom_left.y -= m.functional_size.y / 2;
+	
+	draw_text(font, label, font_height, bottom_left, v2(1, 1), COLOR_WHITE);
+	
+	return pressed;
+}
+
+string view_mode_stringify(View_Mode vm) 
+{
+	switch (vm) {
+		case VIEW_GAME_AFTER_POSTPROCESS:
+			return STR("VIEW_GAME_AFTER_POSTPROCESS");
+		case VIEW_GAME_BEFORE_POSTPROCESS:
+			return STR("VIEW_GAME_BEFORE_POSTPROCESS");
+		case VIEW_BLOOM_MAP:
+			return STR("VIEW_BLOOM_MAP");
+		default: return STR("");
+	}
+}
+
+void draw_game(Draw_Frame *frame) 
+{
+	// Draw a background
+	draw_rect_in_frame(v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), v4(.2, .2, .2, 1), frame);
+
+	tm_scope("Render Floor Tiles")
+	{
+		render_floor_tiles(frame);
+	}
+
+	tm_scope("Render Buildings")
+	{
+		render_buildings(frame);
+	}
+
+	tm_scope("Render entities")
+	{
+		render_entities(frame);
+	}
+
+	tm_scope("Render Player")
+	{
+		render_player(frame);
+	}
+
+	tm_scope("Render UI")
+	{
+		render_ui(frame);
 	}
 }
 
@@ -2657,7 +2788,6 @@ bool world_attempt_load_from_disk()
     memcpy(world, result.data, result.count);
     dealloc_string(get_heap_allocator(), result); 
 
-
 	// After loading the skills, restore the function pointers
     for (int i = 0; i < SKILLID_MAX; i++) 
     {
@@ -2671,6 +2801,29 @@ bool world_attempt_load_from_disk()
     }
 
     return true;
+}
+
+Matrix4 construct_view_matrix(Vector2 pos, float zoom) 
+{
+	Matrix4 view = m4_identity;
+
+	view = m4_identity;
+
+	// randy: these might be ordered incorrectly for the camera shake. Not sure.
+
+	// translate into position
+	view = m4_translate(view, v3(pos.x, pos.y, 0));
+
+	// scale the zoom
+	view = m4_scale(view, v3(1.0/zoom, 1.0/zoom, 1.0));
+
+	return view;
+}
+
+void set_world_view() 
+{
+	world_frame.world_view = construct_view_matrix(camera_pos, camera_zoom);
+	world_frame.camera_pos_copy = camera_pos;
 }
 
 // :Game Program Setup
@@ -2718,9 +2871,7 @@ int entry(int argc, char **argv)
 
 	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 
-	// Camera Settings
-	float camera_zoom = 2;
-	Vector2 camera_pos = v2(0, 0);
+	// :Camera Settings
 
 	string saves_path = get_saves_path();
 
@@ -2748,6 +2899,33 @@ int entry(int argc, char **argv)
 
 	world_save_to_disk();
 
+	// :Shader Stuff
+
+	// regular shader + point light which makes things extra bright
+	Gfx_Shader_Extension light_shader = load_shader(STR("oogabooga/examples/bloom_light.hlsl"), sizeof(Scene_Cbuffer));
+	
+	// shader used to generate bloom map. Very simple: It takes the output color -1 on all channels 
+	// so all we have left is how much bloom there should be
+	Gfx_Shader_Extension bloom_map_shader = load_shader(STR("oogabooga/examples/bloom_map.hlsl"), sizeof(Scene_Cbuffer));
+	
+	// postprocess shader where the bloom happens. It samples from the generated bloom_map.
+	Gfx_Shader_Extension postprocess_bloom_shader = load_shader(STR("oogabooga/examples/bloom.hlsl"), sizeof(Scene_Cbuffer));
+	
+	Gfx_Image *bloom_map = 0;
+	Gfx_Image *game_image = 0;
+	Gfx_Image *final_image = 0;
+	
+	View_Mode view = VIEW_GAME_AFTER_POSTPROCESS;
+	
+	Draw_Frame offscreen_draw_frame;
+	draw_frame_init(& offscreen_draw_frame);
+	
+	Scene_Cbuffer scene_cbuffer;
+
+	// Window width and height may be 0 before first call to os_update(), and we base render target sizes of window size.
+	// This is an Oogabooga quirk which might get fixed at some point.
+	os_update();
+
 	// :Game Loop
 
 	string current_fps = STR("0");
@@ -2756,7 +2934,115 @@ int entry(int argc, char **argv)
 	{
 		reset_temporary_storage();
 		world_frame = (WorldFrame){0};
+		current_draw_frame = 0;
 
+		// Shader / Draw
+
+		// Create bloom map and game image when window size changes (or first time)
+		local_persist Os_Window last_window;
+		if ((last_window.width != window.width || last_window.height != window.height || !game_image) && window.width > 0 && window.height > 0) 
+		{
+			if (bloom_map)   delete_image(bloom_map);
+			if (game_image)  delete_image(game_image);
+			if (final_image) delete_image(final_image);
+			
+			bloom_map  = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+			game_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+			final_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+		}
+		last_window = window;
+		
+		// Set stuff in cbuffer which we need to pass to shaders
+		scene_cbuffer.mouse_pos_screen = v2(input_frame.mouse_x, input_frame.mouse_y);
+		scene_cbuffer.window_size = v2(window.width, window.height);
+		
+		// Draw game with light shader to game_image
+		// Reset draw frame & clear the image with a clear color
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(game_image, v4(.7, .7, .7, 1.0));
+		// Draw game things to offscreen Draw_Frame
+		current_draw_frame = & offscreen_draw_frame;
+		draw_game(& current_draw_frame);
+		
+		// Set the shader & cbuffer before the render call
+		offscreen_draw_frame.shader_extension = light_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		// Render Draw_Frame to the image
+		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
+		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
+		gfx_render_draw_frame(& offscreen_draw_frame, game_image);
+		
+		// Draw game with bloom map shader to the bloom map
+		
+		// Reset draw frame & clear the image
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(bloom_map, COLOR_BLACK);
+		
+		// Draw game things to offscreen Draw_Frame
+		draw_game(& current_draw_frame);
+		
+		// Set the shader & cbuffer before the render call
+		offscreen_draw_frame.shader_extension = bloom_map_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		// Render Draw_Frame to the image
+		///// NOTE: Drawing to one frame like this will wait for the gpu to finish the last draw call. If this becomes
+		// a performance bottleneck, you would have more frames "in flight" which you cycle through.
+		gfx_render_draw_frame(& offscreen_draw_frame, bloom_map);
+		
+		// Draw game image into final image, using the bloom shader which samples from the bloom_map
+		
+		draw_frame_reset(& offscreen_draw_frame);
+		gfx_clear_render_target(final_image, COLOR_BLACK);
+		
+		// To sample from another image in the shader, we must bind it to a specific slot.
+		draw_frame_bind_image_to_shader(& offscreen_draw_frame, bloom_map, 0);
+		
+		// Draw the game the final image, but now with the post process shader
+		draw_image_in_frame(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE, & offscreen_draw_frame);
+		
+		offscreen_draw_frame.shader_extension = postprocess_bloom_shader;
+		offscreen_draw_frame.cbuffer = & scene_cbuffer;
+		
+		gfx_render_draw_frame(& offscreen_draw_frame, final_image);
+		
+		switch (view) 
+		{
+			case VIEW_GAME_AFTER_POSTPROCESS:
+			{
+				Draw_Quad *q = draw_image(final_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				// The draw image will be flipped on y, so we want to draw it "upside down"
+				//swap(q -> uv.y, q -> uv.w, float);
+				break;
+			}
+
+			case VIEW_GAME_BEFORE_POSTPROCESS:
+			{
+				draw_image(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				break;
+			}
+
+			case VIEW_BLOOM_MAP:
+			{
+				draw_image(bloom_map, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				break;
+			}
+
+			default: break;
+			{
+
+			}
+		}
+
+		for (int i = 0; i < VIEW_MODE_MAX; i += 1) 
+		{
+			if (button(view_mode_stringify(i), v2(-window.width / 2 + 40, window.height / 2 - 100 -i * 60), v2(500, 50), i == view)) 
+			{
+				view = i;
+			}
+		}
+		
 		// :Time tracking
 		current_time = os_get_elapsed_seconds();
 		delta_t = current_time - last_time;
@@ -2776,14 +3062,18 @@ int entry(int argc, char **argv)
 			Vector2 target_pos = get_player() -> pos;
 			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
 
-			world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0));
-			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0.0)));
-			world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(1.0 / camera_zoom, 1.0 / camera_zoom, 1.0)));
+			set_world_view();
 		}
+
+		world_frame.screen_proj = m4_make_orthographic_projection(0.0, screen_width, 0.0, screen_height, -1, 10);
+		world_frame.screen_view = m4_identity;
+
+		world_frame.render_target_h = window.height;
+		world_frame.render_target_w = window.width;
 
 		set_world_space();
 
-		push_z_layer(Layer_WORLD);
+		push_z_layer_in_frame(Layer_WORLD, current_draw_frame);
 
 		Vector2 mouse_pos_world = get_mouse_pos_in_world_space();
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
@@ -2795,33 +3085,6 @@ int entry(int argc, char **argv)
 		}
 
 		update_cooldown(& world -> floor_cooldown);
-
-		FloorData* floor_data = & world -> floors[world -> current_floor];
-
-		tm_scope("Render Floor Tiles")
-		{
-			render_floor_tiles(floor_data, color_0);
-		}
-
-		tm_scope("Render Buildings")
-		{
-			render_buildings(floor_data, color_0);
-		}
-
-		tm_scope("Render entities")
-		{
-			render_entities();
-		}
-
-		tm_scope("Render Player")
-		{
-			render_player();
-		}
-
-		tm_scope("Render UI")
-		{
-			render_ui();
-		}
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
@@ -2981,6 +3244,7 @@ int entry(int argc, char **argv)
 			if (is_key_just_pressed('K') && is_key_down(KEY_SHIFT)) 
 			{
 				memset(world, 0, sizeof(World));
+				memset(& world_frame, 0, sizeof(WorldFrame));
 				world_setup();
 				log("reset");
 			}

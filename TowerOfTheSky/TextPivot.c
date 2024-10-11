@@ -13,7 +13,7 @@ enum Pivot
 	PIVOT_top_right,
 };
 
-Gfx_Text_Metrics draw_text_with_pivot(Gfx_Font *font, string text, u32 raster_height, Vector2 position, Vector2 scale, Vector4 color, Pivot pivot) 
+Gfx_Text_Metrics draw_text_with_pivot(Gfx_Font *font, string text, u32 raster_height, Vector2 position, Vector2 scale, Vector4 color, Pivot pivot, Draw_Frame *frame) 
 {
 	Gfx_Text_Metrics metrics = measure_text(font, text, raster_height, scale);
 	position = v2_sub(position, metrics.visual_pos_min);
@@ -34,6 +34,6 @@ Gfx_Text_Metrics draw_text_with_pivot(Gfx_Font *font, string text, u32 raster_he
 		break;
 	}
 	position = v2_sub(position, v2_mul(metrics.visual_size, pivot_mul));
-	draw_text(font, text, raster_height, position, scale, color);
+	draw_text_in_frame(font, text, raster_height, position, scale, color, frame);
 	return metrics;
 }
