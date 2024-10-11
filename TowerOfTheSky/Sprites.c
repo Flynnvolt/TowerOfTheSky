@@ -158,8 +158,8 @@ void load_sprite_data(const string base_path)
     #if CONFIGURATION == DEBUG
         for (SpriteID i = 0; i < SPRITE_MAX; i++) 
         {
-            SpriteData* sprite = &sprites[i];
-            assert(sprite->image, "Sprite was not setup properly");
+            SpriteData* sprite = & sprites[i];
+            assert(sprite -> image, "Sprite was not setup properly");
         }
     #endif
 }

@@ -2692,7 +2692,10 @@ void draw_game(Draw_Frame *frame)
 	{
 		render_player(frame);
 	}
+}
 
+void draw_ui(Draw_Frame *frame)
+{
 	tm_scope("Render UI")
 	{
 		render_ui(frame);
@@ -2952,11 +2955,15 @@ int entry(int argc, char **argv)
 	Gfx_Image *bloom_map = 0;
 	Gfx_Image *game_image = 0;
 	Gfx_Image *final_image = 0;
+	Gfx_Image *ui_image = 0;
 	
 	View_Mode view = VIEW_GAME_AFTER_POSTPROCESS;
 	
 	Draw_Frame offscreen_draw_frame;
 	draw_frame_init(& offscreen_draw_frame);
+
+	Draw_Frame ui_draw_frame;
+	draw_frame_init(& ui_draw_frame);
 	
 	Scene_Cbuffer scene_cbuffer;
 
@@ -3172,6 +3179,7 @@ int entry(int argc, char **argv)
 			bloom_map  = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
 			game_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
 			final_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
+			ui_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
 		}
 		last_window = window;
 		
@@ -3228,14 +3236,29 @@ int entry(int argc, char **argv)
 		offscreen_draw_frame.cbuffer = & scene_cbuffer;
 		
 		gfx_render_draw_frame(& offscreen_draw_frame, final_image);
-		
+
+		// UI rendering
+
+		draw_frame_reset(& ui_draw_frame);
+		gfx_clear_render_target(ui_image, v4(0,0,0,0));
+
+		ui_draw_frame.enable_z_sorting = true;
+		ui_draw_frame.cbuffer = & scene_cbuffer;
+
+		current_draw_frame = & ui_draw_frame;
+
+		draw_ui(& ui_draw_frame);
+
+		gfx_render_draw_frame(& ui_draw_frame, ui_image);
+	
 		switch (view) 
 		{
 			case VIEW_GAME_AFTER_POSTPROCESS:
 			{
-				Draw_Quad *q = draw_image(final_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				draw_image(final_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				Draw_Quad *q = draw_image(ui_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
 				// The draw image will be flipped on y, so we want to draw it "upside down"
-				//swap(q -> uv.y, q -> uv.w, float);
+				swap(q -> uv.y, q -> uv.w, float);
 				break;
 			}
 
