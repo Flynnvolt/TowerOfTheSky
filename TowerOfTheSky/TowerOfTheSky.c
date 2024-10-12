@@ -3175,6 +3175,7 @@ int entry(int argc, char **argv)
 			if (bloom_map)   delete_image(bloom_map);
 			if (game_image)  delete_image(game_image);
 			if (final_image) delete_image(final_image);
+			if (ui_image)    delete_image(ui_image);
 			
 			bloom_map  = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
 			game_image = make_image_render_target(window.width, window.height, 4, 0, get_heap_allocator());
