@@ -1050,26 +1050,24 @@ void spawn_enemies(SpriteID enemy_ID, FloorData *floor, float spawn_chance)
 
 // Floor System
 
-FloorData create_empty_floor(bool first_floor, int floor_ID)
+FloorData* create_empty_floor(bool first_floor, int floor_ID)
 {
-	FloorData floor;
-	memset(& floor, 0, sizeof(FloorData));
+    FloorData* floor = (FloorData*) alloc(get_temporary_allocator(), sizeof(FloorData));
+    memset(floor, 0, sizeof(FloorData));
 
-	create_circle_floor_data(& floor);
+    create_circle_floor_data(floor);
+    setup_walls(floor, floor_ID);
+    setup_stairs(floor, first_floor, floor_ID);
 
-	setup_walls(& floor, floor_ID);
+    if (first_floor == false)
+    {
+        setup_crates(floor, 10, floor_ID);
+    }
 
-    setup_stairs(& floor, first_floor, floor_ID);
+    floor -> is_valid = true;
+    floor -> floor_ID = floor_ID;
 
-	if (first_floor == false)
-	{
-		setup_crates(& floor, 10, floor_ID);
-	}
-
-	floor.is_valid = true;
-	floor.floor_ID = floor_ID;
-
-	return floor;
+    return floor;
 }
 
 void load_next_floor()
@@ -1086,7 +1084,7 @@ void load_next_floor()
 		}
 		else
 		{
-			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			world -> floors[next_floor_id] = *create_empty_floor(false, next_floor_id);
 			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
@@ -1114,7 +1112,7 @@ void load_previous_floor()
 		}
 		else
 		{
-			world -> floors[next_floor_id] = create_empty_floor(false, next_floor_id);
+			world -> floors[next_floor_id] = *create_empty_floor(false, next_floor_id);
 			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
@@ -2706,31 +2704,35 @@ void draw_ui(Draw_Frame *frame)
 
 void world_setup()
 {
-	log("fresh world made");
-	//start inventory open
-	world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
+    log("fresh world made");
+    
+    // Start inventory open
+    world -> ux_state = (world -> ux_state == UX_inventory ? UX_nil : UX_inventory);
 
-	if (world -> current_floor == null)
-	{
-		world -> current_floor = 0;
-	}
-	log("%i current floor", world -> current_floor);
-	world -> floors[world -> current_floor] = create_empty_floor(true, world -> current_floor);
-	world -> active_floors++;
+    if (world -> current_floor == null)
+    {
+        world -> current_floor = 0;
+    }
+    
+    log("%i current floor", world -> current_floor);
+    
+    world -> floors[world -> current_floor] = *create_empty_floor(true, world -> current_floor);
+    
+    world -> active_floors++;
 
-	setup_player(& world -> player);
-	memcpy(world -> player.all_upgrades, upgrades, sizeof(upgrades));
+    setup_player(& world -> player);
+    memcpy(world -> player.all_upgrades, upgrades, sizeof(upgrades));
 
-	// :test stuff
-	#if defined(DEV_TESTING)
-	{
-		world -> items[ITEM_Exp] = setup_exp_item();
+    // :test stuff
+    #if defined(DEV_TESTING)
+    {
+        world -> items[ITEM_Exp] = setup_exp_item();
 
-		// Spawn one Target
-		Entity* en = entity_create();
-		setup_target(en);
-	}
-	#endif
+        // Spawn one Target
+        Entity* en = entity_create();
+        setup_target(en);
+    }
+    #endif
 }
 
 // :Save / Load System
