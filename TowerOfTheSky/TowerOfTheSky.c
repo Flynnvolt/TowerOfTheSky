@@ -2439,9 +2439,11 @@ void render_floor_tiles(Draw_Frame *frame)
 
 			// Checkerboard color pattern
 			Vector4 col = color_0;
+			//log("%f, %f, %f, %f", color_0.r, color_0.g, color_0.b, color_0.a);
+
 			if (((x + y) % 2) == 0) 
 			{
-				col.a = 0.75;
+				col.a = 0.5;
 			}
 			
 			float x_pos = x * tile_width;
@@ -2892,7 +2894,7 @@ int entry(int argc, char **argv)
 
 	// :Color
 
-	Vector4 color_0 = hex_to_rgba(0x2a2d3aff);
+	color_0 = hex_to_rgba(0x2a2d3aff);
 
     char exe_path_char[260];
     
