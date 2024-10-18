@@ -3200,7 +3200,7 @@ int entry(int argc, char **argv)
 		draw_game(current_draw_frame);
 		
 		// Set the shader & cbuffer before the render call
-		//offscreen_draw_frame.shader_extension = light_shader;
+		offscreen_draw_frame.shader_extension = light_shader;
 		offscreen_draw_frame.cbuffer = & scene_cbuffer;
 		
 		// Render Draw_Frame to the image
