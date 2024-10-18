@@ -2443,7 +2443,7 @@ void render_floor_tiles(Draw_Frame *frame)
 
 			if (((x + y) % 2) == 0) 
 			{
-				col.a = 0.5;
+				col.a = 0.8;
 			}
 			
 			float x_pos = x * tile_width;
@@ -2894,7 +2894,7 @@ int entry(int argc, char **argv)
 
 	// :Color
 
-	color_0 = hex_to_rgba(0x2a2d3aff);
+	color_0 = hex_to_rgba(0x2f5ebdff);
 
     char exe_path_char[260];
     
@@ -3195,12 +3195,12 @@ int entry(int argc, char **argv)
 		// Draw game with light shader to game_image
 		// Reset draw frame & clear the image with a clear color
 		draw_frame_reset(& offscreen_draw_frame);
-		gfx_clear_render_target(game_image, v4(.7, .7, .7, 1.0));
+		gfx_clear_render_target(game_image, v4(0, 0, 0, 0));
 		// Draw game things to offscreen Draw_Frame
 		draw_game(current_draw_frame);
 		
 		// Set the shader & cbuffer before the render call
-		offscreen_draw_frame.shader_extension = light_shader;
+		//offscreen_draw_frame.shader_extension = light_shader;
 		offscreen_draw_frame.cbuffer = & scene_cbuffer;
 		
 		// Render Draw_Frame to the image
