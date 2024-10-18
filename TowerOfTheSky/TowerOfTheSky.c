@@ -2241,6 +2241,32 @@ void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color, Draw_Fr
 
 void render_ui(Draw_Frame *frame)
 {
+	// stay in world space for healthbars
+
+	// Render entity health bars
+
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
+	{
+		Entity* en = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
+
+		if (en -> is_valid)
+		{
+			Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> sprite_ID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> sprite_ID].image -> height)));
+
+			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
+		}
+	}
+
+	// Render player health bar
+
+	Entity *player = get_player();
+
+	Vector2 health_bar_pos = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5)), (player -> pos.y + (sprites[player -> sprite_ID].image -> height)));
+
+	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
+
+	// set screen space for rest of UI
+
 	set_screen_space();
 
 	push_z_layer_in_frame(Layer_UI, current_draw_frame);
@@ -2256,7 +2282,7 @@ void render_ui(Draw_Frame *frame)
 	string current_fps = tprint("%i FPS %.2f ms", fps_display, frame_time_display);
 
 	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
-
+	
 	// :Inventory UI
 	{
 		if (is_key_just_pressed(KEY_TAB))
@@ -2520,12 +2546,6 @@ void render_player(Draw_Frame *frame)
 	Vector4 col = COLOR_WHITE;
 	draw_image_xform_in_frame(sprite_data.image, xform, sprite_size, col, frame);
 
-	// Healthbar test values
-	Vector2 health_bar_pos = v2((player -> pos.x + (sprite_data.image -> width * 0.5)), (player -> pos.y + (sprite_data.image -> height)));
-
-	// Temperary render player healthbar test
-	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
-
 	// World space current location debug for object pos
 	//draw_text(font, sprint(get_temporary_allocator(), STR("%.2f %.2f"), player -> pos.x, player -> pos.y), font_height, player -> pos, v2(0.2, 0.2), COLOR_WHITE);
 
@@ -2576,11 +2596,6 @@ void render_entities(Draw_Frame *frame)
 					Vector4 col = COLOR_WHITE;
 
 					draw_image_xform_in_frame(sprites[en -> sprite_ID].image, xform, sprite_size, col, frame);
-
-					Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> sprite_ID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> sprite_ID].image -> height)));
-
-					// Temp healthbar for non-players
-					draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
 
 					//world space current location debug for object pos
 					//draw_text(font, sprint(get_temporary_allocator(), STR("%f %f"), en -> pos.x, en -> pos.y), font_height, en -> pos, v2(0.1, 0.1), COLOR_WHITE);
