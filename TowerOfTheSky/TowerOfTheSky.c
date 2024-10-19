@@ -3015,15 +3015,20 @@ int entry(int argc, char **argv)
 
 	// :Shader Stuff
 
+    string full_path;
+
 	// regular shader + point light which makes things extra bright
-	Gfx_Shader_Extension light_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom_light.hlsl"), sizeof(Scene_Cbuffer));
+	full_path = string_concat(exe_path, STR("\\Shaders\\bloom_light.hlsl"), get_temporary_allocator());
+	Gfx_Shader_Extension light_shader = load_shader(full_path, sizeof(Scene_Cbuffer));
 	
 	// shader used to generate bloom map. Very simple: It takes the output color -1 on all channels 
 	// so all we have left is how much bloom there should be
-	Gfx_Shader_Extension bloom_map_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom_map.hlsl"), sizeof(Scene_Cbuffer));
+	full_path = string_concat(exe_path, STR("\\Shaders\\bloom_map.hlsl"), get_temporary_allocator());
+	Gfx_Shader_Extension bloom_map_shader = load_shader(full_path, sizeof(Scene_Cbuffer));
 	
 	// postprocess shader where the bloom happens. It samples from the generated bloom_map.
-	Gfx_Shader_Extension postprocess_bloom_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom.hlsl"), sizeof(Scene_Cbuffer));
+	full_path = string_concat(exe_path, STR("\\Shaders\\bloom.hlsl"), get_temporary_allocator());
+	Gfx_Shader_Extension postprocess_bloom_shader = load_shader(full_path, sizeof(Scene_Cbuffer));
 	
 	Gfx_Image *bloom_map = 0;
 	Gfx_Image *game_image = 0;

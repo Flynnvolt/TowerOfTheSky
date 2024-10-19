@@ -10,4 +10,6 @@ pushd build
 
 xcopy "..\TowerOfTheSky\Resources" "Resources" /E /I /Y
 
+xcopy "..\TowerOfTheSky\Shaders" "Shaders" /E /I /Y
+
 popd
