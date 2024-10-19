@@ -72,7 +72,7 @@ inline float32 degrees_to_radians(float32 degrees)
     return degrees * (M_PI / 180.0f);
 }
 
-void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees) 
+void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
 {
     // Calculate the elapsed time for the animation
     float32 anim_elapsed = fmodf(current_time - anim_info -> anim_start_time, anim_info -> anim_duration);
@@ -121,7 +121,7 @@ void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *pos
     float64 px_height = 1.0 / (float64)anim_info -> anim_sheet -> height;
 
     // Draw the sprite sheet with the UV box for the current frame
-    Draw_Quad *quad = draw_image_xform(anim_info -> anim_sheet, transformation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE);
+    Draw_Quad *quad = draw_image_xform_in_frame(anim_info -> anim_sheet, transformation_matrix, v2(frame_width_scaled, frame_height_scaled), COLOR_WHITE, frame);
     quad -> uv.x1 = (float32)(anim_sheet_pos_x) / (float32)anim_info -> anim_sheet -> width + (float32)px_width * 0.1f;
     quad -> uv.y1 = (float32)(anim_sheet_pos_y) / (float32)anim_info -> anim_sheet -> height + (float32)px_height * 0.1f;
     quad -> uv.x2 = (float32)(anim_sheet_pos_x + anim_info -> anim_frame_width) / (float32)anim_info -> anim_sheet -> width;
@@ -133,10 +133,10 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees) 
+void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
 {
     float32 current_time = Animation_now(); // Get the current time
-    play_animation(animation, current_time, position, scale_ratio, rotation_degrees); // Play the animation
+    play_animation(animation, current_time, position, scale_ratio, rotation_degrees, frame); // Play the animation
 }
 
 // Setup Fireball animation

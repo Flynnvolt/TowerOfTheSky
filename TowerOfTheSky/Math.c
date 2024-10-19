@@ -162,3 +162,13 @@ Draw_Quad* draw_sprite_in_rect(SpriteData sprite_data, Range2f rect, Vector4 col
 
 	return draw_image(sprite_data.image, rect.min, range2f_size(rect), col);
 }
+
+Vector2 normalize(Vector2 v) 
+{
+    float length = sqrt(v.x * v.x + v.y * v.y);
+    if (length > 0) 
+	{
+        return (Vector2){ v.x / length, v.y / length };
+    }
+    return (Vector2){ 0.0f, 0.0f };  // Return a zero vector if length is zero
+}

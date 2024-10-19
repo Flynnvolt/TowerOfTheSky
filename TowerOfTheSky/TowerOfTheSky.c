@@ -17,6 +17,7 @@
 #include "WorldFrame.c"
 #include "Player.c"
 #include "Upgrades.c"
+#include "Light.c"
 
 #define DEV_TESTING
 
@@ -51,6 +52,10 @@ float camera_zoom = 3;
 Vector2 camera_pos = {0};
 
 Vector4 color_0;
+
+LightSource lights[MAX_LIGHTS];
+
+int light_count = 0;
 
 // :Timing
 
@@ -89,7 +94,41 @@ struct Scene_Cbuffer
 {
 	Vector2 mouse_pos_screen; // We use this to make a light around the mouse cursor
 	Vector2 window_size; // We only use this to revert the Y in the shader because for some reason d3d11 inverts it.
+	LightSource lights[MAX_LIGHTS];
+	int light_count;
 };
+
+Scene_Cbuffer scene_cbuffer;
+
+void create_rectangular_light_source(Vector2 position, Vector4 color, Vector2 size, float radius, Vector2 direction, float intensity, Scene_Cbuffer* scene_cbuffer) 
+{
+    LightSource light;
+
+	light.position = v2_add(position, v2(window.width / 2, window.height / 2)); // Adjust position
+    light.size = size;
+	light.direction = normalize(direction); // Ensure direction is normalized
+	light.radius = radius;
+
+    light.color = color;
+	light.intensity = intensity;
+    scene_cbuffer -> lights[scene_cbuffer -> light_count] = light;
+    scene_cbuffer -> light_count++;
+}
+
+void create_circular_light_source(Vector2 position, Vector4 color, float intensity, float radius, Scene_Cbuffer* scene_cbuffer) 
+{
+    LightSource light;
+
+	light.position = v2_add(position, v2(window.width / 2, window.height / 2)); // Adjust position
+    light.size = v2(0, 0); // Set size to zero for point lights
+	light.radius = radius;   // Use size for point light radius
+	light.direction = v2(0, 0); // No direction needed for point lights
+
+    light.color = color;
+	light.intensity = intensity;
+    scene_cbuffer -> lights[scene_cbuffer -> light_count] = light;
+    scene_cbuffer -> light_count++;
+}
 
 inline float64 now() 
 {
@@ -98,7 +137,7 @@ inline float64 now()
 
 float alpha_from_end_time(float64 end_time, float length) 
 {
-	return float_alpha(now(), end_time-length, end_time);
+	return float_alpha(now(), end_time - length, end_time);
 }
 
 bool has_reached_end_time(float64 end_time) 
@@ -127,14 +166,14 @@ Vector2 get_mouse_pos_in_current_space()
 	Matrix4 proj;
 	if (current_draw_frame) 
 	{
-		proj = current_draw_frame->projection;
+		proj = current_draw_frame -> projection;
 	} else {
 		proj = world_frame.world_proj;
 	}
 	Matrix4 view;
 	if (current_draw_frame) 
 	{
-		view = current_draw_frame->camera_xform;
+		view = current_draw_frame -> camera_xform;
 	} else {
 		view = world_frame.world_view;
 	}
@@ -1678,7 +1717,7 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
     }
 }
 
-void update_projectile(Projectile *projectile) 
+void update_projectile(Projectile *projectile, Draw_Frame *frame) 
 {
     if (!projectile -> is_active) return;
 
@@ -1728,7 +1767,9 @@ void update_projectile(Projectile *projectile)
         return;
     }
 
-    update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation);
+    update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation, frame);
+
+	create_circular_light_source(projectile -> position, COLOR_RED, 1, 25, & scene_cbuffer);
 }
 
 // :Rendering
@@ -2707,6 +2748,19 @@ void draw_game(Draw_Frame *frame)
 	{
 		render_player(frame);
 	}
+
+	tm_scope("Update Projectiles")
+	{
+		// Loop through all Projectiles and render / move them.
+		for (int i = 0; i < MAX_PROJECTILES; i++) 
+		{		
+			if (world -> projectiles[i].is_active) 
+			{
+				update_projectile(& world -> projectiles[i], frame);
+			}
+		}
+	}
+
 }
 
 void draw_ui(Draw_Frame *frame)
@@ -2962,14 +3016,14 @@ int entry(int argc, char **argv)
 	// :Shader Stuff
 
 	// regular shader + point light which makes things extra bright
-	Gfx_Shader_Extension light_shader = load_shader(STR("oogabooga/examples/bloom_light.hlsl"), sizeof(Scene_Cbuffer));
+	Gfx_Shader_Extension light_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom_light.hlsl"), sizeof(Scene_Cbuffer));
 	
 	// shader used to generate bloom map. Very simple: It takes the output color -1 on all channels 
 	// so all we have left is how much bloom there should be
-	Gfx_Shader_Extension bloom_map_shader = load_shader(STR("oogabooga/examples/bloom_map.hlsl"), sizeof(Scene_Cbuffer));
+	Gfx_Shader_Extension bloom_map_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom_map.hlsl"), sizeof(Scene_Cbuffer));
 	
 	// postprocess shader where the bloom happens. It samples from the generated bloom_map.
-	Gfx_Shader_Extension postprocess_bloom_shader = load_shader(STR("oogabooga/examples/bloom.hlsl"), sizeof(Scene_Cbuffer));
+	Gfx_Shader_Extension postprocess_bloom_shader = load_shader(STR("TowerOfTheSky/Shaders/bloom.hlsl"), sizeof(Scene_Cbuffer));
 	
 	Gfx_Image *bloom_map = 0;
 	Gfx_Image *game_image = 0;
@@ -2983,8 +3037,6 @@ int entry(int argc, char **argv)
 
 	Draw_Frame ui_draw_frame;
 	draw_frame_init(& ui_draw_frame);
-	
-	Scene_Cbuffer scene_cbuffer;
 
 	// Window width and height may be 0 before first call to os_update(), and we base render target sizes of window size.
 	// This is an Oogabooga quirk which might get fixed at some point.
@@ -3000,6 +3052,7 @@ int entry(int argc, char **argv)
 		world_frame = (WorldFrame){0};
 		current_draw_frame = 0;
 		current_draw_frame = & offscreen_draw_frame;
+		scene_cbuffer.light_count = 0;
 		
 		// :Time tracking
 		current_time = os_get_elapsed_seconds();
@@ -3046,18 +3099,6 @@ int entry(int argc, char **argv)
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
 	
-		tm_scope("Update Projectiles")
-		{
-			// Loop through all Projectiles and render / move them.
-			for (int i = 0; i < MAX_PROJECTILES; i++) 
-			{		
-				if (world -> projectiles[i].is_active) 
-				{
-					update_projectile(& world -> projectiles[i]);
-				}
-			}
-		}
-
 		tm_scope("Update enemies")
 		{
 			// Loop through all enemies and update enemy state
