@@ -2715,11 +2715,11 @@ string view_mode_stringify(View_Mode vm)
 {
 	switch (vm) {
 		case VIEW_GAME_AFTER_POSTPROCESS:
-			return STR("VIEW_GAME_AFTER_POSTPROCESS");
+			return STR("AFTER_POSTPROCESS");
 		case VIEW_GAME_BEFORE_POSTPROCESS:
-			return STR("VIEW_GAME_BEFORE_POSTPROCESS");
+			return STR("BEFORE_POSTPROCESS");
 		case VIEW_BLOOM_MAP:
-			return STR("VIEW_BLOOM_MAP");
+			return STR("BLOOM_MAP");
 		default: return STR("");
 	}
 }
@@ -3134,7 +3134,7 @@ int entry(int argc, char **argv)
 					{
 						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost)
 						{
-							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, false);
+							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 50.0, & Fireball, 1.0, 22, 1000, 15, false);
 
 							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost;
 						}
@@ -3156,7 +3156,7 @@ int entry(int argc, char **argv)
 					{
 						if (get_player_resource(RESOURCEID_Mana) -> current >= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost)
 						{
-							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 250.0, & Fireball, 1.0, 22, 1000, 5, true);
+							spawn_projectile(get_player_ability(ABILITYID_Fire_Bolt), get_player(), 50.0, & Fireball, 1.0, 22, 1000, 15, true);
 
 							get_player_resource(RESOURCEID_Mana) -> current -= get_player_ability(ABILITYID_Fire_Bolt) -> resource_cost;
 						}
@@ -3252,6 +3252,7 @@ int entry(int argc, char **argv)
 		// Reset draw frame & clear the image with a clear color
 		draw_frame_reset(& offscreen_draw_frame);
 		gfx_clear_render_target(game_image, v4(0, 0, 0, 0));
+		
 		// Draw game things to offscreen Draw_Frame
 		draw_game(current_draw_frame);
 		
@@ -3325,13 +3326,15 @@ int entry(int argc, char **argv)
 
 			case VIEW_GAME_BEFORE_POSTPROCESS:
 			{
-				draw_image(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				Draw_Quad *q = draw_image(game_image, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				swap(q -> uv.y, q -> uv.w, float);
 				break;
 			}
 
 			case VIEW_BLOOM_MAP:
 			{
-				draw_image(bloom_map, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				Draw_Quad *q = draw_image(bloom_map, v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), COLOR_WHITE);
+				swap(q -> uv.y, q -> uv.w, float);
 				break;
 			}
 
@@ -3343,7 +3346,8 @@ int entry(int argc, char **argv)
 
 		for (int i = 0; i < VIEW_MODE_MAX; i += 1) 
 		{
-			if (button(view_mode_stringify(i), v2(-window.width / 2 + 40, window.height / 2 - 100 -i * 60), v2(500, 50), i == view)) 
+			// Reverse the button order by flipping the i index for the y position
+			if (button(view_mode_stringify(i), v2(-window.width / 2 + 40, -window.height / 2 + 100 + (VIEW_MODE_MAX - 1 - i) * 60), v2(500, 50), i == view)) 
 			{
 				view = i;
 			}
