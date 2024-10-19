@@ -2,7 +2,7 @@
 #include "World.c"
 #include "Range.c"
 #include "TextPivot.c"
-#include "TutorialMath.c"
+#include "Math.c"
 #include "AnimationData.c"
 #include "Projectile.c"
 #include "Abilities.c"
