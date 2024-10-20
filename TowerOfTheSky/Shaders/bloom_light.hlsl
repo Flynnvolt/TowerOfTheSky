@@ -20,7 +20,7 @@ float4 get_light_contribution(PS_INPUT input) {
     float2 vertex_pos = input.position_screen.xy;  // In pixels
     vertex_pos.y = window_size.y - vertex_pos.y; // Adjust for Y inversion
 
-    float4 total_light_contribution = float4(0, 0, 0, 1);
+    float4 total_light_contribution = float4(0, 0, 0, 0);
 
     for (int i = 0; i < light_count; i++) {
         LightSource light = lights[i];
@@ -46,12 +46,12 @@ float4 get_light_contribution(PS_INPUT input) {
             if (abs(rotated_pos.x) <= light.size.x * 0.5 && abs(rotated_pos.y) <= light.size.y * 0.5) {
                 // Instead of using the distance, use the individual x and y components for attenuation
                 float attenuation_x;
-
+                
                 // Uniform light falloff along x-axis if radius is 0
                 if (light.radius == 0) {
                     attenuation_x = 1.0; // No falloff on x-axis
                 } else {
-                    // Taper off x-axis based on radius
+                // Taper off x-axis based on radius
                     attenuation_x = saturate(1.0 - (abs(rotated_pos.x) / light.radius));
                 }
                 float attenuation_y = saturate(1.0 - (abs(rotated_pos.y) / (light.size.y * 0.5)));
@@ -65,10 +65,13 @@ float4 get_light_contribution(PS_INPUT input) {
     return total_light_contribution;
 }
 
-
 float4 pixel_shader_extension(PS_INPUT input, float4 color) {
     if (input.type == 1) {
         return color;
     }
-    return color + get_light_contribution(input);
+
+    float4 light_contribution = get_light_contribution(input);
+
+    // Add light contribution to the RGB channels but keep the original alpha
+    return float4(color.rgb + light_contribution.rgb, color.a);
 }
