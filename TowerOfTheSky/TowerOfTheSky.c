@@ -1719,7 +1719,7 @@ void spawn_projectile(Ability *ability, Entity *source_entity, float speed, Anim
     }
 }
 
-void update_projectile(Projectile *projectile, Draw_Frame *frame) 
+void update_projectile(Projectile *projectile) 
 {
     if (!projectile -> is_active) return;
 
@@ -1768,8 +1768,6 @@ void update_projectile(Projectile *projectile, Draw_Frame *frame)
 		world -> active_projectiles--;
         return;
     }
-
-    update_animation(& projectile -> animation, & projectile -> position, projectile -> scale, & projectile -> rotation, frame);
 
 	create_circular_light_source(projectile -> position, COLOR_RED, 1, 25, & scene_cbuffer);
 }
@@ -2325,6 +2323,14 @@ void render_ui(Draw_Frame *frame)
 	string current_fps = tprint("%i FPS %.2f ms", fps_display, frame_time_display);
 
 	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
+
+	string active_projectile_string = tprint("%i projectiles active", world -> active_projectiles);
+
+	draw_text_with_pivot(font, active_projectile_string, font_height, v2(300, 255), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
+
+	string active_lights_string = tprint("%i lights active", scene_cbuffer.light_count);
+
+	draw_text_with_pivot(font, active_lights_string, font_height, v2(300, 235), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
 	
 	// :Inventory UI
 	{
@@ -2751,18 +2757,18 @@ void draw_game(Draw_Frame *frame)
 		render_player(frame);
 	}
 
-	tm_scope("Update Projectiles")
+	tm_scope("Render Projectiles")
 	{
 		// Loop through all Projectiles and render / move them.
 		for (int i = 0; i < MAX_PROJECTILES; i++) 
 		{		
 			if (world -> projectiles[i].is_active) 
 			{
-				update_projectile(& world -> projectiles[i], frame);
+				Projectile* projectile = & world -> projectiles[i];  // Take the address of the projectile
+				update_animation(& projectile -> animation, & projectile -> position, & projectile -> scale, & projectile -> rotation, frame);
 			}
 		}
 	}
-
 }
 
 void draw_ui(Draw_Frame *frame)
@@ -3114,6 +3120,18 @@ int entry(int argc, char **argv)
 				if (world -> floors[world -> current_floor].enemies[i].enemy_entity.is_valid == true) 
 				{
 					update_enemy_states(& world -> floors[world -> current_floor].enemies[i]);
+				}
+			}
+		}
+
+		tm_scope("Update Projectiles")
+		{
+			// Loop through all Projectiles and render / move them.
+			for (int i = 0; i < MAX_PROJECTILES; i++) 
+			{		
+				if (world -> projectiles[i].is_active) 
+				{
+					update_projectile(& world -> projectiles[i]);
 				}
 			}
 		}

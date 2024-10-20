@@ -72,7 +72,7 @@ inline float32 degrees_to_radians(float32 degrees)
     return degrees * (M_PI / 180.0f);
 }
 
-void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
+void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *position, float32 *scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
 {
     // Calculate the elapsed time for the animation
     float32 anim_elapsed = fmodf(current_time - anim_info -> anim_start_time, anim_info -> anim_duration);
@@ -92,8 +92,8 @@ void play_animation(AnimationInfo *anim_info, float32 current_time, Vector2 *pos
     u32 anim_sheet_pos_y = (anim_info -> number_of_rows - anim_index_y - 1) * anim_info -> anim_frame_height; // Y inverted
 
     // Scale factor and size calculation
-    float32 frame_width_scaled = anim_info -> anim_frame_width * scale_ratio;
-    float32 frame_height_scaled = anim_info -> anim_frame_height * scale_ratio;
+float32 frame_width_scaled = anim_info -> anim_frame_width * (*scale_ratio);
+float32 frame_height_scaled = anim_info -> anim_frame_height * (*scale_ratio);
 
     // Ensure pixel-perfect scaling
     frame_width_scaled = roundf(frame_width_scaled);
@@ -133,7 +133,7 @@ inline float64 Animation_now()
     return os_get_elapsed_seconds();
 }
 
-void update_animation(AnimationInfo *animation, Vector2 *position, float32 scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
+void update_animation(AnimationInfo *animation, Vector2 *position, float32 *scale_ratio, float32 *rotation_degrees, Draw_Frame *frame) 
 {
     float32 current_time = Animation_now(); // Get the current time
     play_animation(animation, current_time, position, scale_ratio, rotation_degrees, frame); // Play the animation
