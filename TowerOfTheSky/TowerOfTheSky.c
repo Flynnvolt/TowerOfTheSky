@@ -113,11 +113,11 @@ void create_rectangular_light_source(Vector2 position, Vector4 color, Vector2 si
     scene_cbuffer -> light_count++;
 }
 
-void create_circular_light_source(Vector2 position, Vector4 color, float intensity, float radius, Scene_Cbuffer* scene_cbuffer) 
+void create_circular_light_source(Vector2 *position, Vector4 color, float intensity, float radius, Scene_Cbuffer* scene_cbuffer) 
 {
     LightSource light;
 
-	light.position = v2_add(position, v2(window.width / 2, window.height / 2)); // Adjust position
+	light.position = v2_add(*position, v2(window.width / 2, window.height / 2)); // Adjust position
     light.size = v2(0, 0); // Set size to zero for point lights
 	light.radius = radius;   // Use size for point light radius
 	light.direction = v2(0, 0); // No direction needed for point lights
@@ -162,17 +162,23 @@ Vector2 get_mouse_pos_in_current_space()
 
 	// this is a bit icky, but we're using the draw frame's matricies if valid. If not, we default to world space
 	Matrix4 proj;
+
 	if (current_draw_frame) 
 	{
 		proj = current_draw_frame -> projection;
-	} else {
+	} 
+	else 
+	{
 		proj = world_frame.world_proj;
 	}
 	Matrix4 view;
+
 	if (current_draw_frame) 
 	{
 		view = current_draw_frame -> camera_xform;
-	} else {
+	} 
+	else 
+	{
 		view = world_frame.world_view;
 	}
 
@@ -1768,8 +1774,6 @@ void update_projectile(Projectile *projectile)
 		world -> active_projectiles--;
         return;
     }
-
-	create_circular_light_source(projectile -> position, COLOR_RED, 1, 25, & scene_cbuffer);
 }
 
 // :Rendering
@@ -2282,36 +2286,6 @@ void display_ability_upgrade_buttons(Vector2 button_size, Vector4 color, Draw_Fr
 
 void render_ui(Draw_Frame *frame)
 {
-	// stay in world space for healthbars
-
-	// Render entity health bars
-
-	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
-	{
-		Entity* en = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
-
-		if (en -> is_valid)
-		{
-			Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> sprite_ID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> sprite_ID].image -> height)));
-
-			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
-		}
-	}
-
-	// Render player health bar
-
-	Entity *player = get_player();
-
-	Vector2 health_bar_pos = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5)), (player -> pos.y + (sprites[player -> sprite_ID].image -> height)));
-
-	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
-
-	// set screen space for rest of UI
-
-	set_screen_space();
-
-	push_z_layer_in_frame(Layer_UI, current_draw_frame);
-
 	Vector2 txt_scale = v2(0.1, 0.1);
 	Vector4 bg_col = v4(0, 0, 0, 0.90);
 	Vector4 fill_col = v4(0.5, 0.5, 0.5, 1.0);
@@ -2486,15 +2460,38 @@ void render_ui(Draw_Frame *frame)
 		world_frame.hover_consumed = true;
 	}
 
+	set_world_space();
+
+	// world space for healthbars
+
+	// Render entity health bars
+
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
+	{
+		Entity* en = & world -> floors[world -> current_floor].enemies[i].enemy_entity;
+
+		if (en -> is_valid)
+		{
+			Vector2 health_bar_pos = v2((en -> pos.x + (sprites[en -> sprite_ID].image -> width * 0.5)), (en -> pos.y + (sprites[en -> sprite_ID].image -> height)));
+
+			draw_unit_bar(health_bar_pos, & en -> health, & en -> max_health, & en -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
+		}
+	}
+
+	// Render player health bar
+
+	Entity *player = get_player();
+
+	Vector2 health_bar_pos = v2((player -> pos.x + (sprites[player -> sprite_ID].image -> width * 0.5)), (player -> pos.y + (sprites[player -> sprite_ID].image -> height)));
+
+	draw_unit_bar(health_bar_pos, & player -> health, & player -> max_health, & player -> health_regen, 4, 6, COLOR_RED, bg_box_color, frame);
+
 	// Esc Closes ALL UI
 	if (world -> ux_state != UX_nil && is_key_just_pressed(KEY_ESCAPE)) 
 	{
 		consume_key_just_pressed(KEY_ESCAPE);
 		world -> ux_state = 0;
 	}
-
-	set_world_space();
-	pop_z_layer_in_frame(current_draw_frame);
 }
 
 // :Floor Rendering
@@ -2736,6 +2733,8 @@ string view_mode_stringify(View_Mode vm)
 
 void draw_game(Draw_Frame *frame) 
 {
+	set_world_space();
+
 	// Draw a background
 	draw_rect_in_frame(v2(-window.width / 2, -window.height / 2), v2(window.width, window.height), v4(.2, .2, .2, 1), frame);
 
@@ -2768,6 +2767,7 @@ void draw_game(Draw_Frame *frame)
 			{
 				Projectile* projectile = & world -> projectiles[i];  // Take the address of the projectile
 				update_animation(& projectile -> animation, & projectile -> position, & projectile -> scale, & projectile -> rotation, frame);
+				create_circular_light_source(& projectile -> position, COLOR_RED, 1, 25, & scene_cbuffer);
 			}
 		}
 	}
@@ -2775,6 +2775,8 @@ void draw_game(Draw_Frame *frame)
 
 void draw_ui(Draw_Frame *frame)
 {
+	set_screen_space();
+
 	tm_scope("Render UI")
 	{
 		render_ui(frame);
@@ -2947,7 +2949,6 @@ Matrix4 construct_view_matrix(Vector2 pos, float zoom)
 void set_world_view() 
 {
 	world_frame.world_view = construct_view_matrix(camera_pos, camera_zoom);
-	world_frame.camera_pos_copy = camera_pos;
 }
 
 // :Game Program Setup
@@ -3086,6 +3087,7 @@ int entry(int argc, char **argv)
 		{
 			Vector2 target_pos = get_player() -> pos;
 			animate_v2_to_target(& camera_pos, target_pos, delta_t, 15.0f);
+			//log("%f, %f", camera_pos.x, camera_pos.y);
 
 			set_world_view();
 		}
@@ -3095,10 +3097,6 @@ int entry(int argc, char **argv)
 
 		world_frame.render_target_h = window.height;
 		world_frame.render_target_w = window.width;
-
-		set_world_space();
-
-		push_z_layer_in_frame(Layer_WORLD, current_draw_frame);
 
 		Vector2 mouse_pos_world = get_mouse_pos_in_current_space();
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
@@ -3113,7 +3111,7 @@ int entry(int argc, char **argv)
 
 		// Debug Visuals
 		//update_debug_circle(& circle_state);
-	
+
 		tm_scope("Update enemies")
 		{
 			// Loop through all enemies and update enemy state
