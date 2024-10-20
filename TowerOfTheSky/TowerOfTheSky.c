@@ -2324,6 +2324,7 @@ void render_ui(Draw_Frame *frame)
 
 	draw_text_with_pivot(font, current_fps, font_height, v2(5, 265), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
 
+	/*
 	string active_projectile_string = tprint("%i projectiles active", world -> active_projectiles);
 
 	draw_text_with_pivot(font, active_projectile_string, font_height, v2(300, 255), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
@@ -2331,6 +2332,7 @@ void render_ui(Draw_Frame *frame)
 	string active_lights_string = tprint("%i lights active", scene_cbuffer.light_count);
 
 	draw_text_with_pivot(font, active_lights_string, font_height, v2(300, 235), v2(0.15, 0.15), COLOR_WHITE, PIVOT_top_left, frame);
+	*/
 	
 	// :Inventory UI
 	{
