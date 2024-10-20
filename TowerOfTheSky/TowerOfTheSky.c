@@ -55,8 +55,6 @@ Vector4 color_0;
 
 LightSource lights[MAX_LIGHTS];
 
-int light_count = 0;
-
 // :Timing
 
 float64 delta_t;
@@ -1119,6 +1117,7 @@ void load_next_floor()
 		{
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
+			world -> active_projectiles = 0;
 			world -> current_floor++;
 		}
 		else
@@ -1127,6 +1126,7 @@ void load_next_floor()
 			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
+			world -> active_projectiles = 0;
 			world -> current_floor++;
 			spawn_enemies(SPRITE_Slime, & world -> floors[world -> current_floor], 0.005);
 		}
@@ -1147,6 +1147,7 @@ void load_previous_floor()
 		{
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
+			world -> active_projectiles = 0;
 			world -> current_floor--;
 		}
 		else
@@ -1155,6 +1156,7 @@ void load_previous_floor()
 			world -> active_floors++;
 			player_change_floor(next_floor_id);
 			memset(world -> projectiles, 0, sizeof(world -> projectiles));
+			world -> active_projectiles = 0;
 			world -> current_floor--;
 			spawn_enemies(SPRITE_Slime, & world -> floors[world -> current_floor], 0.005);
 		}
